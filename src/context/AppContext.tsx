@@ -76,6 +76,7 @@ interface AppContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
+  signInWithGoogle: (inviteCode?: string) => Promise<AuthResult>;
   logout: () => void;
   continueAsDemo: () => void;
 
@@ -174,7 +175,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: sessionData } = await supabase.auth.getSession();
         const user = sessionData.session?.user;
         if (!user) return;
-        const profile = await db.fetchProfileByUserId(user.id);
+        let profile = await db.fetchProfileByUserId(user.id);
+
+        // If this is a first-time OAuth sign-in (e.g. Google), the auth user exists
+        // in Supabase Auth but no profiles row was created yet. Auto-provision their profile now.
+        if (!profile) {
+          let pendingInviteCode: string | null = null;
+          try {
+            pendingInviteCode = localStorage.getItem('legacy-link-pending-invite');
+            localStorage.removeItem('legacy-link-pending-invite');
+          } catch { /* noop */ }
+
+          let invite: Awaited<ReturnType<typeof db.fetchInvitationByCode>> = null;
+          if (pendingInviteCode) {
+            try {
+              invite = await db.fetchInvitationByCode(pendingInviteCode);
+            } catch (err) {
+              console.warn('[legacy-link] failed to validate pending invite code:', err);
+            }
+          }
+
+          const rawName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Family Member';
+          const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || undefined;
+
+          let familyId: string;
+          let role: Role;
+
+          if (invite) {
+            familyId = invite.familyId;
+            role = invite.role;
+            await db.createProfile({
+              id: user.id,
+              familyId,
+              memberId: invite.memberId,
+              displayName: rawName,
+              email: user.email,
+              avatarUrl,
+              role,
+            });
+            await db.redeemInvitationCode(invite.id, user.id);
+          } else {
+            familyId = newId();
+            role = 'family_admin';
+            await db.createFamily(familyId, `${rawName}'s Family`);
+            await db.createProfile({
+              id: user.id,
+              familyId,
+              displayName: rawName,
+              email: user.email,
+              avatarUrl,
+              role,
+            });
+          }
+
+          profile = await db.fetchProfileByUserId(user.id);
+        }
+
         if (!profile) { await supabase.auth.signOut(); return; }
         const dataset = await db.fetchFamilyDataset(profile.familyId);
         setData(dataset);
@@ -683,6 +739,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async (inviteCode) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: 'Google sign-in requires Supabase online mode.' };
+    }
+    if (inviteCode?.trim()) {
+      try {
+        localStorage.setItem('legacy-link-pending-invite', inviteCode.trim().toUpperCase());
+      } catch { /* noop */ }
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     if (isSupabaseConfigured && supabase) void supabase.auth.signOut();
@@ -703,7 +778,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentProfile,
     setCurrentProfileId,
     toasts, pushToast, dismissToast,
-    isAuthenticated, login, signup, logout, continueAsDemo,
+    isAuthenticated, login, signup, signInWithGoogle, logout, continueAsDemo,
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,

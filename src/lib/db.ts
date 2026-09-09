@@ -252,11 +252,11 @@ export async function updateFamilyTemplate(familyId: string, template: string) {
 }
 
 export async function createProfile(p: {
-  id: string; familyId: string; memberId?: string; displayName: string; email?: string; role: string;
+  id: string; familyId: string; memberId?: string; displayName: string; email?: string; avatarUrl?: string; role: string;
 }) {
   const { error } = await must().from('profiles').insert({
     id: p.id, family_id: p.familyId, member_id: p.memberId ?? null,
-    display_name: p.displayName, email: p.email ?? null, role: p.role,
+    display_name: p.displayName, email: p.email ?? null, avatar_url: p.avatarUrl ?? null, role: p.role,
   });
   if (error) throw error;
 }
