@@ -117,6 +117,23 @@ export function membersByGeneration(members: Member[]): Map<number, Member[]> {
   return map;
 }
 
+/**
+ * Converts a number of generations removed into the term people actually use
+ * ("Grandparent", "Great-great-grandchild"), instead of a generic
+ * "ancestor" / "descendant" + generation count.
+ *   1 -> Parent / Child
+ *   2 -> Grandparent / Grandchild
+ *   3 -> Great-grandparent / Great-grandchild
+ *   4 -> Great-great-grandparent / Great-great-grandchild, and so on.
+ */
+export function relationshipTerm(distance: number, direction: 'ancestor' | 'descendant'): string {
+  if (distance <= 1) return direction === 'ancestor' ? 'Parent' : 'Child';
+  const greats = distance - 2;
+  const base = direction === 'ancestor' ? 'grandparent' : 'grandchild';
+  const label = `${'great-'.repeat(greats)}${base}`;
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function fullName(m: Member): string {
   return `${m.firstName} ${m.lastName}`;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, MapPin, Briefcase, Calendar, Users as UsersIcon, Edit3, Crosshair, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getLineage, getAllAncestors, getAllDescendants, fullName, lifespan } from '../../lib/lineage';
+import { getLineage, getAllAncestors, getAllDescendants, relationshipTerm, fullName, lifespan } from '../../lib/lineage';
 import type { Member } from '../../types';
 
 interface PersonDrawerProps {
@@ -49,7 +49,7 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
     );
   };
 
-  const GenerationGroup: React.FC<{ title: string; people: Member[] }> = ({ title, people }) => {
+  const GenerationGroup: React.FC<{ title: string; people: Member[]; direction: 'ancestor' | 'descendant' }> = ({ title, people, direction }) => {
     if (people.length === 0) return null;
     return (
       <div>
@@ -66,7 +66,9 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
                 <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</p>
                 <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{lifespan(p)}</p>
               </div>
-              <span className="shrink-0 text-[10px] text-heritage-green-400 dark:text-heritage-dark-muted">Gen {p.generation}</span>
+              <span className="shrink-0 text-[10px] text-heritage-green-400 dark:text-heritage-dark-muted">
+                {relationshipTerm(Math.abs(p.generation - member.generation), direction)}
+              </span>
             </button>
           ))}
         </div>
@@ -152,14 +154,18 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
                 onClick={() => setShowFullLineage(s => !s)}
                 className="w-full flex items-center justify-between text-sm font-medium text-heritage-green-800 dark:text-heritage-dark-text"
               >
-                <span>Full lineage ({allAncestors.length} ancestors, {allDescendants.length} descendants)</span>
+                <span>Full lineage ({allAncestors.length} on the parents' side, {allDescendants.length} on the children's side)</span>
                 {showFullLineage ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
 
               {showFullLineage && (
                 <div className="mt-4 space-y-5">
-                  <GenerationGroup title={`Every ancestor (oldest first, back to Generation ${allAncestors[0]?.generation ?? member.generation})`} people={allAncestors} />
-                  <GenerationGroup title="Every descendant" people={allDescendants} />
+                  <GenerationGroup
+                    title={`Parents, grandparents & beyond (oldest first, back to the ${relationshipTerm(Math.abs((allAncestors[0]?.generation ?? member.generation) - member.generation), 'ancestor')})`}
+                    people={allAncestors}
+                    direction="ancestor"
+                  />
+                  <GenerationGroup title="Children, grandchildren & beyond" people={allDescendants} direction="descendant" />
                 </div>
               )}
             </div>
