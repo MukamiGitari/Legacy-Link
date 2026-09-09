@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, type LucideIcon } from 'lucide-react';
+import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, ScrollText, type LucideIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { TreeTemplateSwitcher } from '../components/trees/TreeTemplateSwitcher';
 import type { Role, TreeTemplate } from '../types';
 
-type AdminTab = 'users' | 'templates' | 'onboarding' | 'audit';
+type AdminTab = 'users' | 'family' | 'templates' | 'onboarding' | 'audit';
 
 const ROLE_LABEL: Record<Role, string> = {
   super_admin: 'Super Admin',
@@ -25,16 +25,49 @@ const ONBOARDING_STEPS = [
 ];
 
 export const Admin: React.FC = () => {
-  const { data, setActiveTreeTemplate, updateProfileRole, generateInvitationCode, resetToSeed } = useApp();
+  const { data, setActiveTreeTemplate, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode, generateRestorationCode, resetToSeed } = useApp();
   const [tab, setTab] = useState<AdminTab>('users');
   const [pendingTemplate, setPendingTemplate] = useState<TreeTemplate | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteRole, setInviteRole] = useState<Role>('family_member');
+  const [inviteMemberId, setInviteMemberId] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [restorationFor, setRestorationFor] = useState<{ profileId: string; code: string } | null>(null);
+  const [copiedRestoration, setCopiedRestoration] = useState(false);
+
+  // Family profile form — seeded from the current dataset, saved explicitly so a
+  // stray keystroke doesn't write to Supabase on every character.
+  const [familyName, setFamilyName] = useState(data.family.name);
+  const [familyMotto, setFamilyMotto] = useState(data.family.motto ?? '');
+  const [familyOrigin, setFamilyOrigin] = useState(data.family.originStory ?? '');
+  const [familySaved, setFamilySaved] = useState(false);
+  const familyDirty = familyName !== data.family.name
+    || familyMotto !== (data.family.motto ?? '')
+    || familyOrigin !== (data.family.originStory ?? '');
+
+  const handleSaveFamilyDetails = () => {
+    if (!familyName.trim()) return;
+    updateFamilyDetails({ name: familyName.trim(), motto: familyMotto.trim(), originStory: familyOrigin.trim() });
+    setFamilySaved(true);
+    setTimeout(() => setFamilySaved(false), 2500);
+  };
+
+  const handleGenerateRestoration = (profileId: string) => {
+    const code = generateRestorationCode(profileId);
+    setRestorationFor({ profileId, code });
+    setCopiedRestoration(false);
+  };
+
+  // Members who don't already have a profile linked to them — these are the
+  // people it makes sense to pre-link an invite code to.
+  const unlinkedMembers = data.members.filter(
+    m => !data.profiles.some(p => p.memberId === m.id)
+  );
 
   const TABS: { key: AdminTab; label: string; icon: LucideIcon }[] = [
     { key: 'users', label: 'User Management', icon: Users },
+    { key: 'family', label: 'Family Profile', icon: ScrollText },
     { key: 'templates', label: 'Tree Templates', icon: TreePine },
     { key: 'onboarding', label: 'Onboarding Wizard', icon: Wand2 },
     { key: 'audit', label: 'Activity Log', icon: History },
@@ -47,9 +80,9 @@ export const Admin: React.FC = () => {
 
   const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    generateInvitationCode(inviteRole as Exclude<Role, 'super_admin'>);
+    generateInvitationCode(inviteRole as Exclude<Role, 'super_admin'>, inviteMemberId || undefined);
     setCopiedCode(null);
-    setInviteRole('family_member'); setShowInviteForm(false);
+    setInviteRole('family_member'); setInviteMemberId(''); setShowInviteForm(false);
   };
 
   const latestCode = data.invitationCodes[data.invitationCodes.length - 1];
@@ -82,6 +115,7 @@ export const Admin: React.FC = () => {
             <form onSubmit={submitInvite} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 space-y-3">
               <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
                 Generate a code and share it with the relative you're inviting — they'll enter it when creating their account, which sets their role automatically.
+                Optionally link it to their profile in the tree so their account connects straight to the right person.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 items-end">
                 <div>
@@ -90,6 +124,15 @@ export const Admin: React.FC = () => {
                     <option value="family_admin">Family Admin</option>
                     <option value="family_member">Family Member</option>
                     <option value="guest">Guest</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Link to profile (optional)</label>
+                  <select value={inviteMemberId} onChange={e => setInviteMemberId(e.target.value)} className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm">
+                    <option value="">No specific person</option>
+                    {unlinkedMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -102,7 +145,13 @@ export const Admin: React.FC = () => {
 
           {latestCode && (
             <div className="flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
-              <p className="text-sm text-heritage-gold-800">Invitation code: <span className="font-mono font-semibold">{latestCode.code}</span></p>
+              <p className="text-sm text-heritage-gold-800">
+                Invitation code: <span className="font-mono font-semibold">{latestCode.code}</span>
+                {latestCode.memberId && (() => {
+                  const linked = data.members.find(m => m.id === latestCode.memberId);
+                  return linked ? <span className="text-heritage-gold-700"> — linked to {linked.firstName} {linked.lastName}</span> : null;
+                })()}
+              </p>
               <button
                 onClick={() => { navigator.clipboard?.writeText(latestCode.code); setCopiedCode(latestCode.code); }}
                 className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900"
@@ -119,14 +168,29 @@ export const Admin: React.FC = () => {
                 <tr className="text-left text-xs text-heritage-green-500 dark:text-heritage-dark-muted border-b border-heritage-cream-300 dark:border-heritage-dark-border">
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Email</th>
+                  <th className="px-4 py-2.5 font-medium hidden md:table-cell">Linked person</th>
                   <th className="px-4 py-2.5 font-medium">Role</th>
+                  <th className="px-4 py-2.5 font-medium">Password</th>
                 </tr>
               </thead>
               <tbody>
-                {data.profiles.map(p => (
+                {data.profiles.map(p => {
+                  return (
                   <tr key={p.id} className="border-b last:border-0 border-heritage-cream-200 dark:border-heritage-dark-border">
                     <td className="px-4 py-2.5 font-medium text-heritage-green-900 dark:text-heritage-dark-text">{p.displayName}</td>
                     <td className="px-4 py-2.5 text-heritage-green-600 dark:text-heritage-dark-muted hidden sm:table-cell">{p.email ?? '—'}</td>
+                    <td className="px-4 py-2.5 hidden md:table-cell">
+                      <select
+                        value={p.memberId ?? ''}
+                        onChange={e => updateProfileMemberId(p.id, e.target.value || null)}
+                        className="text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 max-w-[160px]"
+                      >
+                        <option value="">— Not linked —</option>
+                        {data.members.map(m => (
+                          <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-4 py-2.5">
                       <select
                         value={p.role}
@@ -136,10 +200,99 @@ export const Admin: React.FC = () => {
                         {(Object.keys(ROLE_LABEL) as Role[]).map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                       </select>
                     </td>
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => handleGenerateRestoration(p.id)}
+                        disabled={!p.email}
+                        title={p.email ? 'Generate a one-time restoration code' : 'This profile has no email on file'}
+                        className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <KeyRound size={13} /> Restoration code
+                      </button>
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+
+          <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5">
+            <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text flex items-center gap-1.5">
+              <KeyRound size={15} className="text-heritage-gold-600" /> If someone forgets their password
+            </p>
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2 leading-relaxed">
+              There's no "Reset your own password" self-service flow — instead, a Family Admin or Super Admin
+              clicks <span className="font-medium">Restoration code</span> next to that person's name above.
+              That mints a single-use, six-character code tied to their account. Share the code with them
+              however you'd normally reach them (phone call, text, in person — not email, since email may be
+              the very thing they're locked out of). They then go to the login screen, choose{' '}
+              <span className="font-medium">"Have a restoration code?"</span>, enter their email, the code, and
+              a brand-new password. The code is consumed the moment it's redeemed, so a fresh one is needed
+              each time someone gets locked out.
+            </p>
+            {restorationFor && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
+                <p className="text-sm text-heritage-gold-800">
+                  Restoration code for <span className="font-medium">{data.profiles.find(p => p.id === restorationFor.profileId)?.displayName}</span>:{' '}
+                  <span className="font-mono font-semibold tracking-wider">{restorationFor.code}</span>
+                </p>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(restorationFor.code); setCopiedRestoration(true); }}
+                  className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900 shrink-0"
+                >
+                  {copiedRestoration ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedRestoration ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'family' && (
+        <div className="max-w-xl rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-6 space-y-4">
+          <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
+            This is what shows on the Dashboard, the Chronicle, and the sidebar for everyone in the family.
+          </p>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Family name *</label>
+            <input
+              required
+              value={familyName}
+              onChange={e => setFamilyName(e.target.value)}
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Motto</label>
+            <input
+              value={familyMotto}
+              onChange={e => setFamilyMotto(e.target.value)}
+              placeholder="A short line shown under the family name"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Origin story</label>
+            <textarea
+              rows={4}
+              value={familyOrigin}
+              onChange={e => setFamilyOrigin(e.target.value)}
+              placeholder="A few sentences about where the family comes from"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={!familyDirty || !familyName.trim()}
+              onClick={handleSaveFamilyDetails}
+              className="px-4 py-2 text-sm rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium"
+            >
+              Save changes
+            </button>
+            {familySaved && <span className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted flex items-center gap-1"><Check size={13} /> Saved</span>}
           </div>
         </div>
       )}

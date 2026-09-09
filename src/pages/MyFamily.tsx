@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TreePine, UserCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
-  getLineage, getGrandparents, getGrandchildren, fullName, lifespan,
+  getLineage, getGrandparents, getGrandchildren, getOtherDescendants, fullName, lifespan,
 } from '../lib/lineage';
 import type { Member } from '../types';
 
@@ -55,7 +55,8 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
     const grandchildren = getGrandchildren(anchor.id, data.relationships)
       .map(id => data.members.find(m => m.id === id))
       .filter((m): m is Member => Boolean(m));
-    return { ...lineage, grandparents, grandchildren };
+    const otherDescendants = getOtherDescendants(anchor.id, data.members, data.relationships);
+    return { ...lineage, grandparents, grandchildren, otherDescendants };
   }, [anchor, data.members, data.relationships]);
 
   return (
@@ -64,7 +65,7 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
         <div>
           <h1 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text">My Family</h1>
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-0.5">
-            A close-up view of one person's immediate circle — grandparents through grandchildren.
+            A close-up view of one person's family circle — grandparents through every generation of descendants.
           </p>
         </div>
         {anchor && (
@@ -116,6 +117,7 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
           <Row title="Siblings" people={circle.siblings} onSelectMember={onSelectMember} />
           <Row title="Children" people={circle.children} onSelectMember={onSelectMember} />
           <Row title="Grandchildren" people={circle.grandchildren} onSelectMember={onSelectMember} />
+          <Row title="Other Descendants" people={circle.otherDescendants} onSelectMember={onSelectMember} />
         </div>
       )}
     </div>
