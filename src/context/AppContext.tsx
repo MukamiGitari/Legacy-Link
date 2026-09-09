@@ -640,8 +640,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const user = signInData.user;
       if (!user) return { ok: false, error: 'Sign-in did not return a session. Please try again.' };
       try {
-        const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) return { ok: false, error: 'No family profile is linked to this account yet.' };
+        let profile = await db.fetchProfileByUserId(user.id);
+        if (!profile) {
+          const rawName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Family Member';
+          const familyId = newId();
+          await db.createFamily(familyId, `${rawName}'s Family`);
+          await db.createProfile({
+            id: user.id,
+            familyId,
+            displayName: rawName,
+            email: user.email,
+            role: 'family_admin',
+          });
+          profile = await db.fetchProfileByUserId(user.id);
+        }
+        if (!profile) return { ok: false, error: 'Could not link family profile. Please try again.' };
         const dataset = await db.fetchFamilyDataset(profile.familyId);
         setData(dataset);
         setCurrentProfileId(profile.id);
