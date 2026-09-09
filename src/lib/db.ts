@@ -12,7 +12,6 @@ import { supabase } from './supabase';
 import type {
   FamilyDataset, Family, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, InvitationCode, AuditLogEntry,
-  Biography, LegacyContribution, LanguageEntry, RestorationCode,
 } from '../types';
 
 function must() {
@@ -78,39 +77,6 @@ const mapChronicleEra = (r: any): ChronicleEra => ({
   headline: r.headline, narrative: r.narrative ?? undefined, photoUrl: r.photo_url ?? undefined,
 });
 
-const mapBiography = (r: any): Biography => ({
-  id: r.id, familyId: r.family_id, memberId: r.member_id,
-  atAGlance: r.at_a_glance ?? undefined,
-  earlyLifeFamily: r.early_life_family ?? undefined,
-  youngAdulthood: r.young_adulthood ?? undefined,
-  marriageFamilyLife: r.marriage_family_life ?? undefined,
-  workAchievementsPassions: r.work_achievements_passions ?? undefined,
-  storiesMemoriesTitle: r.stories_memories_title ?? undefined,
-  storiesMemories: r.stories_memories ?? undefined,
-  laterYears: r.later_years ?? undefined,
-  legacy: r.legacy ?? undefined,
-  updatedAt: r.updated_at,
-  updatedByProfileId: r.updated_by_profile_id ?? undefined,
-});
-
-const mapLegacyContribution = (r: any, tagsByContribution: Map<string, string[]>): LegacyContribution => ({
-  id: r.id, familyId: r.family_id, memberId: r.member_id,
-  authorProfileId: r.author_profile_id ?? undefined, authorName: r.author_name,
-  body: r.body, taggedMemberIds: tagsByContribution.get(r.id) ?? [], createdAt: r.created_at,
-});
-
-const mapLanguageEntry = (r: any): LanguageEntry => ({
-  id: r.id, familyId: r.family_id, entryType: r.entry_type, term: r.term, meaning: r.meaning,
-  answer: r.answer ?? undefined, saidByMemberId: r.said_by_member_id ?? undefined,
-  contributedByProfileId: r.contributed_by_profile_id ?? undefined,
-  contributedByName: r.contributed_by_name, createdAt: r.created_at,
-});
-
-const mapRestorationCode = (r: any): RestorationCode => ({
-  id: r.id, familyId: r.family_id, profileId: r.profile_id, code: r.code,
-  createdAt: r.created_at, redeemedAt: r.redeemed_at ?? undefined,
-});
-
 const mapProfile = (r: any): Profile => ({
   id: r.id, familyId: r.family_id, memberId: r.member_id ?? undefined,
   displayName: r.display_name, email: r.email ?? undefined, avatarUrl: r.avatar_url ?? undefined,
@@ -138,9 +104,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
 
   const [
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
-    memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
-    biosRes, legacyRes, legacyTagsRes, languageRes,
-    profilesRes, invitesRes, auditRes,
+    memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes, profilesRes, invitesRes, auditRes,
   ] = await Promise.all([
     db.from('families').select('*').eq('id', familyId).single(),
     db.from('members').select('*').eq('family_id', familyId),
@@ -153,10 +117,6 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     db.from('event_rsvps').select('event_id, member_id, status'),
     db.from('announcements').select('*').eq('family_id', familyId).order('created_at', { ascending: false }),
     db.from('chronicle_eras').select('*').eq('family_id', familyId).order('sort_order', { ascending: true }),
-    db.from('biographies').select('*').eq('family_id', familyId),
-    db.from('legacy_contributions').select('*').eq('family_id', familyId).order('created_at', { ascending: false }),
-    db.from('legacy_contribution_tags').select('contribution_id, member_id'),
-    db.from('language_entries').select('*').eq('family_id', familyId).order('created_at', { ascending: false }),
     db.from('profiles').select('*').eq('family_id', familyId),
     db.from('invitation_codes').select('*').eq('family_id', familyId),
     db.from('audit_log').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).limit(200),
@@ -164,9 +124,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
 
   const firstError = [
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
-    memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
-    biosRes, legacyRes, legacyTagsRes, languageRes,
-    profilesRes, invitesRes, auditRes,
+    memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes, profilesRes, invitesRes, auditRes,
   ].find(r => r.error)?.error;
   if (firstError) throw firstError;
 
@@ -185,13 +143,6 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     rsvpsByEvent.set(r.event_id, list);
   }
 
-  const tagsByContribution = new Map<string, string[]>();
-  for (const t of legacyTagsRes.data ?? []) {
-    const list = tagsByContribution.get(t.contribution_id) ?? [];
-    list.push(t.member_id);
-    tagsByContribution.set(t.contribution_id, list);
-  }
-
   const profiles = (profilesRes.data ?? []).map(mapProfile);
   const actorNameById = new Map(profiles.map(p => [p.id, p.displayName]));
 
@@ -205,16 +156,8 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     events: (eventsRes.data ?? []).map(r => mapEvent(r, rsvpsByEvent)),
     announcements: (announceRes.data ?? []).map(mapAnnouncement),
     chronicleEras: (eraRes.data ?? []).map(mapChronicleEra),
-    biographies: (biosRes.data ?? []).map(mapBiography),
-    legacyContributions: (legacyRes.data ?? []).map(r => mapLegacyContribution(r, tagsByContribution)),
-    languageEntries: (languageRes.data ?? []).map(mapLanguageEntry),
     profiles,
     invitationCodes: (invitesRes.data ?? []).map(mapInvitationCode),
-    // Restoration codes and notifications are sensitive/per-user, so they aren't bulk-fetched
-    // here with the rest of the family dataset — they're managed directly through the
-    // insert/redeem functions below and kept in local state once created.
-    restorationCodes: [],
-    notifications: [],
     auditLog: (auditRes.data ?? []).map(r => mapAuditLog(r, actorNameById)),
   };
 }
@@ -241,9 +184,9 @@ export async function fetchInvitationByCode(code: string): Promise<InvitationCod
 
 export async function createFamily(id: string, name: string): Promise<Family> {
   const db = must();
-  const { error } = await db.from('families').insert({ id, name });
+  const { data, error } = await db.from('families').insert({ id, name }).select().single();
   if (error) throw error;
-  return { id, name, activeTreeTemplate: 'classic' };
+  return mapFamily(data);
 }
 
 export async function updateFamilyTemplate(familyId: string, template: string) {
@@ -252,11 +195,11 @@ export async function updateFamilyTemplate(familyId: string, template: string) {
 }
 
 export async function createProfile(p: {
-  id: string; familyId: string; memberId?: string; displayName: string; email?: string; avatarUrl?: string; role: string;
+  id: string; familyId: string; memberId?: string; displayName: string; email?: string; role: string;
 }) {
   const { error } = await must().from('profiles').insert({
     id: p.id, family_id: p.familyId, member_id: p.memberId ?? null,
-    display_name: p.displayName, email: p.email ?? null, avatar_url: p.avatarUrl ?? null, role: p.role,
+    display_name: p.displayName, email: p.email ?? null, role: p.role,
   });
   if (error) throw error;
 }
@@ -326,55 +269,6 @@ export async function insertAlbum(a: Album) {
   if (error) throw error;
 }
 
-const PHOTO_BUCKET = 'family-photos';
-
-/** Uploads a photo file to Supabase Storage under `<familyId>/<albumId>/<uuid>.<ext>`
- *  and returns its public URL. Storage RLS (see supabase/003_photo_storage.sql)
- *  scopes writes to members of that family and blocks the Guest role. */
-export async function uploadPhotoFile(familyId: string, albumId: string, file: File): Promise<string> {
-  const db = must();
-  const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
-  const fileName = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const path = `${familyId}/${albumId}/${fileName}.${ext}`;
-
-  const { error: uploadError } = await db.storage.from(PHOTO_BUCKET).upload(path, file, {
-    cacheControl: '3600',
-    upsert: false,
-  });
-  if (uploadError) throw uploadError;
-
-  const { data: publicUrlData } = db.storage.from(PHOTO_BUCKET).getPublicUrl(path);
-  return publicUrlData.publicUrl;
-}
-
-/** Uploads a profile photo (for a member or a login profile) to the same
- *  public bucket, under `<familyId>/avatars/<entityId>-<random>.<ext>`.
- *  `upsert: true` so re-uploading a new photo just replaces the old file. */
-export async function uploadAvatarFile(familyId: string, entityId: string, file: File): Promise<string> {
-  const db = must();
-  const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
-  const suffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID().slice(0, 8)
-    : Math.random().toString(36).slice(2, 8);
-  const path = `${familyId}/avatars/${entityId}-${suffix}.${ext}`;
-
-  const { error: uploadError } = await db.storage.from(PHOTO_BUCKET).upload(path, file, {
-    cacheControl: '3600',
-    upsert: true,
-  });
-  if (uploadError) throw uploadError;
-
-  const { data: publicUrlData } = db.storage.from(PHOTO_BUCKET).getPublicUrl(path);
-  return publicUrlData.publicUrl;
-}
-
-export async function updateProfileAvatarRow(id: string, avatarUrl: string) {
-  const { error } = await must().from('profiles').update({ avatar_url: avatarUrl }).eq('id', id);
-  if (error) throw error;
-}
-
 export async function insertPhoto(p: Photo) {
   const db = must();
   const { error } = await db.from('photos').insert({
@@ -434,46 +328,6 @@ export async function insertChronicleEra(c: ChronicleEra) {
   if (error) throw error;
 }
 
-/** Biographies are one-per-member, so writes upsert on (family_id, member_id). */
-export async function upsertBiographyRow(b: Biography) {
-  const { error } = await must().from('biographies').upsert({
-    id: b.id, family_id: b.familyId, member_id: b.memberId,
-    at_a_glance: b.atAGlance ?? null,
-    early_life_family: b.earlyLifeFamily ?? null,
-    young_adulthood: b.youngAdulthood ?? null,
-    marriage_family_life: b.marriageFamilyLife ?? null,
-    work_achievements_passions: b.workAchievementsPassions ?? null,
-    stories_memories_title: b.storiesMemoriesTitle ?? null,
-    stories_memories: b.storiesMemories ?? null,
-    later_years: b.laterYears ?? null,
-    legacy: b.legacy ?? null,
-    updated_at: b.updatedAt,
-    updated_by_profile_id: b.updatedByProfileId ?? null,
-  }, { onConflict: 'member_id' });
-  if (error) throw error;
-}
-
-export async function insertLegacyContribution(c: LegacyContribution) {
-  const db = must();
-  const { error } = await db.from('legacy_contributions').insert({
-    id: c.id, family_id: c.familyId, member_id: c.memberId,
-    author_profile_id: c.authorProfileId ?? null, author_name: c.authorName,
-    body: c.body, created_at: c.createdAt,
-  });
-  if (error) throw error;
-  if (c.taggedMemberIds.length > 0) {
-    const { error: tagErr } = await db
-      .from('legacy_contribution_tags')
-      .insert(c.taggedMemberIds.map(memberId => ({ contribution_id: c.id, member_id: memberId })));
-    if (tagErr) throw tagErr;
-  }
-}
-
-export async function deleteLegacyContributionRow(id: string) {
-  const { error } = await must().from('legacy_contributions').delete().eq('id', id);
-  if (error) throw error;
-}
-
 export async function insertInvitationCode(inv: InvitationCode) {
   const { error } = await must().from('invitation_codes').insert({
     id: inv.id, family_id: inv.familyId, code: inv.code, role: inv.role,
@@ -488,64 +342,6 @@ export async function redeemInvitationCode(id: string, redeemedByProfileId: stri
     .update({ redeemed_by: redeemedByProfileId, redeemed_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
-}
-
-export async function insertLanguageEntry(e: LanguageEntry) {
-  const { error } = await must().from('language_entries').insert({
-    id: e.id, family_id: e.familyId, entry_type: e.entryType, term: e.term, meaning: e.meaning,
-    answer: e.answer ?? null, said_by_member_id: e.saidByMemberId ?? null,
-    contributed_by_profile_id: e.contributedByProfileId ?? null,
-    contributed_by_name: e.contributedByName, created_at: e.createdAt,
-  });
-  if (error) throw error;
-}
-
-export async function deleteLanguageEntryRow(id: string) {
-  const { error } = await must().from('language_entries').delete().eq('id', id);
-  if (error) throw error;
-}
-
-export async function insertRestorationCode(r: RestorationCode) {
-  const { error } = await must().from('restoration_codes').insert({
-    id: r.id, family_id: r.familyId, profile_id: r.profileId, code: r.code, created_at: r.createdAt,
-  });
-  if (error) throw error;
-}
-
-export async function redeemRestorationCodeRow(id: string) {
-  const { error } = await must()
-    .from('restoration_codes')
-    .update({ redeemed_at: new Date().toISOString() })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-/**
- * Redeem an admin-issued restoration code and set a new password, via the
- * `redeem-restoration-code` Edge Function. This runs server-side with the
- * service role key because a logged-out, locked-out user has no session/RLS
- * access to look up their own profile or restoration code directly — the
- * restoration code itself is the one-time secret that authorizes the change,
- * the same way an emailed password-reset link would.
- */
-export async function redeemRestorationCodeViaEdgeFunction(
-  email: string,
-  code: string,
-  newPassword: string,
-): Promise<{ ok: boolean; error?: string }> {
-  const { data, error } = await must().functions.invoke('redeem-restoration-code', {
-    body: { email, code, newPassword },
-  });
-  if (error) {
-    // Edge Functions surface non-2xx responses as an error here; try to pull
-    // the JSON body's `error` message through, otherwise fall back.
-    const message = (error as { context?: { json?: () => Promise<{ error?: string }> } })?.context?.json
-      ? (await (error as { context: { json: () => Promise<{ error?: string }> } }).context.json())?.error
-      : undefined;
-    return { ok: false, error: message ?? 'Something went wrong. Please try again or contact your family admin.' };
-  }
-  if (data?.ok) return { ok: true };
-  return { ok: false, error: data?.error ?? 'Could not reset your password.' };
 }
 
 export async function insertAuditLog(entry: { familyId: string; actorId: string; action: string; entityType: string }) {

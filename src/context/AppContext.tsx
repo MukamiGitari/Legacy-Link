@@ -2,11 +2,10 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, TreeTemplate, Profile, Role, RelationshipType,
-  Biography, LegacyContribution, LanguageEntry, LanguageEntryType, AppNotification,
 } from '../types';
 import { buildSeedDataset } from '../data/seed';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { registerCredential, verifyCredential, resetCredentialPassword } from '../lib/localAuth';
+import { registerCredential, verifyCredential } from '../lib/localAuth';
 import * as db from '../lib/db';
 
 const STORAGE_KEY = 'heritage-hub-dataset-v1';
@@ -16,19 +15,7 @@ const AUTH_KEY = 'legacy-link-auth-v1';
 function loadFromStorage(): FamilyDataset {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as FamilyDataset;
-      // Backfill fields introduced after some datasets were already saved to
-      // localStorage, so older saved sessions don't crash on the new arrays.
-      return {
-        ...parsed,
-        biographies: parsed.biographies ?? [],
-        legacyContributions: parsed.legacyContributions ?? [],
-        languageEntries: parsed.languageEntries ?? [],
-        restorationCodes: parsed.restorationCodes ?? [],
-        notifications: parsed.notifications ?? [],
-      };
-    }
+    if (raw) return JSON.parse(raw) as FamilyDataset;
   } catch {
     // fall through to seed
   }
@@ -49,15 +36,16 @@ const newId = (): string =>
     ? crypto.randomUUID()
     : `id-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
 
+/** Fire a Supabase write in the background. Local state has already been updated
+ *  optimistically by the caller, so a failure here is logged rather than thrown —
+ *  surfacing a toast for every background sync error is left as a follow-up. */
+function persist(label: string, fn: () => Promise<unknown>) {
+  fn().catch(err => console.error(`[legacy-link] failed to sync "${label}" to Supabase:`, err));
+}
+
 export interface AuthResult {
   ok: boolean;
   error?: string;
-}
-
-export interface Toast {
-  id: string;
-  message: string;
-  tone: 'error' | 'success';
 }
 
 interface AppContextValue {
@@ -67,16 +55,10 @@ interface AppContextValue {
   currentProfile: Profile;
   setCurrentProfileId: (id: string) => void;
 
-  // toasts
-  toasts: Toast[];
-  pushToast: (message: string, tone?: Toast['tone']) => void;
-  dismissToast: (id: string) => void;
-
   // auth
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
-  signInWithGoogle: (inviteCode?: string) => Promise<AuthResult>;
   logout: () => void;
   continueAsDemo: () => void;
 
@@ -105,29 +87,10 @@ interface AppContextValue {
   // chronicle
   addChronicleEra: (c: Omit<ChronicleEra, 'id' | 'familyId' | 'sortOrder'>) => void;
 
-  // biography & legacy
-  saveBiography: (memberId: string, patch: Omit<Partial<Biography>, 'id' | 'familyId' | 'memberId' | 'updatedAt' | 'updatedByProfileId'>) => void;
-  addLegacyContribution: (memberId: string, body: string, taggedMemberIds: string[]) => void;
-  removeLegacyContribution: (id: string) => void;
-
-  // language dictionary
-  addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
-  removeLanguageEntry: (id: string) => void;
-
-  // notifications
-  notificationsForCurrentProfile: AppNotification[];
-  markNotificationRead: (id: string) => void;
-  markAllNotificationsRead: () => void;
-
   // admin
   addProfile: (displayName: string, email: string, role: Role, memberId?: string) => Profile;
   updateProfileRole: (id: string, role: Role) => void;
   generateInvitationCode: (role: Exclude<Role, 'super_admin'>, memberId?: string) => string;
-  generateRestorationCode: (profileId: string) => string;
-  redeemRestorationCode: (email: string, code: string, newPassword: string) => Promise<AuthResult>;
-  /** Online-only: triggers Supabase's built-in password-reset email for a profile. */
-  sendPasswordResetEmail: (email: string) => Promise<AuthResult>;
-  updateProfileAvatar: (id: string, avatarUrl: string) => void;
   logActivity: (action: string, entityType: string) => void;
 
   resetToSeed: () => void;
@@ -175,62 +138,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: sessionData } = await supabase.auth.getSession();
         const user = sessionData.session?.user;
         if (!user) return;
-        let profile = await db.fetchProfileByUserId(user.id);
-
-        // If this is a first-time OAuth sign-in (e.g. Google), the auth user exists
-        // in Supabase Auth but no profiles row was created yet. Auto-provision their profile now.
-        if (!profile) {
-          let pendingInviteCode: string | null = null;
-          try {
-            pendingInviteCode = localStorage.getItem('legacy-link-pending-invite');
-            localStorage.removeItem('legacy-link-pending-invite');
-          } catch { /* noop */ }
-
-          let invite: Awaited<ReturnType<typeof db.fetchInvitationByCode>> = null;
-          if (pendingInviteCode) {
-            try {
-              invite = await db.fetchInvitationByCode(pendingInviteCode);
-            } catch (err) {
-              console.warn('[legacy-link] failed to validate pending invite code:', err);
-            }
-          }
-
-          const rawName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Family Member';
-          const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || undefined;
-
-          let familyId: string;
-          let role: Role;
-
-          if (invite) {
-            familyId = invite.familyId;
-            role = invite.role;
-            await db.createProfile({
-              id: user.id,
-              familyId,
-              memberId: invite.memberId,
-              displayName: rawName,
-              email: user.email,
-              avatarUrl,
-              role,
-            });
-            await db.redeemInvitationCode(invite.id, user.id);
-          } else {
-            familyId = newId();
-            role = 'family_admin';
-            await db.createFamily(familyId, `${rawName}'s Family`);
-            await db.createProfile({
-              id: user.id,
-              familyId,
-              displayName: rawName,
-              email: user.email,
-              avatarUrl,
-              role,
-            });
-          }
-
-          profile = await db.fetchProfileByUserId(user.id);
-        }
-
+        const profile = await db.fetchProfileByUserId(user.id);
         if (!profile) { await supabase.auth.signOut(); return; }
         const dataset = await db.fetchFamilyDataset(profile.familyId);
         setData(dataset);
@@ -251,28 +159,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const isOnlineMode = isSupabaseConfigured && !isDemoOrLocal;
-
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  const pushToast = useCallback((message: string, tone: Toast['tone'] = 'error') => {
-    const id = newId();
-    setToasts(prev => [...prev, { id, message, tone }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000);
-  }, []);
-
-  /** Fire a Supabase write in the background. Local state has already been updated
-   *  optimistically by the caller, so a failure here doesn't roll anything back —
-   *  but it does surface a toast so the person knows the change may not have synced. */
-  const persist = useCallback((label: string, fn: () => Promise<unknown>) => {
-    fn().catch(err => {
-      console.error(`[legacy-link] failed to sync "${label}" to Supabase:`, err);
-      pushToast(`Couldn't save "${label}" to the server. It's showing locally, but try again or refresh to confirm it synced.`);
-    });
-  }, [pushToast]);
 
   const logActivity = useCallback((action: string, entityType: string) => {
     setData(prev => ({
@@ -345,45 +231,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return album;
   };
 
-  /** Creates an in-app notification for every tagged member who has a login profile
-   *  linked to them (skipping the person who did the tagging, if they tagged themselves). */
-  const notifyTaggedMembers = useCallback((
-    taggedMemberIds: string[],
-    kind: AppNotification['kind'],
-    messageFor: (memberName: string) => string
-  ) => {
-    if (taggedMemberIds.length === 0) return;
-    setData(prev => {
-      const newNotifications: AppNotification[] = [];
-      for (const memberId of taggedMemberIds) {
-        const recipientProfile = prev.profiles.find(p => p.memberId === memberId);
-        if (!recipientProfile || recipientProfile.id === currentProfile?.id) continue;
-        const member = prev.members.find(m => m.id === memberId);
-        newNotifications.push({
-          id: newId(),
-          familyId: prev.family.id,
-          profileId: recipientProfile.id,
-          kind,
-          message: messageFor(member ? `${member.firstName} ${member.lastName}` : 'you'),
-          relatedMemberId: memberId,
-          createdAt: new Date().toISOString(),
-        });
-      }
-      if (newNotifications.length === 0) return prev;
-      return { ...prev, notifications: [...newNotifications, ...prev.notifications] };
-    });
-  }, [currentProfile]);
-
   const addPhoto: AppContextValue['addPhoto'] = (p) => {
     const photo: Photo = { ...p, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, photos: [...prev.photos, photo] }));
     if (isOnlineMode) persist('add photo', () => db.insertPhoto(photo));
     logActivity(`Uploaded a photo`, 'photo');
-    notifyTaggedMembers(
-      photo.taggedMemberIds,
-      'photo_tag',
-      () => `${currentProfile?.displayName ?? 'Someone'} tagged you in a photo.`
-    );
     return photo;
   };
 
@@ -428,107 +280,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Added chronicle era "${era.eraLabel}"`, 'chronicle_era');
   };
 
-  const saveBiography: AppContextValue['saveBiography'] = (memberId, patch) => {
-    const existing = data.biographies.find(b => b.memberId === memberId);
-    const biography: Biography = {
-      id: existing?.id ?? newId(),
-      familyId: data.family.id,
-      memberId,
-      atAGlance: existing?.atAGlance,
-      earlyLifeFamily: existing?.earlyLifeFamily,
-      youngAdulthood: existing?.youngAdulthood,
-      marriageFamilyLife: existing?.marriageFamilyLife,
-      workAchievementsPassions: existing?.workAchievementsPassions,
-      storiesMemoriesTitle: existing?.storiesMemoriesTitle,
-      storiesMemories: existing?.storiesMemories,
-      laterYears: existing?.laterYears,
-      legacy: existing?.legacy,
-      ...patch,
-      updatedAt: new Date().toISOString(),
-      updatedByProfileId: currentProfile?.id,
-    };
-    setData(prev => ({
-      ...prev,
-      biographies: existing
-        ? prev.biographies.map(b => (b.memberId === memberId ? biography : b))
-        : [...prev.biographies, biography],
-    }));
-    if (isOnlineMode) persist('biography', () => db.upsertBiographyRow(biography));
-    logActivity(`Updated a family biography`, 'biography');
-  };
-
-  const addLegacyContribution: AppContextValue['addLegacyContribution'] = (memberId, body, taggedMemberIds) => {
-    const contribution: LegacyContribution = {
-      id: newId(),
-      familyId: data.family.id,
-      memberId,
-      authorProfileId: currentProfile?.id,
-      authorName: currentProfile?.displayName ?? 'A family member',
-      body,
-      taggedMemberIds,
-      createdAt: new Date().toISOString(),
-    };
-    setData(prev => ({ ...prev, legacyContributions: [contribution, ...prev.legacyContributions] }));
-    if (isOnlineMode) persist('legacy memory', () => db.insertLegacyContribution(contribution));
-    logActivity(`Shared a legacy memory`, 'legacy_contribution');
-    notifyTaggedMembers(
-      taggedMemberIds,
-      'legacy_tag',
-      () => `${currentProfile?.displayName ?? 'Someone'} tagged you in a legacy memory.`
-    );
-  };
-
-  const removeLegacyContribution: AppContextValue['removeLegacyContribution'] = (id) => {
-    setData(prev => ({ ...prev, legacyContributions: prev.legacyContributions.filter(c => c.id !== id) }));
-    if (isOnlineMode) persist('remove legacy memory', () => db.deleteLegacyContributionRow(id));
-    logActivity(`Removed a legacy memory`, 'legacy_contribution');
-  };
-
-  const addLanguageEntry: AppContextValue['addLanguageEntry'] = ({ entryType, term, meaning, answer, saidByMemberId }) => {
-    const entry: LanguageEntry = {
-      id: newId(),
-      familyId: data.family.id,
-      entryType,
-      term,
-      meaning,
-      answer,
-      saidByMemberId,
-      contributedByProfileId: currentProfile?.id,
-      contributedByName: currentProfile?.displayName ?? 'A family member',
-      createdAt: new Date().toISOString(),
-    };
-    setData(prev => ({ ...prev, languageEntries: [entry, ...prev.languageEntries] }));
-    if (isOnlineMode) persist('language entry', () => db.insertLanguageEntry(entry));
-    logActivity(`Added a ${entryType} to the family language dictionary`, 'language_entry');
-  };
-
-  const removeLanguageEntry: AppContextValue['removeLanguageEntry'] = (id) => {
-    setData(prev => ({ ...prev, languageEntries: prev.languageEntries.filter(e => e.id !== id) }));
-    if (isOnlineMode) persist('remove language entry', () => db.deleteLanguageEntryRow(id));
-    logActivity(`Removed a language dictionary entry`, 'language_entry');
-  };
-
-  const notificationsForCurrentProfile = useMemo(
-    () => data.notifications.filter(n => n.profileId === currentProfile?.id)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [data.notifications, currentProfile]
-  );
-
-  const markNotificationRead: AppContextValue['markNotificationRead'] = (id) => {
-    setData(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => (n.id === id && !n.readAt ? { ...n, readAt: new Date().toISOString() } : n)),
-    }));
-  };
-
-  const markAllNotificationsRead: AppContextValue['markAllNotificationsRead'] = () => {
-    const now = new Date().toISOString();
-    setData(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => (n.profileId === currentProfile?.id && !n.readAt ? { ...n, readAt: now } : n)),
-    }));
-  };
-
   const addProfile: AppContextValue['addProfile'] = (displayName, email, role, memberId) => {
     const profile: Profile = { id: newId(), familyId: data.family.id, displayName, email, role, memberId };
     setData(prev => ({ ...prev, profiles: [...prev.profiles, profile] }));
@@ -542,11 +293,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Changed a member's role to ${role.replace('_', ' ')}`, 'profile');
   };
 
-  const updateProfileAvatar: AppContextValue['updateProfileAvatar'] = (id, avatarUrl) => {
-    setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, avatarUrl } : p)) }));
-    if (isOnlineMode) persist('update profile photo', () => db.updateProfileAvatarRow(id, avatarUrl));
-  };
-
   const generateInvitationCode: AppContextValue['generateInvitationCode'] = (role, memberId) => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const invite = { id: newId(), familyId: data.family.id, code, role, memberId, createdAt: new Date().toISOString() };
@@ -554,75 +300,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isOnlineMode) persist('invitation code', () => db.insertInvitationCode(invite));
     logActivity(`Generated an invitation code`, 'invitation');
     return code;
-  };
-
-  /** Admin action: mint a one-time restoration code for a profile that's locked out.
-   *  The admin shares this code with the person out-of-band (call, message, in person);
-   *  they redeem it on the login screen to set a brand-new password. */
-  const generateRestorationCode: AppContextValue['generateRestorationCode'] = (profileId) => {
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const restoration = { id: newId(), familyId: data.family.id, profileId, code, createdAt: new Date().toISOString() };
-    setData(prev => ({ ...prev, restorationCodes: [...prev.restorationCodes, restoration] }));
-    if (isOnlineMode) persist('restoration code', () => db.insertRestorationCode(restoration));
-    const target = data.profiles.find(p => p.id === profileId);
-    logActivity(`Generated a password restoration code for ${target?.displayName ?? 'a member'}`, 'restoration_code');
-    return code;
-  };
-
-  /** Person-facing action from the "Forgot password?" flow on the login screen:
-   *  redeem an admin-issued restoration code for their email and set a new password. */
-  const redeemRestorationCode: AppContextValue['redeemRestorationCode'] = async (email, code, newPassword) => {
-    if (!email.trim() || !code.trim() || !newPassword) {
-      return { ok: false, error: 'Enter your email, the restoration code, and a new password.' };
-    }
-    if (newPassword.length < 6) return { ok: false, error: 'New password must be at least 6 characters.' };
-
-    // Online mode: the local dataset doesn't hold other members' restoration
-    // codes (they're per-user and not bulk-fetched), and only the server can
-    // actually change a Supabase Auth password. Delegate to the Edge Function,
-    // which validates the code and updates the password with the service role.
-    if (isOnlineMode) {
-      return db.redeemRestorationCodeViaEdgeFunction(email.trim(), code.trim(), newPassword);
-    }
-
-    const profile = data.profiles.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
-    if (!profile) return { ok: false, error: "That email doesn't match an account." };
-
-    const match = data.restorationCodes.find(
-      r => r.profileId === profile.id && r.code === code.trim().toUpperCase() && !r.redeemedAt
-    );
-    if (!match) return { ok: false, error: 'That restoration code is invalid, expired, or already used. Ask your family admin for a new one.' };
-
-    const reset = resetCredentialPassword(email.trim(), newPassword);
-    if (!reset) registerCredential(email.trim(), newPassword, profile.id);
-
-    setData(prev => ({
-      ...prev,
-      restorationCodes: prev.restorationCodes.map(r => (r.id === match.id ? { ...r, redeemedAt: new Date().toISOString() } : r)),
-      auditLog: [
-        { id: newId(), familyId: prev.family.id, actorName: profile.displayName, action: 'Reset their password using a restoration code', entityType: 'restoration_code', createdAt: new Date().toISOString() },
-        ...prev.auditLog,
-      ].slice(0, 200),
-    }));
-
-    return { ok: true };
-  };
-
-  /** Online-only: trigger Supabase's built-in password-reset email.
-   *  The email contains a magic link that opens the app and lets the user
-   *  set a new password. Configure Redirect URLs in Supabase Dashboard →
-   *  Authentication → URL Configuration to point at your deployed app. */
-  const sendPasswordResetEmail: AppContextValue['sendPasswordResetEmail'] = async (email) => {
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: 'Email reset is only available in online mode.' };
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      // redirectTo must match a URL allowed in your Supabase project's
-      // "Redirect URLs" list (Dashboard → Authentication → URL Configuration).
-      redirectTo: `${window.location.origin}/`,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
   };
 
   const resetToSeed = () => {
@@ -640,21 +317,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const user = signInData.user;
       if (!user) return { ok: false, error: 'Sign-in did not return a session. Please try again.' };
       try {
-        let profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) {
-          const rawName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Family Member';
-          const familyId = newId();
-          await db.createFamily(familyId, `${rawName}'s Family`);
-          await db.createProfile({
-            id: user.id,
-            familyId,
-            displayName: rawName,
-            email: user.email,
-            role: 'family_admin',
-          });
-          profile = await db.fetchProfileByUserId(user.id);
-        }
-        if (!profile) return { ok: false, error: 'Could not link family profile. Please try again.' };
+        const profile = await db.fetchProfileByUserId(user.id);
+        if (!profile) return { ok: false, error: 'No family profile is linked to this account yet.' };
         const dataset = await db.fetchFamilyDataset(profile.familyId);
         setData(dataset);
         setCurrentProfileId(profile.id);
@@ -716,10 +380,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
         return { ok: true };
-      } catch (err: any) {
-        console.error('[legacy-link] sign-up error:', err);
-        const message = err?.message || err?.error_description || (typeof err === 'string' ? err : 'Sign-up failed. Please try again.');
-        return { ok: false, error: message };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed. Please try again.' };
       }
     }
 
@@ -754,25 +416,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async (inviteCode) => {
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: 'Google sign-in requires Supabase online mode.' };
-    }
-    if (inviteCode?.trim()) {
-      try {
-        localStorage.setItem('legacy-link-pending-invite', inviteCode.trim().toUpperCase());
-      } catch { /* noop */ }
-    }
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  };
-
   const logout = () => {
     setIsAuthenticated(false);
     if (isSupabaseConfigured && supabase) void supabase.auth.signOut();
@@ -792,19 +435,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isLoading,
     currentProfile,
     setCurrentProfileId,
-    toasts, pushToast, dismissToast,
-    isAuthenticated, login, signup, signInWithGoogle, logout, continueAsDemo,
+    isAuthenticated, login, signup, logout, continueAsDemo,
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
     addAlbum, addPhoto,
     addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
-    saveBiography, addLegacyContribution, removeLegacyContribution,
-    addLanguageEntry, removeLanguageEntry,
-    notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
-    addProfile, updateProfileRole, generateInvitationCode,
-    generateRestorationCode, redeemRestorationCode, sendPasswordResetEmail, logActivity,
-    updateProfileAvatar,
+    addProfile, updateProfileRole, generateInvitationCode, logActivity,
     resetToSeed,
   };
 

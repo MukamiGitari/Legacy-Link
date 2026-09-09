@@ -3,6 +3,7 @@ import { X, User, UploadCloud, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Gender } from '../../types';
 import { canDelete } from '../../lib/permissions';
+import { getParents, getSpouses } from '../../lib/lineage';
 import * as db from '../../lib/db';
 
 const AVATAR_PRESETS = ['aria', 'kaari', 'kanyoro', 'kiogora', 'mworia', 'kaburu', 'kathurima', 'kobia']
@@ -17,6 +18,9 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const { data, addMember, updateMember, removeMember, addRelationship, removeRelationshipsForMember, currentProfile, isOnlineMode, pushToast } = useApp();
   const canRemove = canDelete(currentProfile?.role);
   const existing = memberId ? data.members.find(m => m.id === memberId) : null;
+
+  const existingParents = existing ? getParents(existing.id, data.relationships) : [];
+  const existingSpouses = existing ? getSpouses(existing.id, data.relationships) : [];
 
   const [firstName, setFirstName] = useState(existing?.firstName ?? '');
   const [lastName, setLastName] = useState(existing?.lastName ?? '');
@@ -34,8 +38,20 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
 
-  const [parentId, setParentId] = useState('');
-  const [spouseId, setSpouseId] = useState('');
+  const [parent1Id, setParent1Id] = useState(existingParents[0] ?? '');
+  const [parent2Id, setParent2Id] = useState(existingParents[1] ?? '');
+  const [spouseId, setSpouseId] = useState(existingSpouses[0] ?? '');
+
+  const handleParent1Change = (newParent1Id: string) => {
+    setParent1Id(newParent1Id);
+    // If the selected parent has a spouse, auto-fill Parent 2 if empty
+    if (newParent1Id && !parent2Id) {
+      const spouseOfParent = getSpouses(newParent1Id, data.relationships)[0];
+      if (spouseOfParent && spouseOfParent !== newParent1Id) {
+        setParent2Id(spouseOfParent);
+      }
+    }
+  };
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -65,13 +81,21 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
     let savedId: string;
     if (existing) {
       updateMember(existing.id, payload);
-      if (parentId) addRelationship(parentId, existing.id, 'parent');
-      if (spouseId) addRelationship(existing.id, spouseId, 'spouse');
+      if (parent1Id) addRelationship(parent1Id, existing.id, 'parent');
+      if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, existing.id, 'parent');
+      if (spouseId) {
+        addRelationship(existing.id, spouseId, 'spouse');
+        addRelationship(spouseId, existing.id, 'spouse');
+      }
       savedId = existing.id;
     } else {
       const created = addMember(payload);
-      if (parentId) addRelationship(parentId, created.id, 'parent');
-      if (spouseId) addRelationship(created.id, spouseId, 'spouse');
+      if (parent1Id) addRelationship(parent1Id, created.id, 'parent');
+      if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, created.id, 'parent');
+      if (spouseId) {
+        addRelationship(created.id, spouseId, 'spouse');
+        addRelationship(spouseId, created.id, 'spouse');
+      }
       savedId = created.id;
     }
 
@@ -211,16 +235,23 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
             </div>
           </div>
 
-          <div className="border-t border-heritage-cream-300 dark:border-heritage-dark-border pt-4 grid grid-cols-2 gap-4">
+          <div className="border-t border-heritage-cream-300 dark:border-heritage-dark-border pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className={labelCls}>Link a parent</label>
-              <select className={inputCls} value={parentId} onChange={e => setParentId(e.target.value)}>
+              <label className={labelCls}>Parent 1 (e.g. Father)</label>
+              <select className={inputCls} value={parent1Id} onChange={e => handleParent1Change(e.target.value)}>
                 <option value="">— None —</option>
                 {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Link a spouse</label>
+              <label className={labelCls}>Parent 2 (e.g. Mother)</label>
+              <select className={inputCls} value={parent2Id} onChange={e => setParent2Id(e.target.value)}>
+                <option value="">— None —</option>
+                {otherMembers.filter(m => m.id !== parent1Id).map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Spouse / Partner</label>
               <select className={inputCls} value={spouseId} onChange={e => setSpouseId(e.target.value)}>
                 <option value="">— None —</option>
                 {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}

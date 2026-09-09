@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, Mail, type LucideIcon } from 'lucide-react';
+import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, type LucideIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { TreeTemplateSwitcher } from '../components/trees/TreeTemplateSwitcher';
 import type { Role, TreeTemplate } from '../types';
@@ -25,49 +25,13 @@ const ONBOARDING_STEPS = [
 ];
 
 export const Admin: React.FC = () => {
-  const {
-    data, isOnlineMode, pushToast,
-    setActiveTreeTemplate, updateProfileRole, generateInvitationCode,
-    generateRestorationCode, sendPasswordResetEmail, resetToSeed,
-  } = useApp();
+  const { data, setActiveTreeTemplate, updateProfileRole, generateInvitationCode, resetToSeed } = useApp();
   const [tab, setTab] = useState<AdminTab>('users');
   const [pendingTemplate, setPendingTemplate] = useState<TreeTemplate | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteRole, setInviteRole] = useState<Role>('family_member');
-  const [inviteMemberId, setInviteMemberId] = useState<string>('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [restorationFor, setRestorationFor] = useState<{ profileId: string; code: string } | null>(null);
-  const [copiedRestoration, setCopiedRestoration] = useState(false);
-  // email reset: track which profile has an in-flight request
-  const [emailResetLoadingId, setEmailResetLoadingId] = useState<string | null>(null);
-  const [emailResetSentId, setEmailResetSentId] = useState<string | null>(null);
-
-  const handleGenerateRestoration = (profileId: string) => {
-    const code = generateRestorationCode(profileId);
-    setRestorationFor({ profileId, code });
-    setCopiedRestoration(false);
-  };
-
-  const handleSendResetEmail = async (profileId: string, email: string) => {
-    setEmailResetLoadingId(profileId);
-    const result = await sendPasswordResetEmail(email);
-    setEmailResetLoadingId(null);
-    if (!result.ok) {
-      pushToast(result.error ?? 'Could not send reset email.', 'error');
-    } else {
-      setEmailResetSentId(profileId);
-      pushToast(`Password reset email sent to ${email}.`, 'success');
-      // Clear the "sent" indicator after 8 s so it can be triggered again
-      setTimeout(() => setEmailResetSentId(id => (id === profileId ? null : id)), 8000);
-    }
-  };
-
-  // Members who don't already have a profile linked to them — these are the
-  // people it makes sense to pre-link an invite code to.
-  const unlinkedMembers = data.members.filter(
-    m => !data.profiles.some(p => p.memberId === m.id)
-  );
 
   const TABS: { key: AdminTab; label: string; icon: LucideIcon }[] = [
     { key: 'users', label: 'User Management', icon: Users },
@@ -83,9 +47,9 @@ export const Admin: React.FC = () => {
 
   const submitInvite = (e: React.FormEvent) => {
     e.preventDefault();
-    generateInvitationCode(inviteRole as Exclude<Role, 'super_admin'>, inviteMemberId || undefined);
+    generateInvitationCode(inviteRole as Exclude<Role, 'super_admin'>);
     setCopiedCode(null);
-    setInviteRole('family_member'); setInviteMemberId(''); setShowInviteForm(false);
+    setInviteRole('family_member'); setShowInviteForm(false);
   };
 
   const latestCode = data.invitationCodes[data.invitationCodes.length - 1];
@@ -118,7 +82,6 @@ export const Admin: React.FC = () => {
             <form onSubmit={submitInvite} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 space-y-3">
               <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
                 Generate a code and share it with the relative you're inviting — they'll enter it when creating their account, which sets their role automatically.
-                Optionally link it to their profile in the tree so their account connects straight to the right person.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 items-end">
                 <div>
@@ -127,15 +90,6 @@ export const Admin: React.FC = () => {
                     <option value="family_admin">Family Admin</option>
                     <option value="family_member">Family Member</option>
                     <option value="guest">Guest</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Link to profile (optional)</label>
-                  <select value={inviteMemberId} onChange={e => setInviteMemberId(e.target.value)} className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm">
-                    <option value="">No specific person</option>
-                    {unlinkedMembers.map(m => (
-                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -148,13 +102,7 @@ export const Admin: React.FC = () => {
 
           {latestCode && (
             <div className="flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
-              <p className="text-sm text-heritage-gold-800">
-                Invitation code: <span className="font-mono font-semibold">{latestCode.code}</span>
-                {latestCode.memberId && (() => {
-                  const linked = data.members.find(m => m.id === latestCode.memberId);
-                  return linked ? <span className="text-heritage-gold-700"> — linked to {linked.firstName} {linked.lastName}</span> : null;
-                })()}
-              </p>
+              <p className="text-sm text-heritage-gold-800">Invitation code: <span className="font-mono font-semibold">{latestCode.code}</span></p>
               <button
                 onClick={() => { navigator.clipboard?.writeText(latestCode.code); setCopiedCode(latestCode.code); }}
                 className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900"
@@ -171,21 +119,14 @@ export const Admin: React.FC = () => {
                 <tr className="text-left text-xs text-heritage-green-500 dark:text-heritage-dark-muted border-b border-heritage-cream-300 dark:border-heritage-dark-border">
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Email</th>
-                  <th className="px-4 py-2.5 font-medium hidden md:table-cell">Linked person</th>
                   <th className="px-4 py-2.5 font-medium">Role</th>
-                  <th className="px-4 py-2.5 font-medium">Password</th>
                 </tr>
               </thead>
               <tbody>
-                {data.profiles.map(p => {
-                  const linkedMember = p.memberId ? data.members.find(m => m.id === p.memberId) : undefined;
-                  return (
+                {data.profiles.map(p => (
                   <tr key={p.id} className="border-b last:border-0 border-heritage-cream-200 dark:border-heritage-dark-border">
                     <td className="px-4 py-2.5 font-medium text-heritage-green-900 dark:text-heritage-dark-text">{p.displayName}</td>
                     <td className="px-4 py-2.5 text-heritage-green-600 dark:text-heritage-dark-muted hidden sm:table-cell">{p.email ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-heritage-green-600 dark:text-heritage-dark-muted hidden md:table-cell">
-                      {linkedMember ? `${linkedMember.firstName} ${linkedMember.lastName}` : '—'}
-                    </td>
                     <td className="px-4 py-2.5">
                       <select
                         value={p.role}
@@ -195,88 +136,10 @@ export const Admin: React.FC = () => {
                         {(Object.keys(ROLE_LABEL) as Role[]).map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex flex-col gap-1.5">
-                        {/* Restoration code — works offline and online */}
-                        <button
-                          onClick={() => handleGenerateRestoration(p.id)}
-                          disabled={!p.email}
-                          title={p.email ? 'Generate a one-time restoration code' : 'This profile has no email on file'}
-                          className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <KeyRound size={13} /> Restoration code
-                        </button>
-                        {/* Email reset — Supabase-native, online mode only */}
-                        {isOnlineMode && (
-                          <button
-                            onClick={() => p.email && handleSendResetEmail(p.id, p.email)}
-                            disabled={!p.email || emailResetLoadingId === p.id}
-                            title={
-                              !p.email
-                                ? 'This profile has no email on file'
-                                : 'Send a Supabase password-reset email'
-                            }
-                            className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            {emailResetLoadingId === p.id ? (
-                              <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                            ) : emailResetSentId === p.id ? (
-                              <Check size={13} className="text-green-600" />
-                            ) : (
-                              <Mail size={13} />
-                            )}
-                            {emailResetSentId === p.id ? 'Email sent' : 'Send reset email'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
-          </div>
-
-          <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5">
-            <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text flex items-center gap-1.5">
-              <KeyRound size={15} className="text-heritage-gold-600" /> If someone forgets their password
-            </p>
-            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2 leading-relaxed">
-              You have two options — use whichever fits the situation:
-            </p>
-            <ul className="mt-2 space-y-2 text-sm text-heritage-green-600 dark:text-heritage-dark-muted list-none">
-              {isOnlineMode && (
-                <li className="flex gap-2">
-                  <Mail size={15} className="text-heritage-gold-600 mt-0.5 shrink-0" />
-                  <span>
-                    <span className="font-medium text-heritage-green-800 dark:text-heritage-dark-text">Send reset email</span>
-                    {' '}— sends Supabase's built-in magic-link email. Best when the person still has access to their email inbox. They'll get a link to set a new password directly.
-                  </span>
-                </li>
-              )}
-              <li className="flex gap-2">
-                <KeyRound size={15} className="text-heritage-gold-600 mt-0.5 shrink-0" />
-                <span>
-                  <span className="font-medium text-heritage-green-800 dark:text-heritage-dark-text">Restoration code</span>
-                  {' '}— mints a single-use six-character code tied to that account. Share it out-of-band (phone, text, in person — not email if that's the problem). They enter it on the login screen under <span className="font-medium">"Forgot Password?"</span> along with a new password. The code is consumed on first use.
-                </span>
-              </li>
-            </ul>
-            {restorationFor && (
-              <div className="mt-4 flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
-                <p className="text-sm text-heritage-gold-800">
-                  Restoration code for <span className="font-medium">{data.profiles.find(p => p.id === restorationFor.profileId)?.displayName}</span>:{' '}
-                  <span className="font-mono font-semibold tracking-wider">{restorationFor.code}</span>
-                </p>
-                <button
-                  onClick={() => { navigator.clipboard?.writeText(restorationFor.code); setCopiedRestoration(true); }}
-                  className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900 shrink-0"
-                >
-                  {copiedRestoration ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedRestoration ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
