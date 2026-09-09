@@ -241,9 +241,9 @@ export async function fetchInvitationByCode(code: string): Promise<InvitationCod
 
 export async function createFamily(id: string, name: string): Promise<Family> {
   const db = must();
-  const { data, error } = await db.from('families').insert({ id, name }).select().single();
+  const { error } = await db.from('families').insert({ id, name });
   if (error) throw error;
-  return mapFamily(data);
+  return { id, name, activeTreeTemplate: 'classic' };
 }
 
 export async function updateFamilyTemplate(familyId: string, template: string) {

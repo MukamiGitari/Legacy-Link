@@ -716,8 +716,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
         return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed. Please try again.' };
+      } catch (err: any) {
+        console.error('[legacy-link] sign-up error:', err);
+        const message = err?.message || err?.error_description || (typeof err === 'string' ? err : 'Sign-up failed. Please try again.');
+        return { ok: false, error: message };
       }
     }
 
