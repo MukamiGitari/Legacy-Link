@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TreePine, UserCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
-  getLineage, getGrandparents, getGrandchildren, getOtherDescendants, fullName, lifespan,
+  getLineage, getGrandparents, getGrandchildren, getOtherDescendants, relationshipTerm, fullName, lifespan,
 } from '../lib/lineage';
 import type { Member } from '../types';
 
@@ -11,7 +11,7 @@ interface Props {
   onViewFullTree: (anchorId: string) => void;
 }
 
-const PersonCard: React.FC<{ member: Member; onClick: () => void; highlight?: boolean }> = ({ member, onClick, highlight }) => (
+const PersonCard: React.FC<{ member: Member; onClick: () => void; highlight?: boolean; relationLabel?: string }> = ({ member, onClick, highlight, relationLabel }) => (
   <button
     onClick={onClick}
     className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left w-full transition-colors
@@ -23,18 +23,37 @@ const PersonCard: React.FC<{ member: Member; onClick: () => void; highlight?: bo
     <img src={member.avatarUrl} className="w-11 h-11 rounded-full bg-heritage-gold-100 shrink-0" alt="" />
     <div className="min-w-0">
       <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(member)}</p>
-      <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{lifespan(member)} · Gen {member.generation}</p>
+      <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+        {lifespan(member)}{relationLabel ? ` · ${relationLabel}` : ` · Gen ${member.generation}`}
+      </p>
     </div>
   </button>
 );
 
-const Row: React.FC<{ title: string; people: Member[]; onSelectMember: (id: string) => void }> = ({ title, people, onSelectMember }) => {
+const Row: React.FC<{
+  title: string;
+  people: Member[];
+  onSelectMember: (id: string) => void;
+  anchorGeneration?: number;
+  direction?: 'ancestor' | 'descendant';
+}> = ({ title, people, onSelectMember, anchorGeneration, direction }) => {
   if (people.length === 0) return null;
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-heritage-green-500 dark:text-heritage-dark-muted mb-2">{title}</p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {people.map(p => <PersonCard key={p.id} member={p} onClick={() => onSelectMember(p.id)} />)}
+        {people.map(p => (
+          <PersonCard
+            key={p.id}
+            member={p}
+            onClick={() => onSelectMember(p.id)}
+            relationLabel={
+              direction && anchorGeneration !== undefined
+                ? relationshipTerm(Math.abs(p.generation - anchorGeneration), direction)
+                : undefined
+            }
+          />
+        ))}
       </div>
     </div>
   );
@@ -65,7 +84,7 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
         <div>
           <h1 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text">My Family</h1>
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-0.5">
-            A close-up view of one person's family circle — grandparents through every generation of descendants.
+            A close-up view of one person's family circle — grandparents through every generation that follows.
           </p>
         </div>
         {anchor && (
@@ -103,8 +122,8 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
 
       {anchor && circle && (
         <div className="space-y-6">
-          <Row title="Grandparents" people={circle.grandparents} onSelectMember={onSelectMember} />
-          <Row title="Parents" people={circle.parents} onSelectMember={onSelectMember} />
+          <Row title="Grandparents" people={circle.grandparents} onSelectMember={onSelectMember} anchorGeneration={anchor.generation} direction="ancestor" />
+          <Row title="Parents" people={circle.parents} onSelectMember={onSelectMember} anchorGeneration={anchor.generation} direction="ancestor" />
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-heritage-green-500 dark:text-heritage-dark-muted mb-2">This person</p>
@@ -115,9 +134,9 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
 
           <Row title="Spouse" people={circle.spouse} onSelectMember={onSelectMember} />
           <Row title="Siblings" people={circle.siblings} onSelectMember={onSelectMember} />
-          <Row title="Children" people={circle.children} onSelectMember={onSelectMember} />
-          <Row title="Grandchildren" people={circle.grandchildren} onSelectMember={onSelectMember} />
-          <Row title="Other Descendants" people={circle.otherDescendants} onSelectMember={onSelectMember} />
+          <Row title="Children" people={circle.children} onSelectMember={onSelectMember} anchorGeneration={anchor.generation} direction="descendant" />
+          <Row title="Grandchildren" people={circle.grandchildren} onSelectMember={onSelectMember} anchorGeneration={anchor.generation} direction="descendant" />
+          <Row title="Great-grandchildren & Beyond" people={circle.otherDescendants} onSelectMember={onSelectMember} anchorGeneration={anchor.generation} direction="descendant" />
         </div>
       )}
     </div>
