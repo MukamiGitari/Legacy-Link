@@ -1,4 +1,4 @@
-﻿-- Migration 006: super_admin bootstrap + RLS helper hardening
+-- Migration 006: super_admin bootstrap + RLS helper hardening
 --
 -- Problem: current_family_id() and current_role_is_admin() are defined as
 -- SECURITY INVOKER (the default). This means they execute under the calling
@@ -50,10 +50,13 @@ as $$
 $$;
 
 -- ----------------------------------------------------------------------------
--- 2. INSERT policy on profiles so the Edge Function can create the first row
---    (signup() already covers normal self-registration; this covers the
---    bootstrap path where there is no existing session yet).
+-- 2. INSERT policies on families and profiles for user registration
 -- ----------------------------------------------------------------------------
+
+-- Allow any authenticated user to create a new family during registration
+drop policy if exists families_insert on families;
+create policy families_insert on families for insert
+  with check (auth.role() = 'authenticated');
 
 -- Allow a user to insert their own profile row (id = auth.uid()).
 drop policy if exists profiles_insert_self on profiles;
