@@ -90,6 +90,17 @@ export function getGrandchildren(memberId: string, rels: Relationship[]): string
   return Array.from(set);
 }
 
+/**
+ * Great-grandchildren and beyond — every descendant not already covered by
+ * getChildren/getGrandchildren, however many generations deep the tree goes.
+ */
+export function getOtherDescendants(memberId: string, members: Member[], rels: Relationship[]): Member[] {
+  const all = getAllDescendants(memberId, members, rels);
+  const children = new Set(getChildren(memberId, rels));
+  const grandchildren = new Set(getGrandchildren(memberId, rels));
+  return all.filter(m => !children.has(m.id) && !grandchildren.has(m.id));
+}
+
 export function getLineage(memberId: string, members: Member[], rels: Relationship[]): Lineage {
   const byId = (id: string) => members.find(m => m.id === id);
   const toMembers = (ids: string[]) => ids.map(byId).filter((m): m is Member => Boolean(m));
