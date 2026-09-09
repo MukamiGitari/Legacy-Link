@@ -12,6 +12,9 @@ import * as db from '../lib/db';
 const STORAGE_KEY = 'heritage-hub-dataset-v1';
 const SESSION_KEY = 'heritage-hub-session-v1';
 const AUTH_KEY = 'legacy-link-auth-v1';
+/** Google OAuth redirects the whole page away and back, so an invite code entered
+ *  on the "Join Family" tab has to survive that round trip outside React state. */
+const GOOGLE_INVITE_KEY = 'legacy-link-google-invite';
 
 function loadFromStorage(): FamilyDataset {
   try {
@@ -76,6 +79,7 @@ interface AppContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
+  signInWithGoogle: (inviteCode?: string) => Promise<AuthResult>;
   logout: () => void;
   continueAsDemo: () => void;
 
@@ -175,7 +179,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const user = sessionData.session?.user;
         if (!user) return;
         const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) { await supabase.auth.signOut(); return; }
+        if (!profile) {
+          // No profile yet — this is a brand-new sign-in (most likely via Google,
+          // since email/password signup already creates the profile inline).
+          // Provision one the same way the manual signup flow does: redeem a
+          // pending invite if one was stashed before the OAuth redirect, or spin
+          // up a new family if this person is starting fresh.
+          let pendingInvite: string | null = null;
+          try { pendingInvite = localStorage.getItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
+
+          const displayName =
+            (user.user_metadata?.full_name as string | undefined) ||
+            (user.user_metadata?.name as string | undefined) ||
+            user.email ||
+            'New Member';
+
+          let familyId: string;
+          if (pendingInvite) {
+            const invite = await db.fetchInvitationByCode(pendingInvite);
+            if (!invite) {
+              try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
+              await supabase.auth.signOut();
+              console.error('[legacy-link] Google sign-in used an invalid or already-used invite code.');
+              return;
+            }
+            familyId = invite.familyId;
+            await db.createProfile({ id: user.id, familyId, memberId: invite.memberId, displayName, email: user.email ?? '', role: invite.role });
+            await db.redeemInvitationCode(invite.id, user.id);
+          } else {
+            familyId = newId();
+            await db.createFamily(familyId, `${displayName}'s Family`);
+            await db.createProfile({ id: user.id, familyId, displayName, email: user.email ?? '', role: 'family_admin' });
+          }
+          try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
+
+          const dataset = await db.fetchFamilyDataset(familyId);
+          setData(dataset);
+          setCurrentProfileId(user.id);
+          setIsDemoOrLocal(false);
+          setIsAuthenticated(true);
+          return;
+        }
         const dataset = await db.fetchFamilyDataset(profile.familyId);
         setData(dataset);
         setCurrentProfileId(profile.id);
@@ -681,6 +725,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /** Kicks off the Google OAuth redirect. Any invite code from the "Join Family"
+   *  tab is stashed in localStorage first, since the page fully navigates away
+   *  and back — the session-restore effect above picks it up on return to
+   *  provision a profile for first-time sign-ins. */
+  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async (inviteCode) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: 'Google sign-in requires the app to be connected to Supabase.' };
+    }
+    try {
+      if (inviteCode?.trim()) {
+        try { localStorage.setItem(GOOGLE_INVITE_KEY, inviteCode.trim().toUpperCase()); } catch { /* noop */ }
+      } else {
+        try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Google sign-in failed. Please try again.' };
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     if (isSupabaseConfigured && supabase) void supabase.auth.signOut();
@@ -701,7 +770,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentProfile,
     setCurrentProfileId,
     toasts, pushToast, dismissToast,
-    isAuthenticated, login, signup, logout, continueAsDemo,
+    isAuthenticated, login, signup, signInWithGoogle, logout, continueAsDemo,
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
