@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, type LucideIcon } from 'lucide-react';
+import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, Mail, type LucideIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { TreeTemplateSwitcher } from '../components/trees/TreeTemplateSwitcher';
 import type { Role, TreeTemplate } from '../types';
@@ -25,7 +25,11 @@ const ONBOARDING_STEPS = [
 ];
 
 export const Admin: React.FC = () => {
-  const { data, setActiveTreeTemplate, updateProfileRole, generateInvitationCode, generateRestorationCode, resetToSeed } = useApp();
+  const {
+    data, isOnlineMode, pushToast,
+    setActiveTreeTemplate, updateProfileRole, generateInvitationCode,
+    generateRestorationCode, sendPasswordResetEmail, resetToSeed,
+  } = useApp();
   const [tab, setTab] = useState<AdminTab>('users');
   const [pendingTemplate, setPendingTemplate] = useState<TreeTemplate | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
@@ -35,11 +39,28 @@ export const Admin: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [restorationFor, setRestorationFor] = useState<{ profileId: string; code: string } | null>(null);
   const [copiedRestoration, setCopiedRestoration] = useState(false);
+  // email reset: track which profile has an in-flight request
+  const [emailResetLoadingId, setEmailResetLoadingId] = useState<string | null>(null);
+  const [emailResetSentId, setEmailResetSentId] = useState<string | null>(null);
 
   const handleGenerateRestoration = (profileId: string) => {
     const code = generateRestorationCode(profileId);
     setRestorationFor({ profileId, code });
     setCopiedRestoration(false);
+  };
+
+  const handleSendResetEmail = async (profileId: string, email: string) => {
+    setEmailResetLoadingId(profileId);
+    const result = await sendPasswordResetEmail(email);
+    setEmailResetLoadingId(null);
+    if (!result.ok) {
+      pushToast(result.error ?? 'Could not send reset email.', 'error');
+    } else {
+      setEmailResetSentId(profileId);
+      pushToast(`Password reset email sent to ${email}.`, 'success');
+      // Clear the "sent" indicator after 8 s so it can be triggered again
+      setTimeout(() => setEmailResetSentId(id => (id === profileId ? null : id)), 8000);
+    }
   };
 
   // Members who don't already have a profile linked to them — these are the
@@ -175,14 +196,39 @@ export const Admin: React.FC = () => {
                       </select>
                     </td>
                     <td className="px-4 py-2.5">
-                      <button
-                        onClick={() => handleGenerateRestoration(p.id)}
-                        disabled={!p.email}
-                        title={p.email ? 'Generate a one-time restoration code' : 'This profile has no email on file'}
-                        className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <KeyRound size={13} /> Restoration code
-                      </button>
+                      <div className="flex flex-col gap-1.5">
+                        {/* Restoration code — works offline and online */}
+                        <button
+                          onClick={() => handleGenerateRestoration(p.id)}
+                          disabled={!p.email}
+                          title={p.email ? 'Generate a one-time restoration code' : 'This profile has no email on file'}
+                          className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <KeyRound size={13} /> Restoration code
+                        </button>
+                        {/* Email reset — Supabase-native, online mode only */}
+                        {isOnlineMode && (
+                          <button
+                            onClick={() => p.email && handleSendResetEmail(p.id, p.email)}
+                            disabled={!p.email || emailResetLoadingId === p.id}
+                            title={
+                              !p.email
+                                ? 'This profile has no email on file'
+                                : 'Send a Supabase password-reset email'
+                            }
+                            className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {emailResetLoadingId === p.id ? (
+                              <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                            ) : emailResetSentId === p.id ? (
+                              <Check size={13} className="text-green-600" />
+                            ) : (
+                              <Mail size={13} />
+                            )}
+                            {emailResetSentId === p.id ? 'Email sent' : 'Send reset email'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   );
@@ -196,15 +242,26 @@ export const Admin: React.FC = () => {
               <KeyRound size={15} className="text-heritage-gold-600" /> If someone forgets their password
             </p>
             <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2 leading-relaxed">
-              There's no "Reset your own password" self-service flow — instead, a Family Admin or Super Admin
-              clicks <span className="font-medium">Restoration code</span> next to that person's name above.
-              That mints a single-use, six-character code tied to their account. Share the code with them
-              however you'd normally reach them (phone call, text, in person — not email, since email may be
-              the very thing they're locked out of). They then go to the login screen, choose{' '}
-              <span className="font-medium">"Have a restoration code?"</span>, enter their email, the code, and
-              a brand-new password. The code is consumed the moment it's redeemed, so a fresh one is needed
-              each time someone gets locked out.
+              You have two options — use whichever fits the situation:
             </p>
+            <ul className="mt-2 space-y-2 text-sm text-heritage-green-600 dark:text-heritage-dark-muted list-none">
+              {isOnlineMode && (
+                <li className="flex gap-2">
+                  <Mail size={15} className="text-heritage-gold-600 mt-0.5 shrink-0" />
+                  <span>
+                    <span className="font-medium text-heritage-green-800 dark:text-heritage-dark-text">Send reset email</span>
+                    {' '}— sends Supabase's built-in magic-link email. Best when the person still has access to their email inbox. They'll get a link to set a new password directly.
+                  </span>
+                </li>
+              )}
+              <li className="flex gap-2">
+                <KeyRound size={15} className="text-heritage-gold-600 mt-0.5 shrink-0" />
+                <span>
+                  <span className="font-medium text-heritage-green-800 dark:text-heritage-dark-text">Restoration code</span>
+                  {' '}— mints a single-use six-character code tied to that account. Share it out-of-band (phone, text, in person — not email if that's the problem). They enter it on the login screen under <span className="font-medium">"Forgot Password?"</span> along with a new password. The code is consumed on first use.
+                </span>
+              </li>
+            </ul>
             {restorationFor && (
               <div className="mt-4 flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
                 <p className="text-sm text-heritage-gold-800">

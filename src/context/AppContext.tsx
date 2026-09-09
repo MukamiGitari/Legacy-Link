@@ -124,6 +124,8 @@ interface AppContextValue {
   generateInvitationCode: (role: Exclude<Role, 'super_admin'>, memberId?: string) => string;
   generateRestorationCode: (profileId: string) => string;
   redeemRestorationCode: (email: string, code: string, newPassword: string) => Promise<AuthResult>;
+  /** Online-only: triggers Supabase's built-in password-reset email for a profile. */
+  sendPasswordResetEmail: (email: string) => Promise<AuthResult>;
   updateProfileAvatar: (id: string, avatarUrl: string) => void;
   logActivity: (action: string, entityType: string) => void;
 
@@ -550,6 +552,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /** Online-only: trigger Supabase's built-in password-reset email.
+   *  The email contains a magic link that opens the app and lets the user
+   *  set a new password. Configure Redirect URLs in Supabase Dashboard →
+   *  Authentication → URL Configuration to point at your deployed app. */
+  const sendPasswordResetEmail: AppContextValue['sendPasswordResetEmail'] = async (email) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: 'Email reset is only available in online mode.' };
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      // redirectTo must match a URL allowed in your Supabase project's
+      // "Redirect URLs" list (Dashboard → Authentication → URL Configuration).
+      redirectTo: `${window.location.origin}/`,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
+
   const resetToSeed = () => {
     const fresh = buildSeedDataset();
     setData(fresh);
@@ -694,7 +713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addLanguageEntry, removeLanguageEntry,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
     addProfile, updateProfileRole, generateInvitationCode,
-    generateRestorationCode, redeemRestorationCode, logActivity,
+    generateRestorationCode, redeemRestorationCode, sendPasswordResetEmail, logActivity,
     updateProfileAvatar,
     resetToSeed,
   };
