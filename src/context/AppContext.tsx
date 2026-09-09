@@ -1,455 +1,391 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import type {
-  FamilyDataset, Member, Relationship, Album, Photo, Memory,
-  FamilyEvent, Announcement, ChronicleEra, TreeTemplate, Profile, Role, RelationshipType,
-} from '../types';
-import { buildSeedDataset } from '../data/seed';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { registerCredential, verifyCredential } from '../lib/localAuth';
-import * as db from '../lib/db';
+import React, { useState } from 'react';
+import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, ScrollText, type LucideIcon } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { TreeTemplateSwitcher } from '../components/trees/TreeTemplateSwitcher';
+import type { Role, TreeTemplate } from '../types';
 
-const STORAGE_KEY = 'heritage-hub-dataset-v1';
-const SESSION_KEY = 'heritage-hub-session-v1';
-const AUTH_KEY = 'legacy-link-auth-v1';
+type AdminTab = 'users' | 'family' | 'templates' | 'onboarding' | 'audit';
 
-function loadFromStorage(): FamilyDataset {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as FamilyDataset;
-  } catch {
-    // fall through to seed
-  }
-  return buildSeedDataset();
-}
-
-function saveToStorage(data: FamilyDataset) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // storage full or unavailable — silently ignore, in-memory state still works
-  }
-}
-
-/** Real UUIDs everywhere so ids are valid whether they end up in localStorage or Postgres. */
-const newId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `id-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
-
-/** Fire a Supabase write in the background. Local state has already been updated
- *  optimistically by the caller, so a failure here is logged rather than thrown —
- *  surfacing a toast for every background sync error is left as a follow-up. */
-function persist(label: string, fn: () => Promise<unknown>) {
-  fn().catch(err => console.error(`[legacy-link] failed to sync "${label}" to Supabase:`, err));
-}
-
-export interface AuthResult {
-  ok: boolean;
-  error?: string;
-}
-
-interface AppContextValue {
-  data: FamilyDataset;
-  isOnlineMode: boolean;
-  isLoading: boolean;
-  currentProfile: Profile;
-  setCurrentProfileId: (id: string) => void;
-
-  // auth
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<AuthResult>;
-  signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
-  logout: () => void;
-  continueAsDemo: () => void;
-
-  // members
-  addMember: (m: Omit<Member, 'id' | 'familyId'>) => Member;
-  updateMember: (id: string, patch: Partial<Member>) => void;
-  removeMember: (id: string) => void;
-
-  // relationships
-  addRelationship: (fromId: string, toId: string, type: RelationshipType, startedAt?: string) => void;
-  removeRelationshipsForMember: (memberId: string) => void;
-
-  // template
-  setActiveTreeTemplate: (t: TreeTemplate) => void;
-
-  // media
-  addAlbum: (a: Omit<Album, 'id' | 'familyId'>) => Album;
-  addPhoto: (p: Omit<Photo, 'id' | 'familyId'>) => Photo;
-
-  // memories / events / announcements
-  addMemory: (m: Omit<Memory, 'id' | 'familyId' | 'createdAt'>) => void;
-  addEvent: (e: Omit<FamilyEvent, 'id' | 'familyId' | 'rsvps'>) => void;
-  setRsvp: (eventId: string, memberId: string, status: FamilyEvent['rsvps'][number]['status']) => void;
-  addAnnouncement: (a: Omit<Announcement, 'id' | 'familyId' | 'createdAt'>) => void;
-
-  // chronicle
-  addChronicleEra: (c: Omit<ChronicleEra, 'id' | 'familyId' | 'sortOrder'>) => void;
-
-  // admin
-  addProfile: (displayName: string, email: string, role: Role, memberId?: string) => Profile;
-  updateProfileRole: (id: string, role: Role) => void;
-  generateInvitationCode: (role: Exclude<Role, 'super_admin'>, memberId?: string) => string;
-  logActivity: (action: string, entityType: string) => void;
-
-  resetToSeed: () => void;
-}
-
-const AppContext = createContext<AppContextValue | null>(null);
-
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<FamilyDataset>(() => (isSupabaseConfigured ? buildSeedDataset() : loadFromStorage()));
-  const [currentProfileId, setCurrentProfileId] = useState<string>(() => {
-    try {
-      return localStorage.getItem(SESSION_KEY) || data.profiles[0]?.id || '';
-    } catch {
-      return data.profiles[0]?.id || '';
-    }
-  });
-
-  // In online mode the dataset comes from Supabase, not localStorage, and demo/local
-  // sessions shouldn't be persisted to disk (they're throwaway seed data).
-  const [isDemoOrLocal, setIsDemoOrLocal] = useState(!isSupabaseConfigured);
-  useEffect(() => {
-    if (isDemoOrLocal) saveToStorage(data);
-  }, [data, isDemoOrLocal]);
-  useEffect(() => {
-    try { localStorage.setItem(SESSION_KEY, currentProfileId); } catch { /* noop */ }
-  }, [currentProfileId]);
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (isSupabaseConfigured) return false; // resolved by the session-check effect below
-    try { return localStorage.getItem(AUTH_KEY) === '1'; } catch { return false; }
-  });
-  useEffect(() => {
-    if (isDemoOrLocal) {
-      try { localStorage.setItem(AUTH_KEY, isAuthenticated ? '1' : '0'); } catch { /* noop */ }
-    }
-  }, [isAuthenticated, isDemoOrLocal]);
-
-  // On load, if Supabase is configured, see if there's already a signed-in session
-  // and hydrate real data for that family instead of the local seed.
-  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) { setIsLoading(false); return; }
-    (async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (!user) return;
-        const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) { await supabase.auth.signOut(); return; }
-        const dataset = await db.fetchFamilyDataset(profile.familyId);
-        setData(dataset);
-        setCurrentProfileId(profile.id);
-        setIsDemoOrLocal(false);
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error('[legacy-link] failed to restore session:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
-
-  const currentProfile = useMemo(
-    () => data.profiles.find(p => p.id === currentProfileId) ?? data.profiles[0],
-    [data.profiles, currentProfileId]
-  );
-
-  const isOnlineMode = isSupabaseConfigured && !isDemoOrLocal;
-
-  const logActivity = useCallback((action: string, entityType: string) => {
-    setData(prev => ({
-      ...prev,
-      auditLog: [
-        { id: newId(), familyId: prev.family.id, actorName: currentProfile?.displayName ?? 'Unknown', action, entityType, createdAt: new Date().toISOString() },
-        ...prev.auditLog,
-      ].slice(0, 200),
-    }));
-    if (isOnlineMode && currentProfile) {
-      persist('audit log', () => db.insertAuditLog({ familyId: data.family.id, actorId: currentProfile.id, action, entityType }));
-    }
-  }, [currentProfile, isOnlineMode, data.family.id]);
-
-  const addMember: AppContextValue['addMember'] = (m) => {
-    const member: Member = { ...m, id: newId(), familyId: data.family.id };
-    setData(prev => ({ ...prev, members: [...prev.members, member] }));
-    if (isOnlineMode) persist('add member', () => db.insertMember(member));
-    logActivity(`Added member "${member.firstName} ${member.lastName}"`, 'member');
-    return member;
-  };
-
-  const updateMember: AppContextValue['updateMember'] = (id, patch) => {
-    setData(prev => ({
-      ...prev,
-      members: prev.members.map(m => (m.id === id ? { ...m, ...patch } : m)),
-    }));
-    if (isOnlineMode) persist('update member', () => db.updateMemberRow(id, patch));
-    logActivity(`Updated member record`, 'member');
-  };
-
-  const removeMember: AppContextValue['removeMember'] = (id) => {
-    setData(prev => ({
-      ...prev,
-      members: prev.members.filter(m => m.id !== id),
-      relationships: prev.relationships.filter(r => r.fromMemberId !== id && r.toMemberId !== id),
-    }));
-    if (isOnlineMode) persist('remove member', async () => {
-      await db.deleteRelationshipsForMemberRow(id);
-      await db.deleteMemberRow(id);
-    });
-    logActivity(`Removed a member`, 'member');
-  };
-
-  const addRelationship: AppContextValue['addRelationship'] = (fromId, toId, type, startedAt) => {
-    const relationship: Relationship = { id: newId(), familyId: data.family.id, fromMemberId: fromId, toMemberId: toId, relationshipType: type, startedAt };
-    setData(prev => ({ ...prev, relationships: [...prev.relationships, relationship] }));
-    if (isOnlineMode) persist('add relationship', () => db.insertRelationship(relationship));
-  };
-
-  const removeRelationshipsForMember: AppContextValue['removeRelationshipsForMember'] = (memberId) => {
-    setData(prev => ({
-      ...prev,
-      relationships: prev.relationships.filter(r => r.fromMemberId !== memberId && r.toMemberId !== memberId),
-    }));
-    if (isOnlineMode) persist('remove relationships', () => db.deleteRelationshipsForMemberRow(memberId));
-  };
-
-  const setActiveTreeTemplate: AppContextValue['setActiveTreeTemplate'] = (t) => {
-    setData(prev => ({ ...prev, family: { ...prev.family, activeTreeTemplate: t } }));
-    if (isOnlineMode) persist('tree template', () => db.updateFamilyTemplate(data.family.id, t));
-    logActivity(`Switched tree template to "${t}"`, 'family');
-  };
-
-  const addAlbum: AppContextValue['addAlbum'] = (a) => {
-    const album: Album = { ...a, id: newId(), familyId: data.family.id };
-    setData(prev => ({ ...prev, albums: [...prev.albums, album] }));
-    if (isOnlineMode) persist('add album', () => db.insertAlbum(album));
-    logActivity(`Created album "${album.title}"`, 'album');
-    return album;
-  };
-
-  const addPhoto: AppContextValue['addPhoto'] = (p) => {
-    const photo: Photo = { ...p, id: newId(), familyId: data.family.id };
-    setData(prev => ({ ...prev, photos: [...prev.photos, photo] }));
-    if (isOnlineMode) persist('add photo', () => db.insertPhoto(photo));
-    logActivity(`Uploaded a photo`, 'photo');
-    return photo;
-  };
-
-  const addMemory: AppContextValue['addMemory'] = (m) => {
-    const memory: Memory = { ...m, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
-    setData(prev => ({ ...prev, memories: [memory, ...prev.memories] }));
-    if (isOnlineMode) persist('add memory', () => db.insertMemory(memory));
-    logActivity(`Shared a memory "${m.title}"`, 'memory');
-  };
-
-  const addEvent: AppContextValue['addEvent'] = (e) => {
-    const event: FamilyEvent = { ...e, id: newId(), familyId: data.family.id, rsvps: [] };
-    setData(prev => ({ ...prev, events: [...prev.events, event] }));
-    if (isOnlineMode) persist('add event', () => db.insertEvent(event));
-    logActivity(`Scheduled event "${e.title}"`, 'event');
-  };
-
-  const setRsvp: AppContextValue['setRsvp'] = (eventId, memberId, status) => {
-    setData(prev => ({
-      ...prev,
-      events: prev.events.map(ev => {
-        if (ev.id !== eventId) return ev;
-        const existing = ev.rsvps.filter(r => r.memberId !== memberId);
-        return { ...ev, rsvps: [...existing, { memberId, status }] };
-      }),
-    }));
-    if (isOnlineMode) persist('rsvp', () => db.upsertRsvp(eventId, memberId, status));
-  };
-
-  const addAnnouncement: AppContextValue['addAnnouncement'] = (a) => {
-    const announcement: Announcement = { ...a, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
-    setData(prev => ({ ...prev, announcements: [announcement, ...prev.announcements] }));
-    if (isOnlineMode) persist('add announcement', () => db.insertAnnouncement(announcement));
-    logActivity(`Posted announcement "${a.title}"`, 'announcement');
-  };
-
-  const addChronicleEra: AppContextValue['addChronicleEra'] = (c) => {
-    const nextSortOrder = data.chronicleEras.reduce((max, e) => Math.max(max, e.sortOrder), 0) + 1;
-    const era: ChronicleEra = { ...c, id: newId(), familyId: data.family.id, sortOrder: nextSortOrder };
-    setData(prev => ({ ...prev, chronicleEras: [...prev.chronicleEras, era] }));
-    if (isOnlineMode) persist('add chronicle era', () => db.insertChronicleEra(era));
-    logActivity(`Added chronicle era "${era.eraLabel}"`, 'chronicle_era');
-  };
-
-  const addProfile: AppContextValue['addProfile'] = (displayName, email, role, memberId) => {
-    const profile: Profile = { id: newId(), familyId: data.family.id, displayName, email, role, memberId };
-    setData(prev => ({ ...prev, profiles: [...prev.profiles, profile] }));
-    logActivity(`Invited "${displayName}" as ${role.replace('_', ' ')}`, 'profile');
-    return profile;
-  };
-
-  const updateProfileRole: AppContextValue['updateProfileRole'] = (id, role) => {
-    setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, role } : p)) }));
-    if (isOnlineMode) persist('update role', () => db.updateProfileRoleRow(id, role));
-    logActivity(`Changed a member's role to ${role.replace('_', ' ')}`, 'profile');
-  };
-
-  const generateInvitationCode: AppContextValue['generateInvitationCode'] = (role, memberId) => {
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const invite = { id: newId(), familyId: data.family.id, code, role, memberId, createdAt: new Date().toISOString() };
-    setData(prev => ({ ...prev, invitationCodes: [...prev.invitationCodes, invite] }));
-    if (isOnlineMode) persist('invitation code', () => db.insertInvitationCode(invite));
-    logActivity(`Generated an invitation code`, 'invitation');
-    return code;
-  };
-
-  const resetToSeed = () => {
-    const fresh = buildSeedDataset();
-    setData(fresh);
-    setCurrentProfileId(fresh.profiles[0].id);
-  };
-
-  const login: AppContextValue['login'] = async (email, password) => {
-    if (!email.trim() || !password) return { ok: false, error: 'Enter your email and password.' };
-
-    if (isSupabaseConfigured && supabase) {
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { ok: false, error: error.message };
-      const user = signInData.user;
-      if (!user) return { ok: false, error: 'Sign-in did not return a session. Please try again.' };
-      try {
-        const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) return { ok: false, error: 'No family profile is linked to this account yet.' };
-        const dataset = await db.fetchFamilyDataset(profile.familyId);
-        setData(dataset);
-        setCurrentProfileId(profile.id);
-        setIsDemoOrLocal(false);
-        setIsAuthenticated(true);
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Failed to load your family data.' };
-      }
-    }
-
-    const profileId = verifyCredential(email, password);
-    if (!profileId || !data.profiles.some(p => p.id === profileId)) {
-      return { ok: false, error: 'That email and password don\'t match an account.' };
-    }
-    setCurrentProfileId(profileId);
-    setIsAuthenticated(true);
-    return { ok: true };
-  };
-
-  const signup: AppContextValue['signup'] = async (displayName, email, password, inviteCode) => {
-    if (!displayName.trim() || !email.trim() || !password) {
-      return { ok: false, error: 'Fill in your name, email, and password.' };
-    }
-    if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        let invite: Awaited<ReturnType<typeof db.fetchInvitationByCode>> = null;
-        if (inviteCode?.trim()) {
-          invite = await db.fetchInvitationByCode(inviteCode.trim());
-          if (!invite) return { ok: false, error: 'That invitation code is invalid or already used.' };
-        }
-
-        const { data: signUpData, error } = await supabase.auth.signUp({ email, password });
-        if (error) return { ok: false, error: error.message };
-        const user = signUpData.user;
-        if (!user || !signUpData.session) {
-          return { ok: false, error: 'Check your email to confirm your account, then sign in.' };
-        }
-
-        let familyId: string;
-        let role: Role;
-        if (invite) {
-          familyId = invite.familyId;
-          role = invite.role;
-          await db.createProfile({ id: user.id, familyId, memberId: invite.memberId, displayName, email, role });
-          await db.redeemInvitationCode(invite.id, user.id);
-        } else {
-          familyId = newId();
-          role = 'family_admin';
-          await db.createFamily(familyId, `${displayName}'s Family`);
-          await db.createProfile({ id: user.id, familyId, displayName, email, role });
-        }
-
-        const dataset = await db.fetchFamilyDataset(familyId);
-        setData(dataset);
-        setCurrentProfileId(user.id);
-        setIsDemoOrLocal(false);
-        setIsAuthenticated(true);
-        return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed. Please try again.' };
-      }
-    }
-
-    // Offline / local mode
-    if (data.profiles.some(p => p.email?.toLowerCase() === email.toLowerCase())) {
-      return { ok: false, error: 'An account with this email already exists — try signing in.' };
-    }
-    let role: Role = 'family_member';
-    let matchedInvite: (typeof data.invitationCodes)[number] | undefined;
-    if (inviteCode?.trim()) {
-      matchedInvite = data.invitationCodes.find(
-        c => c.code === inviteCode.trim().toUpperCase() && !c.redeemedByProfileId
-      );
-      if (!matchedInvite) return { ok: false, error: 'That invitation code is invalid or already used.' };
-      role = matchedInvite.role;
-    }
-
-    const profile = addProfile(displayName, email, role, matchedInvite?.memberId);
-    registerCredential(email, password, profile.id);
-
-    if (matchedInvite) {
-      setData(prev => ({
-        ...prev,
-        invitationCodes: prev.invitationCodes.map(c =>
-          c.id === matchedInvite!.id ? { ...c, redeemedByProfileId: profile.id } : c
-        ),
-      }));
-    }
-
-    setCurrentProfileId(profile.id);
-    setIsAuthenticated(true);
-    return { ok: true };
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    if (isSupabaseConfigured && supabase) void supabase.auth.signOut();
-  };
-
-  const continueAsDemo = () => {
-    const fresh = buildSeedDataset();
-    setData(fresh);
-    setIsDemoOrLocal(true);
-    if (fresh.profiles[0]) setCurrentProfileId(fresh.profiles[0].id);
-    setIsAuthenticated(true);
-  };
-
-  const value: AppContextValue = {
-    data,
-    isOnlineMode,
-    isLoading,
-    currentProfile,
-    setCurrentProfileId,
-    isAuthenticated, login, signup, logout, continueAsDemo,
-    addMember, updateMember, removeMember,
-    addRelationship, removeRelationshipsForMember,
-    setActiveTreeTemplate,
-    addAlbum, addPhoto,
-    addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
-    addProfile, updateProfileRole, generateInvitationCode, logActivity,
-    resetToSeed,
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+const ROLE_LABEL: Record<Role, string> = {
+  super_admin: 'Super Admin',
+  family_admin: 'Family Admin',
+  family_member: 'Family Member',
+  guest: 'Guest',
 };
 
-export function useApp(): AppContextValue {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
-  return ctx;
-}
+const ONBOARDING_STEPS = [
+  { title: 'Welcome', body: 'Introduce the new family administrator to Legacy Link and what they\'ll be setting up.' },
+  { title: 'Family Details', body: 'Set the family name, motto, and origin story that appears on the dashboard.' },
+  { title: 'Root Ancestors', body: 'Add the earliest known ancestors to anchor the family tree.' },
+  { title: 'Add Generations', body: 'Build out children, spouses, and grandchildren generation by generation.' },
+  { title: 'Choose a Tree Template', body: 'Pick one of the six visual styles — it can be changed anytime.' },
+  { title: 'Upload Photos', body: 'Create the first albums and upload founding photographs.' },
+  { title: 'Invite the Family', body: 'Generate invitation codes so relatives can join and add their own branches.' },
+  { title: 'Go Live', body: 'Review everything and publish the archive for the whole family.' },
+];
+
+export const Admin: React.FC = () => {
+  const { data, setActiveTreeTemplate, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode, generateRestorationCode, resetToSeed } = useApp();
+  const [tab, setTab] = useState<AdminTab>('users');
+  const [pendingTemplate, setPendingTemplate] = useState<TreeTemplate | null>(null);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteRole, setInviteRole] = useState<Role>('family_member');
+  const [inviteMemberId, setInviteMemberId] = useState<string>('');
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [restorationFor, setRestorationFor] = useState<{ profileId: string; code: string } | null>(null);
+  const [copiedRestoration, setCopiedRestoration] = useState(false);
+
+  // Family profile form — seeded from the current dataset, saved explicitly so a
+  // stray keystroke doesn't write to Supabase on every character.
+  const [familyName, setFamilyName] = useState(data.family.name);
+  const [familyMotto, setFamilyMotto] = useState(data.family.motto ?? '');
+  const [familyOrigin, setFamilyOrigin] = useState(data.family.originStory ?? '');
+  const [familySaved, setFamilySaved] = useState(false);
+  const familyDirty = familyName !== data.family.name
+    || familyMotto !== (data.family.motto ?? '')
+    || familyOrigin !== (data.family.originStory ?? '');
+
+  const handleSaveFamilyDetails = () => {
+    if (!familyName.trim()) return;
+    updateFamilyDetails({ name: familyName.trim(), motto: familyMotto.trim(), originStory: familyOrigin.trim() });
+    setFamilySaved(true);
+    setTimeout(() => setFamilySaved(false), 2500);
+  };
+
+  const handleGenerateRestoration = (profileId: string) => {
+    const code = generateRestorationCode(profileId);
+    setRestorationFor({ profileId, code });
+    setCopiedRestoration(false);
+  };
+
+  // Members who don't already have a profile linked to them — these are the
+  // people it makes sense to pre-link an invite code to.
+  const unlinkedMembers = data.members.filter(
+    m => !data.profiles.some(p => p.memberId === m.id)
+  );
+
+  const TABS: { key: AdminTab; label: string; icon: LucideIcon }[] = [
+    { key: 'users', label: 'User Management', icon: Users },
+    { key: 'family', label: 'Family Profile', icon: ScrollText },
+    { key: 'templates', label: 'Tree Templates', icon: TreePine },
+    { key: 'onboarding', label: 'Onboarding Wizard', icon: Wand2 },
+    { key: 'audit', label: 'Activity Log', icon: History },
+  ];
+
+  const confirmTemplateSwitch = () => {
+    if (pendingTemplate) setActiveTreeTemplate(pendingTemplate);
+    setPendingTemplate(null);
+  };
+
+  const submitInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    generateInvitationCode(inviteRole as Exclude<Role, 'super_admin'>, inviteMemberId || undefined);
+    setCopiedCode(null);
+    setInviteRole('family_member'); setInviteMemberId(''); setShowInviteForm(false);
+  };
+
+  const latestCode = data.invitationCodes[data.invitationCodes.length - 1];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex overflow-x-auto scrollbar-thin gap-1 bg-heritage-cream-200 dark:bg-heritage-dark-hover rounded-xl p-1">
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
+              ${tab === key ? 'bg-white dark:bg-heritage-dark-card text-heritage-green-900 dark:text-heritage-dark-text shadow-soft' : 'text-heritage-green-600 dark:text-heritage-dark-muted'}`}
+          >
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'users' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">Manage who can view and edit the family archive.</p>
+            <button onClick={() => setShowInviteForm(s => !s)} className="text-sm bg-heritage-green-800 hover:bg-heritage-green-700 text-white font-medium px-3.5 py-2 rounded-lg">
+              Generate Invitation
+            </button>
+          </div>
+
+          {showInviteForm && (
+            <form onSubmit={submitInvite} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 space-y-3">
+              <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                Generate a code and share it with the relative you're inviting — they'll enter it when creating their account, which sets their role automatically.
+                Optionally link it to their profile in the tree so their account connects straight to the right person.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Role for this invite</label>
+                  <select value={inviteRole} onChange={e => setInviteRole(e.target.value as Role)} className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm">
+                    <option value="family_admin">Family Admin</option>
+                    <option value="family_member">Family Member</option>
+                    <option value="guest">Guest</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Link to profile (optional)</label>
+                  <select value={inviteMemberId} onChange={e => setInviteMemberId(e.target.value)} className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm">
+                    <option value="">No specific person</option>
+                    {unlinkedMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowInviteForm(false)} className="px-3.5 py-2 text-sm rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">Cancel</button>
+                <button type="submit" className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium">Generate code</button>
+              </div>
+            </form>
+          )}
+
+          {latestCode && (
+            <div className="flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
+              <p className="text-sm text-heritage-gold-800">
+                Invitation code: <span className="font-mono font-semibold">{latestCode.code}</span>
+                {latestCode.memberId && (() => {
+                  const linked = data.members.find(m => m.id === latestCode.memberId);
+                  return linked ? <span className="text-heritage-gold-700"> — linked to {linked.firstName} {linked.lastName}</span> : null;
+                })()}
+              </p>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(latestCode.code); setCopiedCode(latestCode.code); }}
+                className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900"
+              >
+                {copiedCode === latestCode.code ? <Check size={13} /> : <Copy size={13} />}
+                {copiedCode === latestCode.code ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-heritage-green-500 dark:text-heritage-dark-muted border-b border-heritage-cream-300 dark:border-heritage-dark-border">
+                  <th className="px-4 py-2.5 font-medium">Name</th>
+                  <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Email</th>
+                  <th className="px-4 py-2.5 font-medium hidden md:table-cell">Linked person</th>
+                  <th className="px-4 py-2.5 font-medium">Role</th>
+                  <th className="px-4 py-2.5 font-medium">Password</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.profiles.map(p => {
+                  return (
+                  <tr key={p.id} className="border-b last:border-0 border-heritage-cream-200 dark:border-heritage-dark-border">
+                    <td className="px-4 py-2.5 font-medium text-heritage-green-900 dark:text-heritage-dark-text">{p.displayName}</td>
+                    <td className="px-4 py-2.5 text-heritage-green-600 dark:text-heritage-dark-muted hidden sm:table-cell">{p.email ?? '—'}</td>
+                    <td className="px-4 py-2.5 hidden md:table-cell">
+                      <select
+                        value={p.memberId ?? ''}
+                        onChange={e => updateProfileMemberId(p.id, e.target.value || null)}
+                        className="text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 max-w-[160px]"
+                      >
+                        <option value="">— Not linked —</option>
+                        {data.members.map(m => (
+                          <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <select
+                        value={p.role}
+                        onChange={e => updateProfileRole(p.id, e.target.value as Role)}
+                        className="text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1"
+                      >
+                        {(Object.keys(ROLE_LABEL) as Role[]).map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => handleGenerateRestoration(p.id)}
+                        disabled={!p.email}
+                        title={p.email ? 'Generate a one-time restoration code' : 'This profile has no email on file'}
+                        className="flex items-center gap-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <KeyRound size={13} /> Restoration code
+                      </button>
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5">
+            <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text flex items-center gap-1.5">
+              <KeyRound size={15} className="text-heritage-gold-600" /> If someone forgets their password
+            </p>
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2 leading-relaxed">
+              There's no "Reset your own password" self-service flow — instead, a Family Admin or Super Admin
+              clicks <span className="font-medium">Restoration code</span> next to that person's name above.
+              That mints a single-use, six-character code tied to their account. Share the code with them
+              however you'd normally reach them (phone call, text, in person — not email, since email may be
+              the very thing they're locked out of). They then go to the login screen, choose{' '}
+              <span className="font-medium">"Have a restoration code?"</span>, enter their email, the code, and
+              a brand-new password. The code is consumed the moment it's redeemed, so a fresh one is needed
+              each time someone gets locked out.
+            </p>
+            {restorationFor && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-heritage-gold-300 bg-heritage-gold-50 px-4 py-3">
+                <p className="text-sm text-heritage-gold-800">
+                  Restoration code for <span className="font-medium">{data.profiles.find(p => p.id === restorationFor.profileId)?.displayName}</span>:{' '}
+                  <span className="font-mono font-semibold tracking-wider">{restorationFor.code}</span>
+                </p>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(restorationFor.code); setCopiedRestoration(true); }}
+                  className="ml-auto flex items-center gap-1 text-xs text-heritage-gold-700 hover:text-heritage-gold-900 shrink-0"
+                >
+                  {copiedRestoration ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedRestoration ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'family' && (
+        <div className="max-w-xl rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-6 space-y-4">
+          <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
+            This is what shows on the Dashboard, the Chronicle, and the sidebar for everyone in the family.
+          </p>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Family name *</label>
+            <input
+              required
+              value={familyName}
+              onChange={e => setFamilyName(e.target.value)}
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Motto</label>
+            <input
+              value={familyMotto}
+              onChange={e => setFamilyMotto(e.target.value)}
+              placeholder="A short line shown under the family name"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Origin story</label>
+            <textarea
+              rows={4}
+              value={familyOrigin}
+              onChange={e => setFamilyOrigin(e.target.value)}
+              placeholder="A few sentences about where the family comes from"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={!familyDirty || !familyName.trim()}
+              onClick={handleSaveFamilyDetails}
+              className="px-4 py-2 text-sm rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium"
+            >
+              Save changes
+            </button>
+            {familySaved && <span className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted flex items-center gap-1"><Check size={13} /> Saved</span>}
+          </div>
+        </div>
+      )}
+
+      {tab === 'templates' && (
+        <div className="space-y-4">
+          <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
+            Choose the default tree style every family member sees first. Current: <span className="font-medium capitalize">{data.family.activeTreeTemplate}</span>
+          </p>
+          <TreeTemplateSwitcher active={data.family.activeTreeTemplate} onChange={setPendingTemplate} />
+
+          {pendingTemplate && pendingTemplate !== data.family.activeTreeTemplate && (
+            <div className="rounded-xl border border-heritage-gold-300 bg-heritage-gold-50 p-4 flex items-start gap-3">
+              <ShieldAlert size={18} className="text-heritage-gold-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-heritage-gold-800">
+                  Switch the family's default tree to <span className="font-semibold capitalize">{pendingTemplate}</span>? All members will see this style when they open the Family Tree page.
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={confirmTemplateSwitch} className="text-xs px-3 py-1.5 rounded-lg bg-heritage-green-800 text-white font-medium">Confirm switch</button>
+                  <button onClick={() => setPendingTemplate(null)} className="text-xs px-3 py-1.5 rounded-lg border border-heritage-gold-400 text-heritage-gold-800">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'onboarding' && (
+        <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-6">
+          <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mb-5">
+            Walk a new family administrator through setting up their archive from scratch.
+          </p>
+          <div className="flex items-center gap-1.5 mb-6 flex-wrap">
+            {ONBOARDING_STEPS.map((s, i) => (
+              <button
+                key={s.title}
+                onClick={() => setWizardStep(i)}
+                className={`w-7 h-7 rounded-full text-xs font-semibold flex items-center justify-center
+                  ${i === wizardStep ? 'bg-heritage-green-800 text-white' : i < wizardStep ? 'bg-heritage-green-100 text-heritage-green-700' : 'bg-heritage-cream-200 text-heritage-green-500 dark:bg-heritage-dark-hover'}`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+          <div className="max-w-md">
+            <p className="text-xs uppercase tracking-wide text-heritage-gold-600">Step {wizardStep + 1} of {ONBOARDING_STEPS.length}</p>
+            <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text mt-1">{ONBOARDING_STEPS[wizardStep].title}</h3>
+            <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-2 leading-relaxed">{ONBOARDING_STEPS[wizardStep].body}</p>
+            <div className="flex gap-2 mt-5">
+              <button
+                disabled={wizardStep === 0}
+                onClick={() => setWizardStep(s => Math.max(0, s - 1))}
+                className="px-3.5 py-2 text-sm rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted disabled:opacity-40"
+              >
+                Back
+              </button>
+              <button
+                disabled={wizardStep === ONBOARDING_STEPS.length - 1}
+                onClick={() => setWizardStep(s => Math.min(ONBOARDING_STEPS.length - 1, s + 1))}
+                className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-40"
+              >
+                Next step
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'audit' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">Real-time record of changes made to this archive.</p>
+            <button onClick={() => { if (confirm('Reset all data back to the original seeded family? This discards any local changes.')) resetToSeed(); }} className="text-xs text-red-600 hover:text-red-800">
+              Reset to seed data
+            </button>
+          </div>
+          <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card divide-y divide-heritage-cream-200 dark:divide-heritage-dark-border">
+            {data.auditLog.map(entry => (
+              <div key={entry.id} className="px-4 py-3 flex items-center gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-heritage-gold-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">
+                    <span className="font-medium">{entry.actorName}</span> {entry.action.toLowerCase().startsWith(entry.actorName.toLowerCase()) ? '' : ''}
+                    {' '}{entry.action}
+                  </p>
+                  <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{new Date(entry.createdAt).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
