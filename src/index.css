@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-heritage-cream-400 dark:border-heritage-dark-border;
+  }
+  ::selection {
+    @apply bg-heritage-gold-200 text-heritage-green-900;
+  }
+  h1, h2, h3, h4 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.heritage.green.300') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: theme('colors.heritage.green.300');
+    border-radius: 999px;
+  }
+}
+
+.dark body {
+  background-color: theme('colors.heritage.dark.bg');
+  color: theme('colors.heritage.dark.text');
+}
+
+/* ---- Pure-CSS org-chart connectors, used by the Classic/Minimalist/Heritage trees ---- */
+.org-tree {
+  display: table;
+  margin: 0 auto;
+  padding-top: 0;
+}
+.org-tree ul {
+  display: table;
+  margin: 0 auto;
+  padding-top: 28px;
+  position: relative;
+}
+.org-tree li {
+  display: table-cell;
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  padding: 28px 14px 0 14px;
+  vertical-align: top;
+}
+.org-tree li::before,
+.org-tree li::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 2px solid var(--tree-line, #9bc2b0);
+  width: 50%;
+  height: 28px;
+}
+.org-tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid var(--tree-line, #9bc2b0);
+}
+.org-tree li:only-child::after,
+.org-tree li:only-child::before {
+  display: none;
+}
+.org-tree li:only-child {
+  padding-top: 0;
+}
+.org-tree li:first-child::before,
+.org-tree li:last-child::after {
+  border: 0 none;
+}
+.org-tree li:last-child::before {
+  border-right: 2px solid var(--tree-line, #9bc2b0);
+  border-radius: 0 6px 0 0;
+}
+.org-tree li:first-child::after {
+  border-radius: 6px 0 0 0;
+}
+.org-tree > li {
+  padding-top: 0;
+}
+.org-tree > li::before,
+.org-tree > li::after {
+  display: none;
+}
+.org-tree ul::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid var(--tree-line, #9bc2b0);
+  width: 0;
+  height: 28px;
+}
