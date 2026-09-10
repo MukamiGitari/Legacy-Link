@@ -206,6 +206,8 @@ export interface FamilyDataset {
   biographies: Biography[];
   legacyContributions: LegacyContribution[];
   languageEntries: LanguageEntry[];
+  triviaScores: TriviaScore[];
+  stories: Story[];
   profiles: Profile[];
   invitationCodes: InvitationCode[];
   restorationCodes: RestorationCode[];
@@ -238,6 +240,43 @@ export interface LanguageEntry {
   createdAt: string;
 }
 
+export type StoryStatus = 'active' | 'complete';
+
+/**
+ * One line a family member contributed to a collaborative "story builder" round.
+ * Entries are written blind — a contributor only sees the immediately preceding
+ * entry, not the whole story — so the finished piece reads like a family game,
+ * not a jointly-edited document.
+ */
+export interface StoryEntry {
+  id: string;
+  storyId: string;
+  memberProfileId: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
+/**
+ * A collaborative story: a seed prompt, an ordered turn order of participating
+ * profiles, and the entries contributed so far. Once every participant has
+ * taken a turn the story is marked 'complete' and can be saved into the
+ * family's Memories/Chronicle as a finished piece.
+ */
+export interface Story {
+  id: string;
+  familyId: string;
+  title: string;
+  seedPrompt: string;
+  status: StoryStatus;
+  turnOrder: string[]; // profile ids, in play order
+  currentTurnIndex: number;
+  entries: StoryEntry[];
+  createdAt: string;
+  completedAt?: string;
+  savedAsMemoryId?: string;
+}
+
 export type NotificationKind = 'photo_tag' | 'legacy_tag' | 'memory_tag';
 
 /** An in-app notification generated when a member is tagged somewhere, delivered to the
@@ -264,6 +303,20 @@ export interface RestorationCode {
   code: string;
   createdAt: string;
   redeemedAt?: string;
+}
+
+export type TriviaCategory = 'our_family' | 'history' | 'geography';
+
+/** One completed round of the Family Trivia game, kept for the leaderboard. */
+export interface TriviaScore {
+  id: string;
+  familyId: string;
+  profileId: string;
+  playerName: string;
+  category: TriviaCategory;
+  score: number;
+  totalQuestions: number;
+  createdAt: string;
 }
 
 /** Derived lineage helper used by tree visualizers and the person drawer. */

@@ -16,6 +16,8 @@ import { Events } from './pages/Events';
 import { Announcements } from './pages/Announcements';
 import { Chronicle } from './pages/Chronicle';
 import { Dictionary } from './pages/Dictionary';
+import { Trivia } from './pages/Trivia';
+import { Games } from './pages/Games';
 import { Admin } from './pages/Admin';
 import { useApp } from './context/AppContext';
 import { isAdminRole, canAddContent } from './lib/permissions';
@@ -23,7 +25,7 @@ import { ShieldAlert } from 'lucide-react';
 
 export type Page =
   | 'dashboard' | 'myFamily' | 'tree' | 'directory' | 'profile' | 'gallery'
-  | 'memories' | 'events' | 'announcements' | 'chronicle' | 'dictionary' | 'admin';
+  | 'memories' | 'events' | 'announcements' | 'chronicle' | 'dictionary' | 'trivia' | 'games' | 'admin';
 
 const App: React.FC = () => {
   const { isAuthenticated, isLoading, currentProfile } = useApp();
@@ -109,6 +111,8 @@ const App: React.FC = () => {
           {page === 'announcements' && <Announcements />}
           {page === 'chronicle' && <Chronicle />}
           {page === 'dictionary' && <Dictionary onSelectMember={openMemberDrawer} />}
+          {page === 'trivia' && <Trivia />}
+          {page === 'games' && <Games />}
           {page === 'admin' && (isAdmin ? <Admin /> : (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-12 text-center">
               <ShieldAlert size={28} className="text-heritage-bark-500" />
