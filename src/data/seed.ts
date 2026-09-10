@@ -109,31 +109,31 @@ export const relationships: Relationship[] = [
 
 export const albums: Album[] = [
   { id: 'al1', familyId: FAMILY_ID, title: "Naomi & Reuben's Wedding", category: 'weddings',
-    description: 'The wedding that started it all, Nkubu 1950.', coverPhotoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800' },
+    description: 'The wedding that started it all, Nkubu 1950.', coverPhotoUrl: 'https://images.unsplash.com/photo-1608009232260-9b527a5bb9bd?w=800' },
   { id: 'al2', familyId: FAMILY_ID, title: '2019 Kobia-Kiogora Reunion', category: 'reunions',
-    description: 'Three generations gathered at the Nkubu homestead.', coverPhotoUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800' },
+    description: 'Three generations gathered at the Nkubu homestead.', coverPhotoUrl: '/photos/framed_wood_reunion_large.jpg' },
   { id: 'al3', familyId: FAMILY_ID, title: 'Childhood in Nkubu', category: 'childhood',
-    description: 'Peter, Susan and James growing up on the farm.', coverPhotoUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=800' },
+    description: 'Peter, Susan and James growing up on the farm.', coverPhotoUrl: '/photos/scene_mother_daughter_garden.jpg' },
   { id: 'al4', familyId: FAMILY_ID, title: 'The Homestead, 1955–1970', category: 'historical',
-    description: 'Early photographs of the coffee terraces and original house.', coverPhotoUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800' },
+    description: 'Early photographs of the coffee terraces and original house.', coverPhotoUrl: '/photos/scene_grandmas_garden.jpg' },
   { id: 'al5', familyId: FAMILY_ID, title: "Remembering Reuben & Naomi", category: 'memorials',
-    description: 'A tribute album shared at both memorial services.', coverPhotoUrl: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=800' },
+    description: 'A tribute album shared at both memorial services.', coverPhotoUrl: '/photos/framed_wood_elders.jpg' },
   { id: 'al6', familyId: FAMILY_ID, title: 'Christmas at the Homestead', category: 'holidays',
-    description: 'The annual gathering, every December since 1985.', coverPhotoUrl: 'https://images.unsplash.com/photo-1482517967863-00e15c9b44be?w=800' },
+    description: 'The annual gathering, every December since 1985.', coverPhotoUrl: '/photos/scene_dinner_selfie.jpg' },
 ];
 
 export const photos: Photo[] = [
-  { id: 'p1', albumId: 'al1', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800', caption: 'Reuben and Naomi outside church, 1950', takenAt: '1950-06-10', taggedMemberIds: ['m1', 'm2'] },
-  { id: 'p2', albumId: 'al2', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800', caption: 'The whole family under the old fig tree', takenAt: '2019-12-27', taggedMemberIds: ['m3','m4','m5','m6','m7','m8'] },
-  { id: 'p3', albumId: 'al3', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=800', caption: 'Peter and Susan on the farm, 1962', takenAt: '1962-04-01', taggedMemberIds: ['m3','m5'] },
-  { id: 'p4', albumId: 'al4', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800', caption: 'The original homestead house', takenAt: '1958-01-01', taggedMemberIds: [] },
-  { id: 'p5', albumId: 'al6', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1482517967863-00e15c9b44be?w=800', caption: 'Christmas lunch, 2021', takenAt: '2021-12-25', taggedMemberIds: ['m9','m10','m17','m18'] },
+  { id: 'p1', albumId: 'al1', familyId: FAMILY_ID, url: 'https://images.unsplash.com/photo-1608009232260-9b527a5bb9bd?w=800', caption: 'Reuben and Naomi outside church, 1950', takenAt: '1950-06-10', taggedMemberIds: ['m1', 'm2'] },
+  { id: 'p2', albumId: 'al2', familyId: FAMILY_ID, url: '/photos/framed_wood_reunion_large.jpg', caption: 'The whole family under the old fig tree', takenAt: '2019-12-27', taggedMemberIds: ['m3','m4','m5','m6','m7','m8'] },
+  { id: 'p3', albumId: 'al3', familyId: FAMILY_ID, url: '/photos/scene_kids_garden.jpg', caption: 'Peter and Susan on the farm, 1962', takenAt: '1962-04-01', taggedMemberIds: ['m3','m5'] },
+  { id: 'p4', albumId: 'al4', familyId: FAMILY_ID, url: '/photos/scene_grandmas_garden.jpg', caption: 'The original homestead house', takenAt: '1958-01-01', taggedMemberIds: [] },
+  { id: 'p5', albumId: 'al6', familyId: FAMILY_ID, url: '/photos/scene_dinner_selfie.jpg', caption: 'Christmas lunch, 2021', takenAt: '2021-12-25', taggedMemberIds: ['m9','m10','m17','m18'] },
 ];
 
 export const memories: Memory[] = [
   { id: 'mem1', familyId: FAMILY_ID, title: "Grandmother's Wedding Day & The Silk Shawl (1950)",
     body: "Naomi wore her mother's silk shawl, hand-carried from Chogoria, and insisted the ceremony wait until the afternoon rains passed. The shawl is still kept in the cedar chest at the homestead.",
-    era: '1950s', authorMemberId: 'm5', coverPhotoUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800',
+    era: '1950s', authorMemberId: 'm5', coverPhotoUrl: 'https://images.unsplash.com/photo-1608009232260-9b527a5bb9bd?w=800',
     relatedMemberIds: ['m1', 'm2'], createdAt: '2020-03-01' },
   { id: 'mem2', familyId: FAMILY_ID, title: 'The Coffee Terraces Reuben Built',
     body: 'Reuben terraced the hillside by hand over two dry seasons so the rains would not wash away the topsoil. Those same terraces still produce the family\'s coffee today.',
@@ -276,6 +276,121 @@ export const languageEntries: LanguageEntry[] = [
     saidByMemberId: 'm2',
     contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-16T12:00:00Z',
   },
+  {
+    id: 'lang9', familyId: FAMILY_ID, entryType: 'proverb', term: 'Agiicuria ta kireere naiji uria akareera',
+    meaning: 'When he hangs himself down like a bat, he definitely knows how he would float through the air.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T08:00:00Z',
+  },
+  {
+    id: 'lang10', familyId: FAMILY_ID, entryType: 'proverb', term: 'Agwikia jua nduu kaara',
+    meaning: 'He has inserted a finger into the anus of the monster — meaning, one has tried a very dangerous feat.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T08:05:00Z',
+  },
+  {
+    id: 'lang11', familyId: FAMILY_ID, entryType: 'proverb', term: 'Agwikirithania na murampa',
+    meaning: 'He has rubbed shoulders against a baobab tree — meaning, he wants to compare himself with a giant. He wants to look big.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T08:10:00Z',
+  },
+  {
+    id: 'lang12', familyId: FAMILY_ID, entryType: 'proverb', term: 'Akagwata gikama mwanki-ukwora (jukwora)',
+    meaning: 'He would get hold of a red-hot iron brand just after it has left the fire. The gikama was a piece of metal used in a trial ordeal to determine the guilt or innocence of an accused thief, carried with naked hands across a given distance — dropping it proved thievery. The proverb warns of the consequences of thievery.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T08:15:00Z',
+  },
+  {
+    id: 'lang13', familyId: FAMILY_ID, entryType: 'proverb', term: 'Akwina abicha',
+    meaning: 'He has danced topsy-turvy (upside down). Similar to "Akwina atema ntabui" ("he has danced amazingly beyond") and "Akwina atura nturi" ("he has danced amazingly to the end"). Means too much of a good thing might be bad — he has danced himself to death.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T08:20:00Z',
+  },
+  {
+    id: 'lang14', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ari mutine jukuura',
+    meaning: 'He is under a leaking tree — meaning, he is having problems.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T08:25:00Z',
+  },
+  {
+    id: 'lang15', familyId: FAMILY_ID, entryType: 'proverb', term: 'Bia thuguri bitiujuraga ncuku',
+    meaning: 'Bartered grains do not fill up the granary — one should not expect to be self-sufficient without cultivating land.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T08:30:00Z',
+  },
+  {
+    id: 'lang16', familyId: FAMILY_ID, entryType: 'proverb', term: 'Cookera akui, Nturutimi yacookeere Nciru',
+    meaning: 'Return before you go further — Nturutimi returned after it had reached Mciru. Nturutimi was one of the age groups in Meru; Mciru is where the Njuri-Ncheke Council of Elders met to formulate the rules and customs governing Meru life. The proverb warns against pushing past a decision that is already binding and final.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T08:35:00Z',
+  },
+  {
+    id: 'lang17', familyId: FAMILY_ID, entryType: 'proverb', term: 'Naanga yereragua ni ruuo',
+    meaning: 'The naanga flies with the wind. A naanga is a soft printed cotton cloth worn over the shoulders by dancing Meru warriors, flying behind each dancer as a beautiful bunting. Possibly means to swim with the current, to go with the flow.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T08:40:00Z',
+  },
+  {
+    id: 'lang18', familyId: FAMILY_ID, entryType: 'proverb', term: 'Nagwurite kareere maigo',
+    meaning: 'He has extracted the bat\u2019s teeth — he has done something extraordinary.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T08:45:00Z',
+  },
+  {
+    id: 'lang19', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ncamba ti matina',
+    meaning: 'The strength of a hero does not centre on his buttocks. Also "Ncamba ti biuriu" ("the strength of a hero is not displayed by the calves of his legs"). One\u2019s fame and strength are not determined by appearance or physical force, but by intelligence and other qualities.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T08:50:00Z',
+  },
+  {
+    id: 'lang20', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ndara mugumone itiji ndaara mugene nikumuntwa',
+    meaning: 'One (a bird) that spends the night on a fig-tree does not know that the other, passing the night on a thorny cactus tree, is being pricked.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T08:55:00Z',
+  },
+  {
+    id: 'lang21', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ndiita na (Mwirigo) Juu juri iraa kana juria juri nondo',
+    meaning: 'Should I follow the route with clay soil, or the one with ochre? The Meru believed in two imaginary roads in life: the white "clay" road of light, connected to Ngai the Creator; and the red "ochre" road, connected with fear and bloodshed — warriors wore ochre before going to war. Used when one faces a dilemma.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T09:00:00Z',
+  },
+  {
+    id: 'lang22', familyId: FAMILY_ID, entryType: 'saying', term: 'Ni-kae karumirwa ka nyeenje kaguruke na ruuo',
+    meaning: 'Let it be a bite of a cockroach and fly with the wind — an expression used for soothing a hurt child.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T09:05:00Z',
+  },
+  {
+    id: 'lang23', familyId: FAMILY_ID, entryType: 'proverb', term: 'Niku gwatuka maguru ta mbiti',
+    meaning: 'It is halving one\u2019s body into two, like a hyena — similar to "he who hunts two hares leaves one and loses the other." A hyena chasing a goat reached a fork in the path and, greedy to cover both routes, placed its legs on each path and tore itself in two. Warns against trying to have everything at once.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T09:10:00Z',
+  },
+  {
+    id: 'lang24', familyId: FAMILY_ID, entryType: 'proverb', term: 'Niku kwenja nkari igoti',
+    meaning: 'It is to shave the leopard\u2019s mane — to undertake a very dangerous and nerve-wracking venture.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T09:15:00Z',
+  },
+  {
+    id: 'lang25', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ni nyongo ikuthekera rugio',
+    meaning: 'It is a pot laughing at the potsherd — nothing lasts for ever, for even a pot will break one day.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T09:20:00Z',
+  },
+  {
+    id: 'lang26', familyId: FAMILY_ID, entryType: 'proverb', term: 'Ni utheri kwinira uri na mpara',
+    meaning: 'It is no use to lull a child with a hungry look.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T09:25:00Z',
+  },
+  {
+    id: 'lang27', familyId: FAMILY_ID, entryType: 'proverb', term: "Ng'ombe ni cietu kuuma kaumo",
+    meaning: 'The cattle belong to us right from the beginning.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T09:30:00Z',
+  },
+  {
+    id: 'lang28', familyId: FAMILY_ID, entryType: 'proverb', term: 'Nja iri mukuru itiguujaga nderi',
+    meaning: 'The vultures would not land at a village where there is a wise old man — meaning no crime would be committed, since vultures usually alight where blood has been shed.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T09:35:00Z',
+  },
+  {
+    id: 'lang29', familyId: FAMILY_ID, entryType: 'proverb', term: "Nkejira ng'ombe ntigiri ciuma ngoji",
+    meaning: 'I shall come for the cows after the donkeys have grown horns — when pigs fly.',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-03-18T09:40:00Z',
+  },
+  {
+    id: 'lang30', familyId: FAMILY_ID, entryType: 'proverb', term: "Nthenge inkuru ititiyaga utheri",
+    meaning: 'An old he-goat does not sneeze for nothing — old men speak the truth with a lot of experience and deep reasoning.',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-03-18T09:45:00Z',
+  },
+  {
+    id: 'lang31', familyId: FAMILY_ID, entryType: 'proverb', term: 'Niku kurita mbiti irinyene',
+    meaning: 'It\u2019s like removing a hyena from a pit. A man pulled a trapped hyena out of a pit out of pity, only for the hyena to then demand an arm or leg to eat since it was starving. The man tricked it into stepping onto its back to reach a "fattest arm" supposedly nearby, then climbed out and left it behind. Directed at people who are never grateful for good deeds done for them.',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T09:50:00Z',
+  },
 ];
 
 export const profiles: Profile[] = [
@@ -298,7 +413,7 @@ export function buildSeedDataset(): FamilyDataset {
       name: 'The Kobia & Kiogora Family',
       motto: 'Our Roots, Our Story, Our Legacy.',
       originStory: 'Founded in 1950 when Reuben Kobia married Naomi Kiogora and cleared the first coffee terraces above Nkubu, on the eastern slopes of Mount Kenya.',
-      coverPhotoUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1200',
+      coverPhotoUrl: '/photos/scene_farm_gathering.jpg',
       activeTreeTemplate: 'classic',
     },
     members,

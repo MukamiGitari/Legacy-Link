@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Languages, Trash2 } from 'lucide-react';
+import { Plus, Languages, Trash2, Pencil, Check, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
@@ -28,7 +28,7 @@ const TYPE_BADGE_CLASS: Record<LanguageEntryType, string> = {
 const TYPE_ORDER: LanguageEntryType[] = ['word', 'phrase', 'proverb', 'riddle', 'saying'];
 
 export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
-  const { data, currentProfile, addLanguageEntry, removeLanguageEntry } = useApp();
+  const { data, currentProfile, addLanguageEntry, updateLanguageEntry, removeLanguageEntry } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
   const isAdmin = currentProfile?.role === 'super_admin' || currentProfile?.role === 'family_admin';
 
@@ -39,6 +39,27 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
   const [answer, setAnswer] = useState('');
   const [saidByMemberId, setSaidByMemberId] = useState('');
   const [filter, setFilter] = useState<LanguageEntryType | 'all'>('all');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTerm, setEditTerm] = useState('');
+  const [editMeaning, setEditMeaning] = useState('');
+  const [editAnswer, setEditAnswer] = useState('');
+
+  const startEdit = (id: string, currentTerm: string, currentMeaning: string, currentAnswer?: string) => {
+    setEditingId(id);
+    setEditTerm(currentTerm);
+    setEditMeaning(currentMeaning);
+    setEditAnswer(currentAnswer ?? '');
+  };
+
+  const saveEdit = (id: string, hasAnswer: boolean) => {
+    if (!editTerm.trim() || !editMeaning.trim()) return;
+    updateLanguageEntry(id, {
+      term: editTerm.trim(),
+      meaning: editMeaning.trim(),
+      answer: hasAnswer && editAnswer.trim() ? editAnswer.trim() : undefined,
+    });
+    setEditingId(null);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +192,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
         )}
         {entries.map(entry => {
           const saidBy = entry.saidByMemberId ? data.members.find(mem => mem.id === entry.saidByMemberId) : undefined;
+          const isEditing = editingId === entry.id;
           return (
             <div key={entry.id} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5">
               <div className="flex items-start justify-between gap-3">
@@ -180,24 +202,65 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                     {TYPE_LABEL[entry.entryType]}
                   </span>
                 </div>
-                {(isAdmin || entry.contributedByProfileId === currentProfile?.id) && (
-                  <button
-                    onClick={() => removeLanguageEntry(entry.id)}
-                    className="text-heritage-green-400 hover:text-red-600 shrink-0"
-                    title="Remove entry"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
+                <div className="flex items-center gap-3 shrink-0">
+                  {canAdd && !isEditing && (
+                    <button
+                      onClick={() => startEdit(entry.id, entry.term, entry.meaning, entry.answer)}
+                      className="text-heritage-green-400 hover:text-heritage-green-800 dark:text-heritage-dark-muted"
+                      title="Suggest a correction"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  )}
+                  {(isAdmin || entry.contributedByProfileId === currentProfile?.id) && !isEditing && (
+                    <button
+                      onClick={() => removeLanguageEntry(entry.id)}
+                      className="text-heritage-green-400 hover:text-red-600"
+                      title="Remove entry"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <p className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">{entry.term}</p>
-              <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-2 leading-relaxed">{entry.meaning}</p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <input
+                    autoFocus
+                    value={editTerm} onChange={e => setEditTerm(e.target.value)}
+                    className="w-full font-serif text-lg rounded-lg border border-heritage-gold-400 dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-1.5 focus:outline-none"
+                  />
+                  <textarea
+                    value={editMeaning} onChange={e => setEditMeaning(e.target.value)} rows={3}
+                    className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                  />
+                  {entry.entryType === 'riddle' && (
+                    <input
+                      value={editAnswer} onChange={e => setEditAnswer(e.target.value)} placeholder="The traditional answer (optional)"
+                      className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2"
+                    />
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setEditingId(null)} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">
+                      <X size={13} /> Cancel
+                    </button>
+                    <button onClick={() => saveEdit(entry.id, entry.entryType === 'riddle')} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium">
+                      <Check size={13} /> Save correction
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">{entry.term}</p>
+                  <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-2 leading-relaxed">{entry.meaning}</p>
 
-              {entry.answer && (
-                <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2">
-                  <span className="font-medium">Answer:</span> {entry.answer}
-                </p>
+                  {entry.answer && (
+                    <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-2">
+                      <span className="font-medium">Answer:</span> {entry.answer}
+                    </p>
+                  )}
+                </>
               )}
 
               <div className="flex items-center justify-between mt-4 flex-wrap gap-2">

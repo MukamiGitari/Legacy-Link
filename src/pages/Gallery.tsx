@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Plus, ImagePlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Plus, ImagePlus, Pencil, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { AddAlbumModal } from '../components/gallery/AddAlbumModal';
@@ -22,18 +22,22 @@ interface Props {
 }
 
 export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
-  const { data, currentProfile } = useApp();
+  const { data, currentProfile, updateAlbum } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
   const [category, setCategory] = useState<Album['category'] | 'all'>('all');
   const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showAddAlbum, setShowAddAlbum] = useState(false);
   const [showAddPhotos, setShowAddPhotos] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const albums = category === 'all' ? data.albums : data.albums.filter(a => a.category === category);
   const openAlbum = data.albums.find(a => a.id === openAlbumId);
   const albumPhotos = openAlbum ? data.photos.filter(p => p.albumId === openAlbum.id) : [];
   const lightboxPhoto = lightboxIndex !== null ? albumPhotos[lightboxIndex] : null;
+
+  useEffect(() => { setEditingTitle(false); }, [openAlbumId]);
 
   return (
     <div className="space-y-5">
@@ -42,7 +46,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
           {CATEGORIES.map(c => (
             <button
               key={c.key}
-              onClick={() => setCategory(c.key)}
+              onClick={() => { setCategory(c.key); setOpenAlbumId(null); }}
               className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
                 ${category === c.key
                   ? 'bg-heritage-green-800 border-heritage-green-800 text-white'
@@ -99,7 +103,46 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
               </button>
             )}
           </div>
-          <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text mt-3">{openAlbum.title}</h3>
+          <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text mt-3 flex items-center gap-2">
+            {editingTitle ? (
+              <>
+                <input
+                  autoFocus
+                  className="font-serif text-xl bg-transparent border-b border-heritage-gold-400 focus:outline-none text-heritage-green-900 dark:text-heritage-dark-text"
+                  value={titleDraft}
+                  onChange={e => setTitleDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && titleDraft.trim()) {
+                      updateAlbum(openAlbum.id, { title: titleDraft.trim() });
+                      setEditingTitle(false);
+                    } else if (e.key === 'Escape') {
+                      setEditingTitle(false);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => { if (titleDraft.trim()) { updateAlbum(openAlbum.id, { title: titleDraft.trim() }); setEditingTitle(false); } }}
+                  className="text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900"
+                  aria-label="Save album name"
+                >
+                  <Check size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                {openAlbum.title}
+                {canAdd && (
+                  <button
+                    onClick={() => { setTitleDraft(openAlbum.title); setEditingTitle(true); }}
+                    className="text-heritage-green-400 hover:text-heritage-green-800 dark:text-heritage-dark-muted"
+                    aria-label="Rename album"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </>
+            )}
+          </h3>
           <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted mb-4">{openAlbum.description}</p>
           {albumPhotos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">

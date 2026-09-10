@@ -12,7 +12,7 @@ const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
   { key: 'holidays', label: 'Holidays' },
 ];
 
-const FALLBACK_COVER = 'https://images.unsplash.com/photo-1476234251651-f353703a034d?w=400&q=60';
+const FALLBACK_COVER = '/photos/framed_wood_reunion_small.jpg';
 
 interface Props {
   onClose: () => void;

@@ -100,6 +100,7 @@ interface AppContextValue {
 
   // media
   addAlbum: (a: Omit<Album, 'id' | 'familyId'>) => Album;
+  updateAlbum: (id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl'>>) => void;
   addPhoto: (p: Omit<Photo, 'id' | 'familyId'>) => Photo;
 
   // memories / events / announcements
@@ -118,6 +119,7 @@ interface AppContextValue {
 
   // language dictionary
   addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
+  updateLanguageEntry: (id: string, patch: { term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
   removeLanguageEntry: (id: string) => void;
 
   // trivia & leaderboard
@@ -345,6 +347,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return album;
   };
 
+  const updateAlbum: AppContextValue['updateAlbum'] = (id, patch) => {
+    setData(prev => ({ ...prev, albums: prev.albums.map(a => (a.id === id ? { ...a, ...patch } : a)) }));
+    if (isOnlineMode) persist('update album', () => db.updateAlbumRow(id, patch));
+    if (patch.title) logActivity(`Renamed an album to "${patch.title}"`, 'album');
+  };
+
   /** Creates an in-app notification for every tagged member who has a login profile
    *  linked to them (skipping the person who did the tagging, if they tagged themselves). */
   const notifyTaggedMembers = useCallback((
@@ -508,6 +516,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Removed a language dictionary entry`, 'language_entry');
   };
 
+  const updateLanguageEntry: AppContextValue['updateLanguageEntry'] = (id, patch) => {
+    setData(prev => ({ ...prev, languageEntries: prev.languageEntries.map(e => (e.id === id ? { ...e, ...patch } : e)) }));
+    if (isOnlineMode) persist('update language entry', () => db.updateLanguageEntryRow(id, patch));
+    logActivity(`Corrected a family language dictionary entry`, 'language_entry');
+  };
+
   const recordTriviaScore: AppContextValue['recordTriviaScore'] = (category, score, totalQuestions) => {
     const entry: TriviaScore = {
       id: newId(),
@@ -647,8 +661,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfileAvatar: AppContextValue['updateProfileAvatar'] = (id, avatarUrl) => {
-    setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, avatarUrl } : p)) }));
+    setData(prev => ({
+      ...prev,
+      profiles: prev.profiles.map(p => (p.id === id ? { ...p, avatarUrl } : p)),
+    }));
     if (isOnlineMode) persist('update profile photo', () => db.updateProfileAvatarRow(id, avatarUrl));
+
+    // A profile is a login account; the tree renders from the linked Member record instead,
+    // so without this the person's new photo would never show up on the tree.
+    const profile = data.profiles.find(p => p.id === id);
+    if (profile?.memberId) {
+      setData(prev => ({
+        ...prev,
+        members: prev.members.map(m => (m.id === profile.memberId ? { ...m, avatarUrl } : m)),
+      }));
+      if (isOnlineMode) persist('update member photo', () => db.updateMemberRow(profile.memberId!, { avatarUrl }));
+    }
   };
 
   const generateInvitationCode: AppContextValue['generateInvitationCode'] = (role, memberId) => {
@@ -875,10 +903,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
-    addAlbum, addPhoto,
+    addAlbum, updateAlbum, addPhoto,
     addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
     saveBiography, addLegacyContribution, removeLegacyContribution,
-    addLanguageEntry, removeLanguageEntry,
+    addLanguageEntry, updateLanguageEntry, removeLanguageEntry,
     recordTriviaScore,
     startStory, addStoryEntry, saveStoryAsMemory, abandonStory,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,

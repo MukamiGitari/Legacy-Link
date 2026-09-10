@@ -355,6 +355,16 @@ export async function insertAlbum(a: Album) {
   if (error) throw error;
 }
 
+export async function updateAlbumRow(id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl'>>) {
+  const row: Record<string, unknown> = {};
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.category !== undefined) row.category = patch.category;
+  if (patch.description !== undefined) row.description = patch.description ?? null;
+  if (patch.coverPhotoUrl !== undefined) row.cover_photo_url = patch.coverPhotoUrl ?? null;
+  const { error } = await must().from('albums').update(row).eq('id', id);
+  if (error) throw error;
+}
+
 const PHOTO_BUCKET = 'family-photos';
 
 /** Uploads a photo file to Supabase Storage under `<familyId>/<albumId>/<uuid>.<ext>`
@@ -531,6 +541,16 @@ export async function insertLanguageEntry(e: LanguageEntry) {
 
 export async function deleteLanguageEntryRow(id: string) {
   const { error } = await must().from('language_entries').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function updateLanguageEntryRow(id: string, patch: Partial<Pick<LanguageEntry, 'term' | 'meaning' | 'answer' | 'saidByMemberId'>>) {
+  const row: Record<string, unknown> = {};
+  if (patch.term !== undefined) row.term = patch.term;
+  if (patch.meaning !== undefined) row.meaning = patch.meaning;
+  if (patch.answer !== undefined) row.answer = patch.answer ?? null;
+  if (patch.saidByMemberId !== undefined) row.said_by_member_id = patch.saidByMemberId ?? null;
+  const { error } = await must().from('language_entries').update(row).eq('id', id);
   if (error) throw error;
 }
 
