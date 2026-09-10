@@ -1,7 +1,7 @@
 import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, Biography, LegacyContribution,
-  LanguageEntry,
+  LanguageEntry, TriviaScore,
 } from '../types';
 
 const FAMILY_ID = 'family-kobia-kiogora';
@@ -285,6 +285,12 @@ export const profiles: Profile[] = [
   { id: 'prof4', familyId: FAMILY_ID, displayName: 'Guest Viewer', email: 'guest@example.com', role: 'guest' },
 ];
 
+export const triviaScores: TriviaScore[] = [
+  { id: 'triv1', familyId: FAMILY_ID, profileId: 'prof2', playerName: 'Catherine Kobia', category: 'our_family', score: 8, totalQuestions: 10, createdAt: '2026-05-20T10:00:00Z' },
+  { id: 'triv2', familyId: FAMILY_ID, profileId: 'prof1', playerName: 'John Kobia', category: 'our_family', score: 7, totalQuestions: 10, createdAt: '2026-05-21T09:00:00Z' },
+  { id: 'triv3', familyId: FAMILY_ID, profileId: 'prof3', playerName: 'Faith Muthomi', category: 'history', score: 6, totalQuestions: 10, createdAt: '2026-05-22T14:00:00Z' },
+];
+
 export function buildSeedDataset(): FamilyDataset {
   return {
     family: {
@@ -306,6 +312,8 @@ export function buildSeedDataset(): FamilyDataset {
     biographies,
     legacyContributions,
     languageEntries,
+    triviaScores,
+    stories: [],
     profiles,
     invitationCodes: [],
     restorationCodes: [],

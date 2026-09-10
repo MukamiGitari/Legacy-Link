@@ -17,6 +17,8 @@ const PAGE_TITLES: Record<Page, string> = {
   announcements: 'Announcements',
   chronicle: 'Family History Chronicle',
   dictionary: 'Language & Sayings',
+  trivia: 'Family Trivia',
+  games: 'Games',
   admin: 'Admin Suite',
 };
 

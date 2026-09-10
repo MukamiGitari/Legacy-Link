@@ -3,6 +3,7 @@ import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, TreeTemplate, Profile, Role, RelationshipType,
   Biography, LegacyContribution, LanguageEntry, LanguageEntryType, AppNotification,
+  TriviaCategory, TriviaScore, Story, StoryEntry,
 } from '../types';
 import { buildSeedDataset } from '../data/seed';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
@@ -28,6 +29,8 @@ function loadFromStorage(): FamilyDataset {
         biographies: parsed.biographies ?? [],
         legacyContributions: parsed.legacyContributions ?? [],
         languageEntries: parsed.languageEntries ?? [],
+        triviaScores: parsed.triviaScores ?? [],
+        stories: parsed.stories ?? [],
         restorationCodes: parsed.restorationCodes ?? [],
         notifications: parsed.notifications ?? [],
       };
@@ -116,6 +119,15 @@ interface AppContextValue {
   // language dictionary
   addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
   removeLanguageEntry: (id: string) => void;
+
+  // trivia & leaderboard
+  recordTriviaScore: (category: TriviaCategory, score: number, totalQuestions: number) => void;
+
+  // collaborative story builder game
+  startStory: (title: string, seedPrompt: string, turnOrderProfileIds: string[]) => Story;
+  addStoryEntry: (storyId: string, text: string) => void;
+  saveStoryAsMemory: (storyId: string) => void;
+  abandonStory: (storyId: string) => void;
 
   // notifications
   notificationsForCurrentProfile: AppNotification[];
@@ -496,6 +508,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Removed a language dictionary entry`, 'language_entry');
   };
 
+  const recordTriviaScore: AppContextValue['recordTriviaScore'] = (category, score, totalQuestions) => {
+    const entry: TriviaScore = {
+      id: newId(),
+      familyId: data.family.id,
+      profileId: currentProfile?.id ?? '',
+      playerName: currentProfile?.displayName ?? 'A family member',
+      category,
+      score,
+      totalQuestions,
+      createdAt: new Date().toISOString(),
+    };
+    setData(prev => ({ ...prev, triviaScores: [entry, ...prev.triviaScores] }));
+    if (isOnlineMode) persist('trivia score', () => db.insertTriviaScore(entry));
+    logActivity(`Scored ${score}/${totalQuestions} in Family Trivia`, 'trivia_score');
+  };
+
+  // Stories are kept local-only (see db.ts comment) — no Supabase persist calls here.
+  const startStory: AppContextValue['startStory'] = (title, seedPrompt, turnOrderProfileIds) => {
+    const story: Story = {
+      id: newId(),
+      familyId: data.family.id,
+      title,
+      seedPrompt,
+      status: 'active',
+      turnOrder: turnOrderProfileIds,
+      currentTurnIndex: 0,
+      entries: [],
+      createdAt: new Date().toISOString(),
+    };
+    setData(prev => ({ ...prev, stories: [story, ...prev.stories] }));
+    logActivity(`Started a collaborative story "${title}"`, 'story');
+    return story;
+  };
+
+  const addStoryEntry: AppContextValue['addStoryEntry'] = (storyId, text) => {
+    setData(prev => ({
+      ...prev,
+      stories: prev.stories.map(s => {
+        if (s.id !== storyId || s.status !== 'active') return s;
+        const entry: StoryEntry = {
+          id: newId(),
+          storyId,
+          memberProfileId: currentProfile?.id ?? '',
+          authorName: currentProfile?.displayName ?? 'A family member',
+          text,
+          createdAt: new Date().toISOString(),
+        };
+        const nextIndex = s.currentTurnIndex + 1;
+        const finished = nextIndex >= s.turnOrder.length;
+        return {
+          ...s,
+          entries: [...s.entries, entry],
+          currentTurnIndex: nextIndex,
+          status: finished ? 'complete' : 'active',
+          completedAt: finished ? new Date().toISOString() : undefined,
+        };
+      }),
+    }));
+    logActivity(`Added a line to a collaborative story`, 'story');
+  };
+
+  const saveStoryAsMemory: AppContextValue['saveStoryAsMemory'] = (storyId) => {
+    const story = data.stories.find(s => s.id === storyId);
+    if (!story || story.savedAsMemoryId) return;
+    const body = story.entries.map(e => e.text).join(' ');
+    const memory: Memory = {
+      id: newId(),
+      familyId: data.family.id,
+      title: story.title,
+      body,
+      era: undefined,
+      authorMemberId: undefined,
+      coverPhotoUrl: undefined,
+      relatedMemberIds: [],
+      createdAt: new Date().toISOString(),
+    };
+    setData(prev => ({
+      ...prev,
+      memories: [memory, ...prev.memories],
+      stories: prev.stories.map(s => (s.id === storyId ? { ...s, savedAsMemoryId: memory.id } : s)),
+    }));
+    if (isOnlineMode) persist('save story as memory', () => db.insertMemory(memory));
+    logActivity(`Saved the story "${story.title}" to Memories`, 'story');
+  };
+
+  const abandonStory: AppContextValue['abandonStory'] = (storyId) => {
+    setData(prev => ({ ...prev, stories: prev.stories.filter(s => s.id !== storyId) }));
+  };
+
   const notificationsForCurrentProfile = useMemo(
     () => data.notifications.filter(n => n.profileId === currentProfile?.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -778,6 +879,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
     saveBiography, addLegacyContribution, removeLegacyContribution,
     addLanguageEntry, removeLanguageEntry,
+    recordTriviaScore,
+    startStory, addStoryEntry, saveStoryAsMemory, abandonStory,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
     addProfile, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode,
     generateRestorationCode, redeemRestorationCode, logActivity,
