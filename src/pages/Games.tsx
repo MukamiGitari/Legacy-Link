@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { UserSearch, ListOrdered, Quote, PenLine, Layers, type LucideIcon } from 'lucide-react';
+import { UserSearch, ListOrdered, Quote, PenLine, Layers, Grid3x3, type LucideIcon } from 'lucide-react';
 import { GuessWho } from '../components/games/GuessWho';
 import { BirthdayBingo } from '../components/games/BirthdayBingo';
 import { WhoSaidIt } from '../components/games/WhoSaidIt';
 import { StoryBuilder } from '../components/games/StoryBuilder';
 import { LanguageFlashcards } from '../components/games/LanguageFlashcards';
+import { Sudoku } from '../components/games/Sudoku';
 
-export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards';
+export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards' | 'sudoku';
 
 interface GameMeta {
   key: GameKey;
@@ -46,6 +47,12 @@ const GAMES: GameMeta[] = [
     icon: Layers,
     description: 'See the English meaning, then say or write the term in your language.',
   },
+  {
+    key: 'sudoku',
+    label: 'Sudoku',
+    icon: Grid3x3,
+    description: 'A classic number puzzle — three difficulty levels, play solo any time.',
+  },
 ];
 
 export const Games: React.FC = () => {
@@ -58,6 +65,7 @@ export const Games: React.FC = () => {
   if (active === 'whoSaidIt') return <WhoSaidIt onBack={back} />;
   if (active === 'storyBuilder') return <StoryBuilder onBack={back} />;
   if (active === 'flashcards') return <LanguageFlashcards onBack={back} />;
+  if (active === 'sudoku') return <Sudoku onBack={back} />;
 
   return (
     <div className="space-y-6">
