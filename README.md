@@ -1,5 +1,5 @@
 # Legacy Link (🌿)
-> *"Our Roots, Our Story, Our Legacy."*
+> *"Our Roots, Our Story, Our Legacy."* 
 
 A production-ready, interactive digital family heritage archive, genealogy platform, and multi-template family tree system.
 
