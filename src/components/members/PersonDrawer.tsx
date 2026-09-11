@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, MapPin, Briefcase, Calendar, Users as UsersIcon, Edit3, Crosshair, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, MapPin, Briefcase, Calendar, Users as UsersIcon, Edit3, Crosshair, ChevronDown, ChevronUp, Building2, PawPrint } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getLineage, getAllAncestors, getAllDescendants, relationshipTerm, fullName, lifespan } from '../../lib/lineage';
 import type { Member } from '../../types';
@@ -104,11 +104,20 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
             </span>
           </div>
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-0.5">Generation {member.generation}</p>
+          {member.professionalTitle && (
+            <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-0.5">
+              {member.professionalTitle}{member.currentOrganization ? ` at ${member.currentOrganization}` : ''}
+            </p>
+          )}
 
           <div className="mt-4 space-y-2 text-sm text-heritage-green-800 dark:text-heritage-dark-text">
             <div className="flex items-center gap-2"><Calendar size={15} className="text-heritage-gold-500 shrink-0" /> {lifespan(member)}</div>
             {member.birthPlace && <div className="flex items-center gap-2"><MapPin size={15} className="text-heritage-gold-500 shrink-0" /> {member.birthPlace}</div>}
             {member.occupation && <div className="flex items-center gap-2"><Briefcase size={15} className="text-heritage-gold-500 shrink-0" /> {member.occupation}</div>}
+            {member.location && <div className="flex items-center gap-2"><Building2 size={15} className="text-heritage-gold-500 shrink-0" /> {member.location}</div>}
+            {member.hasPet && (
+              <div className="flex items-center gap-2"><PawPrint size={15} className="text-heritage-gold-500 shrink-0" /> {member.petName || 'Has a pet'}</div>
+            )}
           </div>
 
           {member.bio && (

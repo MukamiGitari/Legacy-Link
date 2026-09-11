@@ -26,6 +26,18 @@ export interface Member {
   restingPlace?: string;
   occupation?: string;
   bio?: string;
+  /** Basic Profile — professional title, distinct from `occupation` (e.g. "Senior Partner" vs "Law"). */
+  professionalTitle?: string;
+  /** Basic Profile — current organization/employer. */
+  currentOrganization?: string;
+  /** Basic Profile — current location (distinct from `birthPlace`). */
+  location?: string;
+  /** Basic Profile — contact or website links, one per line. */
+  contactLinks?: string;
+  /** Whether this member has a pet. When true, `petName` can optionally be set. */
+  hasPet?: boolean;
+  /** Only used when `hasPet` is true — the pet's name. */
+  petName?: string;
 }
 
 export type RelationshipType =
@@ -55,6 +67,8 @@ export interface Album {
   category: 'weddings' | 'reunions' | 'childhood' | 'historical' | 'memorials' | 'holidays' | 'birthdays';
   description?: string;
   coverPhotoUrl?: string;
+  /** The family member this album is about (e.g. "Grandma's 80th Birthday" → Grandma). Shown as a tag next to the album title. */
+  featuredMemberId?: string;
 }
 
 export interface Photo {
@@ -107,7 +121,10 @@ export interface Announcement {
 }
 
 /**
- * A structured 8-section life biography for a member, one row per member.
+ * A structured biography for a member, one row per member, partitioned into
+ * the sections of the Legacy Link biography template (Basic Profile lives on
+ * the Member record itself — see firstName/lastName/avatarUrl/professionalTitle/
+ * currentOrganization/location/contactLinks — everything else lives here).
  * Editable by anyone who can add content (see canAddContent); the `legacy`
  * field is the member-owner's/editor's own words, distinct from the
  * crowd-sourced LegacyContribution entries relatives add underneath it.
@@ -116,15 +133,26 @@ export interface Biography {
   id: string;
   familyId: string;
   memberId: string;
-  atAGlance?: string;
-  earlyLifeFamily?: string;
-  youngAdulthood?: string;
-  marriageFamilyLife?: string;
-  workAchievementsPassions?: string;
-  storiesMemoriesTitle?: string;
-  storiesMemories?: string;
-  laterYears?: string;
+  /** 2. Professional Summary — who they are, what they do, what they're known for. */
+  professionalSummary?: string;
+  /** 3. Early Life & Background — family/community background, childhood influences, early interests. */
+  earlyLifeBackground?: string;
+  /** 4. Education — primary/secondary, college/university, degrees, certifications, special training. */
+  education?: string;
+  /** 5. Career Journey — first job, major positions, organizations, promotions/career changes, current position. */
+  careerJourney?: string;
+  /** 6. Professional Achievements — accomplishments, projects, awards, publications, innovations, contributions. */
+  professionalAchievements?: string;
+  /** 7. Areas of Expertise — e.g. Leadership, Technology, Law, Business, Education, Healthcare. */
+  areasOfExpertise?: string[];
+  /** 8. Community & Social Contributions — service, mentorship, charitable work, organizations supported. */
+  communityContributions?: string;
+  /** 9. Personal Philosophy / Values — principles, beliefs about their profession, leadership philosophy, life lessons. */
+  personalPhilosophy?: string;
+  /** 10. Legacy — what they want to be remembered for, knowledge to pass on, advice, their impact. */
   legacy?: string;
+  /** 11. Personal Life — family, hobbies, interests, personal achievements they're comfortable making public. */
+  personalLife?: string;
   updatedAt: string;
   updatedByProfileId?: string;
 }

@@ -8,6 +8,7 @@ import type {
 import { buildSeedDataset } from '../data/seed';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { registerCredential, verifyCredential, resetCredentialPassword } from '../lib/localAuth';
+import { nameFromEmail } from '../lib/names';
 import * as db from '../lib/db';
 
 const STORAGE_KEY = 'heritage-hub-dataset-v1';
@@ -101,8 +102,10 @@ interface AppContextValue {
 
   // media
   addAlbum: (a: Omit<Album, 'id' | 'familyId'>) => Album;
-  updateAlbum: (id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl'>>) => void;
+  updateAlbum: (id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl' | 'featuredMemberId'>>) => void;
+  removeAlbum: (id: string) => void;
   addPhoto: (p: Omit<Photo, 'id' | 'familyId'>) => Photo;
+  removePhoto: (id: string) => void;
 
   // memories / events / announcements
   addMemory: (m: Omit<Memory, 'id' | 'familyId' | 'createdAt'>) => void;
@@ -150,6 +153,7 @@ interface AppContextValue {
   generateRestorationCode: (profileId: string) => string;
   redeemRestorationCode: (email: string, code: string, newPassword: string) => Promise<AuthResult>;
   updateProfileAvatar: (id: string, avatarUrl: string) => void;
+  updateProfileDisplayName: (id: string, displayName: string) => void;
   logActivity: (action: string, entityType: string) => void;
 
   resetToSeed: () => void;
@@ -207,10 +211,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           let pendingInvite: string | null = null;
           try { pendingInvite = localStorage.getItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
 
+          // Prefer the name the account is actually linked to (Google's profile
+          // name) over the raw email address, so the leaderboard and activity
+          // log never end up showing someone's email instead of their name.
           const displayName =
             (user.user_metadata?.full_name as string | undefined) ||
             (user.user_metadata?.name as string | undefined) ||
-            user.email ||
+            (user.email ? nameFromEmail(user.email) : undefined) ||
             'New Member';
 
           let familyId: string;
@@ -358,6 +365,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (patch.title) logActivity(`Renamed an album to "${patch.title}"`, 'album');
   };
 
+  const removeAlbum: AppContextValue['removeAlbum'] = (id) => {
+    setData(prev => ({
+      ...prev,
+      albums: prev.albums.filter(a => a.id !== id),
+      photos: prev.photos.filter(p => p.albumId !== id),
+    }));
+    if (isOnlineMode) persist('remove album', () => db.deleteAlbumRow(id));
+    logActivity(`Deleted an album`, 'album');
+  };
+
   /** Creates an in-app notification for every tagged member who has a login profile
    *  linked to them (skipping the person who did the tagging, if they tagged themselves). */
   const notifyTaggedMembers = useCallback((
@@ -398,6 +415,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       () => `${currentProfile?.displayName ?? 'Someone'} tagged you in a photo.`
     );
     return photo;
+  };
+
+  const removePhoto: AppContextValue['removePhoto'] = (id) => {
+    setData(prev => ({ ...prev, photos: prev.photos.filter(p => p.id !== id) }));
+    if (isOnlineMode) persist('remove photo', () => db.deletePhotoRow(id));
+    logActivity(`Deleted a photo`, 'photo');
   };
 
   const addMemory: AppContextValue['addMemory'] = (m) => {
@@ -447,15 +470,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: existing?.id ?? newId(),
       familyId: data.family.id,
       memberId,
-      atAGlance: existing?.atAGlance,
-      earlyLifeFamily: existing?.earlyLifeFamily,
-      youngAdulthood: existing?.youngAdulthood,
-      marriageFamilyLife: existing?.marriageFamilyLife,
-      workAchievementsPassions: existing?.workAchievementsPassions,
-      storiesMemoriesTitle: existing?.storiesMemoriesTitle,
-      storiesMemories: existing?.storiesMemories,
-      laterYears: existing?.laterYears,
+      professionalSummary: existing?.professionalSummary,
+      earlyLifeBackground: existing?.earlyLifeBackground,
+      education: existing?.education,
+      careerJourney: existing?.careerJourney,
+      professionalAchievements: existing?.professionalAchievements,
+      areasOfExpertise: existing?.areasOfExpertise,
+      communityContributions: existing?.communityContributions,
+      personalPhilosophy: existing?.personalPhilosophy,
       legacy: existing?.legacy,
+      personalLife: existing?.personalLife,
       ...patch,
       updatedAt: new Date().toISOString(),
       updatedByProfileId: currentProfile?.id,
@@ -708,6 +732,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  /** Updates a login profile's own display name (used for account identity,
+   *  attribution on the leaderboard/activity log, etc.). This intentionally
+   *  does NOT touch the linked Member's firstName/lastName — that's the name
+   *  shown on the family tree and is edited separately (e.g. by an admin via
+   *  Edit Member), so a family member can go by a different name for their
+   *  own account without it changing how they appear on the tree. */
+  const updateProfileDisplayName: AppContextValue['updateProfileDisplayName'] = (id, displayName) => {
+    setData(prev => ({
+      ...prev,
+      profiles: prev.profiles.map(p => (p.id === id ? { ...p, displayName } : p)),
+    }));
+    if (isOnlineMode) persist('update profile display name', () => db.updateProfileDisplayNameRow(id, displayName));
+  };
+
   const generateInvitationCode: AppContextValue['generateInvitationCode'] = (role, memberId) => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const invite = { id: newId(), familyId: data.family.id, code, role, memberId, createdAt: new Date().toISOString() };
@@ -932,7 +970,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
-    addAlbum, updateAlbum, addPhoto,
+    addAlbum, updateAlbum, removeAlbum, addPhoto, removePhoto,
     addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
     saveBiography, addLegacyContribution, removeLegacyContribution,
     addLanguageEntry, updateLanguageEntry, removeLanguageEntry,
@@ -942,7 +980,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
     addProfile, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode,
     generateRestorationCode, redeemRestorationCode, logActivity,
-    updateProfileAvatar,
+    updateProfileAvatar, updateProfileDisplayName,
     resetToSeed,
   };
 

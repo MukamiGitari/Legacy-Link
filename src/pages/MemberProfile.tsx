@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit3, MapPin, Briefcase, Calendar, BookHeart } from 'lucide-react';
+import { ArrowLeft, Edit3, MapPin, Briefcase, Calendar, BookHeart, Building2, Link as LinkIcon, PawPrint } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getLineage, fullName, lifespan } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
@@ -63,11 +63,35 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
           </div>
           <h2 className="font-serif text-2xl mt-3 text-heritage-green-900 dark:text-heritage-dark-text">{fullName(member)}</h2>
           {member.maidenName && <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">née {member.maidenName}</p>}
+          {member.professionalTitle && (
+            <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-0.5">
+              {member.professionalTitle}{member.currentOrganization ? ` at ${member.currentOrganization}` : ''}
+            </p>
+          )}
           <div className="flex flex-wrap gap-4 mt-3 text-sm text-heritage-green-700 dark:text-heritage-dark-muted">
             <span className="flex items-center gap-1.5"><Calendar size={14} className="text-heritage-gold-500" /> {lifespan(member)}</span>
             {member.birthPlace && <span className="flex items-center gap-1.5"><MapPin size={14} className="text-heritage-gold-500" /> {member.birthPlace}</span>}
             {member.occupation && <span className="flex items-center gap-1.5"><Briefcase size={14} className="text-heritage-gold-500" /> {member.occupation}</span>}
+            {member.location && <span className="flex items-center gap-1.5"><Building2 size={14} className="text-heritage-gold-500" /> {member.location}</span>}
+            {member.hasPet && (
+              <span className="flex items-center gap-1.5"><PawPrint size={14} className="text-heritage-gold-500" /> {member.petName || 'Has a pet'}</span>
+            )}
           </div>
+          {member.contactLinks && (
+            <div className="flex flex-wrap gap-3 mt-2 text-sm">
+              {member.contactLinks.split('\n').map(s => s.trim()).filter(Boolean).map((link, i) => (
+                <a
+                  key={i}
+                  href={/^https?:\/\//.test(link) ? link : `https://${link}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-gold-600 underline underline-offset-2"
+                >
+                  <LinkIcon size={12} /> {link}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex overflow-x-auto scrollbar-thin border-t border-heritage-cream-300 dark:border-heritage-dark-border px-2">
@@ -114,48 +138,58 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
 
               {biography && (
                 <>
-                  {biography.atAGlance && (
+                  {biography.professionalSummary && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">At a Glance</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.atAGlance}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Professional Summary</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.professionalSummary}</p>
                     </section>
                   )}
-                  {biography.earlyLifeFamily && (
+                  {biography.earlyLifeBackground && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Early Life & Family</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.earlyLifeFamily}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Early Life & Background</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.earlyLifeBackground}</p>
                     </section>
                   )}
-                  {biography.youngAdulthood && (
+                  {biography.education && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Young Adulthood</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.youngAdulthood}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Education</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.education}</p>
                     </section>
                   )}
-                  {biography.marriageFamilyLife && (
+                  {biography.careerJourney && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Marriage & Family Life</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.marriageFamilyLife}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Career Journey</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.careerJourney}</p>
                     </section>
                   )}
-                  {biography.workAchievementsPassions && (
+                  {biography.professionalAchievements && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Work, Achievements & Passions</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.workAchievementsPassions}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Professional Achievements</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.professionalAchievements}</p>
                     </section>
                   )}
-                  {biography.storiesMemories && (
+                  {biography.areasOfExpertise && biography.areasOfExpertise.length > 0 && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">
-                        {biography.storiesMemoriesTitle || 'Stories We Remember'}
-                      </h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.storiesMemories}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Areas of Expertise</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {biography.areasOfExpertise.map((area, i) => (
+                          <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-heritage-gold-100 text-heritage-green-800 dark:bg-heritage-dark-hover dark:text-heritage-dark-text">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
                     </section>
                   )}
-                  {biography.laterYears && (
+                  {biography.communityContributions && (
                     <section>
-                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Later Years</h3>
-                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.laterYears}</p>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Community & Social Contributions</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.communityContributions}</p>
+                    </section>
+                  )}
+                  {biography.personalPhilosophy && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Personal Philosophy / Values</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.personalPhilosophy}</p>
                     </section>
                   )}
                 </>
@@ -168,6 +202,13 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                 )}
                 <LegacyContributions memberId={member.id} />
               </section>
+
+              {biography?.personalLife && (
+                <section>
+                  <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Personal Life</h3>
+                  <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.personalLife}</p>
+                </section>
+              )}
             </div>
           )}
 

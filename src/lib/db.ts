@@ -37,6 +37,9 @@ const mapMember = (r: any): Member => ({
   dateOfBirth: r.date_of_birth ?? undefined, dateOfPassing: r.date_of_passing ?? undefined,
   birthPlace: r.birth_place ?? undefined, restingPlace: r.resting_place ?? undefined,
   occupation: r.occupation ?? undefined, bio: r.bio ?? undefined,
+  professionalTitle: r.professional_title ?? undefined, currentOrganization: r.current_organization ?? undefined,
+  location: r.location ?? undefined, contactLinks: r.contact_links ?? undefined,
+  hasPet: r.has_pet ?? undefined, petName: r.pet_name ?? undefined,
 });
 
 const mapRelationship = (r: any): Relationship => ({
@@ -47,6 +50,7 @@ const mapRelationship = (r: any): Relationship => ({
 const mapAlbum = (r: any): Album => ({
   id: r.id, familyId: r.family_id, title: r.title, category: r.category,
   description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+  featuredMemberId: r.featured_member_id ?? undefined,
 });
 
 const mapPhoto = (r: any, tagsByPhoto: Map<string, string[]>): Photo => ({
@@ -80,15 +84,16 @@ const mapChronicleEra = (r: any): ChronicleEra => ({
 
 const mapBiography = (r: any): Biography => ({
   id: r.id, familyId: r.family_id, memberId: r.member_id,
-  atAGlance: r.at_a_glance ?? undefined,
-  earlyLifeFamily: r.early_life_family ?? undefined,
-  youngAdulthood: r.young_adulthood ?? undefined,
-  marriageFamilyLife: r.marriage_family_life ?? undefined,
-  workAchievementsPassions: r.work_achievements_passions ?? undefined,
-  storiesMemoriesTitle: r.stories_memories_title ?? undefined,
-  storiesMemories: r.stories_memories ?? undefined,
-  laterYears: r.later_years ?? undefined,
+  professionalSummary: r.professional_summary ?? undefined,
+  earlyLifeBackground: r.early_life_background ?? undefined,
+  education: r.education ?? undefined,
+  careerJourney: r.career_journey ?? undefined,
+  professionalAchievements: r.professional_achievements ?? undefined,
+  areasOfExpertise: r.areas_of_expertise ?? undefined,
+  communityContributions: r.community_contributions ?? undefined,
+  personalPhilosophy: r.personal_philosophy ?? undefined,
   legacy: r.legacy ?? undefined,
+  personalLife: r.personal_life ?? undefined,
   updatedAt: r.updated_at,
   updatedByProfileId: r.updated_by_profile_id ?? undefined,
 });
@@ -310,6 +315,9 @@ export async function insertMember(m: Member) {
     date_of_birth: m.dateOfBirth ?? null, date_of_passing: m.dateOfPassing ?? null,
     birth_place: m.birthPlace ?? null, resting_place: m.restingPlace ?? null,
     occupation: m.occupation ?? null, bio: m.bio ?? null,
+    professional_title: m.professionalTitle ?? null, current_organization: m.currentOrganization ?? null,
+    location: m.location ?? null, contact_links: m.contactLinks ?? null,
+    has_pet: m.hasPet ?? false, pet_name: m.hasPet ? (m.petName ?? null) : null,
   });
   if (error) throw error;
 }
@@ -329,6 +337,12 @@ export async function updateMemberRow(id: string, patch: Partial<Member>) {
   if (patch.restingPlace !== undefined) row.resting_place = patch.restingPlace;
   if (patch.occupation !== undefined) row.occupation = patch.occupation;
   if (patch.bio !== undefined) row.bio = patch.bio;
+  if (patch.professionalTitle !== undefined) row.professional_title = patch.professionalTitle;
+  if (patch.currentOrganization !== undefined) row.current_organization = patch.currentOrganization;
+  if (patch.location !== undefined) row.location = patch.location;
+  if (patch.contactLinks !== undefined) row.contact_links = patch.contactLinks;
+  if (patch.hasPet !== undefined) row.has_pet = patch.hasPet;
+  if (patch.petName !== undefined) row.pet_name = patch.hasPet === false ? null : patch.petName;
   const { error } = await must().from('members').update(row).eq('id', id);
   if (error) throw error;
 }
@@ -358,17 +372,25 @@ export async function insertAlbum(a: Album) {
   const { error } = await must().from('albums').insert({
     id: a.id, family_id: a.familyId, title: a.title, category: a.category,
     description: a.description ?? null, cover_photo_url: a.coverPhotoUrl ?? null,
+    featured_member_id: a.featuredMemberId ?? null,
   });
   if (error) throw error;
 }
 
-export async function updateAlbumRow(id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl'>>) {
+export async function updateAlbumRow(id: string, patch: Partial<Pick<Album, 'title' | 'category' | 'description' | 'coverPhotoUrl' | 'featuredMemberId'>>) {
   const row: Record<string, unknown> = {};
   if (patch.title !== undefined) row.title = patch.title;
   if (patch.category !== undefined) row.category = patch.category;
   if (patch.description !== undefined) row.description = patch.description ?? null;
   if (patch.coverPhotoUrl !== undefined) row.cover_photo_url = patch.coverPhotoUrl ?? null;
+  if (patch.featuredMemberId !== undefined) row.featured_member_id = patch.featuredMemberId ?? null;
   const { error } = await must().from('albums').update(row).eq('id', id);
+  if (error) throw error;
+}
+
+/** Deletes an album and (via `on delete cascade` in the schema) all of its photos and photo tags with it. */
+export async function deleteAlbumRow(id: string) {
+  const { error } = await must().from('albums').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -421,6 +443,13 @@ export async function updateProfileAvatarRow(id: string, avatarUrl: string) {
   if (error) throw error;
 }
 
+/** Updates a login profile's own display name — distinct from the linked
+ *  Member's firstName/lastName, which is the name shown on the family tree. */
+export async function updateProfileDisplayNameRow(id: string, displayName: string) {
+  const { error } = await must().from('profiles').update({ display_name: displayName }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function insertPhoto(p: Photo) {
   const db = must();
   const { error } = await db.from('photos').insert({
@@ -434,6 +463,12 @@ export async function insertPhoto(p: Photo) {
       .insert(p.taggedMemberIds.map(memberId => ({ photo_id: p.id, member_id: memberId })));
     if (tagErr) throw tagErr;
   }
+}
+
+/** Deletes a photo (its photo_tags rows go with it via `on delete cascade`). */
+export async function deletePhotoRow(id: string) {
+  const { error } = await must().from('photos').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function insertMemory(m: Memory) {
@@ -484,15 +519,16 @@ export async function insertChronicleEra(c: ChronicleEra) {
 export async function upsertBiographyRow(b: Biography) {
   const { error } = await must().from('biographies').upsert({
     id: b.id, family_id: b.familyId, member_id: b.memberId,
-    at_a_glance: b.atAGlance ?? null,
-    early_life_family: b.earlyLifeFamily ?? null,
-    young_adulthood: b.youngAdulthood ?? null,
-    marriage_family_life: b.marriageFamilyLife ?? null,
-    work_achievements_passions: b.workAchievementsPassions ?? null,
-    stories_memories_title: b.storiesMemoriesTitle ?? null,
-    stories_memories: b.storiesMemories ?? null,
-    later_years: b.laterYears ?? null,
+    professional_summary: b.professionalSummary ?? null,
+    early_life_background: b.earlyLifeBackground ?? null,
+    education: b.education ?? null,
+    career_journey: b.careerJourney ?? null,
+    professional_achievements: b.professionalAchievements ?? null,
+    areas_of_expertise: b.areasOfExpertise && b.areasOfExpertise.length ? b.areasOfExpertise : null,
+    community_contributions: b.communityContributions ?? null,
+    personal_philosophy: b.personalPhilosophy ?? null,
     legacy: b.legacy ?? null,
+    personal_life: b.personalLife ?? null,
     updated_at: b.updatedAt,
     updated_by_profile_id: b.updatedByProfileId ?? null,
   }, { onConflict: 'member_id' });

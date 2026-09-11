@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, ChevronDown, Wifi, WifiOff, Plus, LogOut, Sun, Moon, Camera, Loader2, Bell, Tag } from 'lucide-react';
+import { Menu, ChevronDown, Wifi, WifiOff, Plus, LogOut, Sun, Moon, Camera, Loader2, Bell, Tag, Pencil, Check, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Page } from '../../App';
@@ -16,7 +16,7 @@ const PAGE_TITLES: Record<Page, string> = {
   events: 'Events Calendar',
   announcements: 'Announcements',
   chronicle: 'Family History Chronicle',
-  dictionary: 'Language & Sayings',
+  dictionary: 'Heritage Vault',
   trivia: 'Family Trivia',
   games: 'Games',
   admin: 'Admin Suite',
@@ -41,14 +41,22 @@ interface TopbarProps {
 
 export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAddMember, canAddMember }) => {
   const {
-    data, currentProfile, setCurrentProfileId, isOnlineMode, logout, updateProfileAvatar, pushToast,
+    data, currentProfile, setCurrentProfileId, isOnlineMode, logout, updateProfileAvatar, updateProfileDisplayName, pushToast,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
   } = useApp();
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
   const unreadCount = notificationsForCurrentProfile.filter(n => !n.readAt).length;
+
+  const saveName = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed && currentProfile) updateProfileDisplayName(currentProfile.id, trimmed);
+    setEditingName(false);
+  };
 
   const avatarFor = (p?: { id: string; displayName: string; avatarUrl?: string }) =>
     p?.avatarUrl || `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(p?.displayName ?? 'guest')}`;
@@ -176,8 +184,38 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
               {currentProfile && (
                 <div className="flex items-center gap-3 px-3 py-2.5 border-b border-heritage-cream-300 dark:border-heritage-dark-border">
                   <img src={avatarFor(currentProfile)} className="w-10 h-10 rounded-full object-cover bg-heritage-gold-100 shrink-0" alt="" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{currentProfile.displayName}</p>
+                  <div className="min-w-0 flex-1">
+                    {editingName ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-transparent border-b border-heritage-gold-400 focus:outline-none w-full min-w-0"
+                          value={nameDraft}
+                          onChange={e => setNameDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveName();
+                            else if (e.key === 'Escape') setEditingName(false);
+                          }}
+                        />
+                        <button onClick={saveName} className="text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 shrink-0" aria-label="Save name">
+                          <Check size={14} />
+                        </button>
+                        <button onClick={() => setEditingName(false)} className="text-heritage-green-400 hover:text-heritage-green-700 shrink-0" aria-label="Cancel">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate flex items-center gap-1.5">
+                        {currentProfile.displayName}
+                        <button
+                          onClick={() => { setNameDraft(currentProfile.displayName); setEditingName(true); }}
+                          className="text-heritage-green-400 hover:text-heritage-green-800 dark:text-heritage-dark-muted shrink-0"
+                          aria-label="Edit your display name"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                      </p>
+                    )}
                     <label className="flex items-center gap-1 text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 cursor-pointer">
                       {savingPhoto ? <Loader2 size={11} className="animate-spin" /> : <Camera size={11} />}
                       {savingPhoto ? 'Saving…' : 'Change photo'}

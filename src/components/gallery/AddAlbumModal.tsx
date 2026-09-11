@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ImagePlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { fullName } from '../../lib/lineage';
 import type { Album } from '../../types';
 
 const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
@@ -21,12 +22,13 @@ interface Props {
 }
 
 export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
-  const { addAlbum } = useApp();
+  const { data, addAlbum } = useApp();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Album['category']>('holidays');
   const [description, setDescription] = useState('');
   const [coverPhotoUrl, setCoverPhotoUrl] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
+  const [featuredMemberId, setFeaturedMemberId] = useState('');
 
   const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400";
   const labelCls = "block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1";
@@ -50,6 +52,7 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
       category,
       description: description.trim() || undefined,
       coverPhotoUrl: coverPhotoUrl || FALLBACK_COVER,
+      featuredMemberId: featuredMemberId || undefined,
     });
     onCreated(album.id);
   };
@@ -89,6 +92,16 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
           <div>
             <label className={labelCls}>Album title *</label>
             <input required className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Summer Reunion 2026" />
+          </div>
+
+          <div>
+            <label className={labelCls}>Who is this about? (optional)</label>
+            <select className={inputCls} value={featuredMemberId} onChange={e => setFeaturedMemberId(e.target.value)}>
+              <option value="">No one in particular</option>
+              {data.members.map(m => (
+                <option key={m.id} value={m.id}>{fullName(m)}</option>
+              ))}
+            </select>
           </div>
 
           <div>

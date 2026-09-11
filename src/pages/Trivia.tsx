@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Brain, Trophy, RotateCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { buildTriviaRound, CATEGORY_LABEL, type TriviaQuestion } from '../lib/trivia';
+import { resolveDisplayName } from '../lib/names';
 import type { TriviaCategory } from '../types';
 
 const CATEGORY_DESCRIPTION: Record<TriviaCategory, string> = {
@@ -70,8 +71,11 @@ export const Trivia: React.FC = () => {
 
     return Array.from(bestByProfile.values())
       .sort((a, b) => (b.score / b.totalQuestions) - (a.score / a.totalQuestions))
-      .slice(0, 10);
-  }, [data.triviaScores, leaderboardFilter]);
+      .slice(0, 10)
+      // Show the name the account is linked to (family member or profile display
+      // name) rather than a raw email that may have been stored on the score.
+      .map(s => ({ ...s, displayName: resolveDisplayName(data, s.profileId, s.playerName) }));
+  }, [data.triviaScores, leaderboardFilter, data.profiles, data.members]);
 
   return (
     <div className="space-y-6">
@@ -148,7 +152,7 @@ export const Trivia: React.FC = () => {
                         {i + 1}
                       </span>
                       <span className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">
-                        {entry.playerName}
+                        {entry.displayName}
                       </span>
                       {leaderboardFilter === 'all' && (
                         <span className="text-[11px] text-heritage-green-500 dark:text-heritage-dark-muted shrink-0">

@@ -10,30 +10,33 @@ interface Props {
 
 interface SectionField {
   key:
-    | 'atAGlance' | 'earlyLifeFamily' | 'youngAdulthood' | 'marriageFamilyLife'
-    | 'workAchievementsPassions' | 'storiesMemories' | 'laterYears' | 'legacy';
+    | 'professionalSummary' | 'earlyLifeBackground' | 'education' | 'careerJourney'
+    | 'professionalAchievements' | 'communityContributions' | 'personalPhilosophy'
+    | 'legacy' | 'personalLife';
   label: string;
   hint: string;
   rows: number;
 }
 
 const SECTIONS: SectionField[] = [
-  { key: 'atAGlance', label: '1. At a Glance', rows: 3,
-    hint: 'A short introduction — full name/nicknames, birth & death dates, birthplace, and a sentence or two on who they were.' },
-  { key: 'earlyLifeFamily', label: '2. Early Life & Family', rows: 4,
-    hint: 'Parents & siblings, where they grew up, childhood circumstances, family traditions, schooling, early influences.' },
-  { key: 'youngAdulthood', label: '3. Young Adulthood', rows: 4,
-    hint: 'Education, first job or career, service, moving away, important friendships, the events happening around them.' },
-  { key: 'marriageFamilyLife', label: '4. Marriage & Family Life', rows: 4,
-    hint: 'How they met their spouse, marriage, children, where the family lived, family customs, their personality as a parent or grandparent.' },
-  { key: 'workAchievementsPassions', label: '5. Work, Achievements & Passions', rows: 4,
-    hint: 'Occupation and career, businesses started, community involvement, hobbies, faith or cultural traditions, talents, causes they cared about.' },
-  { key: 'storiesMemories', label: '6. Stories & Memories', rows: 4,
-    hint: 'Something funny they used to do, a memorable journey, a phrase they always said, a tradition they started.' },
-  { key: 'laterYears', label: '7. Later Years', rows: 4,
-    hint: 'Where they lived, retirement, grandchildren, important family occasions, continuing interests, major later events.' },
-  { key: 'legacy', label: '8. Legacy', rows: 4,
-    hint: 'What they passed on, values they were known for, traditions that continue, who they influenced. Relatives can add their own memories below this in the Legacy tab.' },
+  { key: 'professionalSummary', label: '2. Professional Summary', rows: 3,
+    hint: 'A short introduction explaining who they are, what they do, and what they are known for.' },
+  { key: 'earlyLifeBackground', label: '3. Early Life & Background', rows: 4,
+    hint: 'Family or community background, childhood influences, early interests. (Date/place of birth are set on their profile.)' },
+  { key: 'education', label: '4. Education', rows: 3,
+    hint: 'Primary/secondary education, college/university, degrees, certifications, special training.' },
+  { key: 'careerJourney', label: '5. Career Journey', rows: 4,
+    hint: 'Usually chronological: first job, major positions, organizations worked for, promotions or career changes, current position.' },
+  { key: 'professionalAchievements', label: '6. Professional Achievements', rows: 4,
+    hint: 'Major accomplishments, projects, awards, publications, innovations, important contributions.' },
+  { key: 'communityContributions', label: '8. Community & Social Contributions', rows: 3,
+    hint: 'Community service, mentorship, charitable work, organizations supported, contributions to society.' },
+  { key: 'personalPhilosophy', label: '9. Personal Philosophy / Values', rows: 3,
+    hint: 'Principles, beliefs about their profession, leadership philosophy, life lessons.' },
+  { key: 'legacy', label: '10. Legacy', rows: 4,
+    hint: 'What they want to be remembered for, knowledge to pass to younger generations, advice to future generations, their impact. Relatives can add their own memories below this in the Legacy tab.' },
+  { key: 'personalLife', label: '11. Personal Life', rows: 4,
+    hint: 'Family, hobbies, interests, personal achievements — only what they are comfortable making public.' },
 ];
 
 export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => {
@@ -42,16 +45,17 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
   const existing = data.biographies.find(b => b.memberId === memberId);
 
   const [fields, setFields] = useState<Record<SectionField['key'], string>>({
-    atAGlance: existing?.atAGlance ?? '',
-    earlyLifeFamily: existing?.earlyLifeFamily ?? '',
-    youngAdulthood: existing?.youngAdulthood ?? '',
-    marriageFamilyLife: existing?.marriageFamilyLife ?? '',
-    workAchievementsPassions: existing?.workAchievementsPassions ?? '',
-    storiesMemories: existing?.storiesMemories ?? '',
-    laterYears: existing?.laterYears ?? '',
+    professionalSummary: existing?.professionalSummary ?? '',
+    earlyLifeBackground: existing?.earlyLifeBackground ?? '',
+    education: existing?.education ?? '',
+    careerJourney: existing?.careerJourney ?? '',
+    professionalAchievements: existing?.professionalAchievements ?? '',
+    communityContributions: existing?.communityContributions ?? '',
+    personalPhilosophy: existing?.personalPhilosophy ?? '',
     legacy: existing?.legacy ?? '',
+    personalLife: existing?.personalLife ?? '',
   });
-  const [storiesTitle, setStoriesTitle] = useState(existing?.storiesMemoriesTitle ?? 'Stories We Remember');
+  const [expertiseInput, setExpertiseInput] = useState((existing?.areasOfExpertise ?? []).join(', '));
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -66,16 +70,18 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const areasOfExpertise = expertiseInput.split(',').map(s => s.trim()).filter(Boolean);
     saveBiography(memberId, {
-      atAGlance: fields.atAGlance.trim() || undefined,
-      earlyLifeFamily: fields.earlyLifeFamily.trim() || undefined,
-      youngAdulthood: fields.youngAdulthood.trim() || undefined,
-      marriageFamilyLife: fields.marriageFamilyLife.trim() || undefined,
-      workAchievementsPassions: fields.workAchievementsPassions.trim() || undefined,
-      storiesMemoriesTitle: storiesTitle.trim() || 'Stories We Remember',
-      storiesMemories: fields.storiesMemories.trim() || undefined,
-      laterYears: fields.laterYears.trim() || undefined,
+      professionalSummary: fields.professionalSummary.trim() || undefined,
+      earlyLifeBackground: fields.earlyLifeBackground.trim() || undefined,
+      education: fields.education.trim() || undefined,
+      careerJourney: fields.careerJourney.trim() || undefined,
+      professionalAchievements: fields.professionalAchievements.trim() || undefined,
+      areasOfExpertise: areasOfExpertise.length ? areasOfExpertise : undefined,
+      communityContributions: fields.communityContributions.trim() || undefined,
+      personalPhilosophy: fields.personalPhilosophy.trim() || undefined,
       legacy: fields.legacy.trim() || undefined,
+      personalLife: fields.personalLife.trim() || undefined,
     });
     onClose();
   };
@@ -103,21 +109,14 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
 
         <div className="p-6 space-y-6">
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted -mt-1">
-            You don't need every section filled in, and you don't need to know whether every small detail is historically significant — personal details are what make this come alive.
+            You don't need every section filled in. Name, photo, professional title, organization, location and contact links
+            live on their profile — click "Edit" on their profile page to update those.
           </p>
 
           {SECTIONS.map(section => (
             <div key={section.key}>
               <label className={labelCls}>{section.label}</label>
               <p className={hintCls}>{section.hint}</p>
-              {section.key === 'storiesMemories' && (
-                <input
-                  className={`${textareaCls} mb-2`}
-                  placeholder="Section title (e.g. \u201cStories We Remember\u201d or \u201cFamily Memories\u201d)"
-                  value={storiesTitle}
-                  onChange={e => setStoriesTitle(e.target.value)}
-                />
-              )}
               <textarea
                 className={textareaCls}
                 rows={section.rows}
@@ -127,6 +126,17 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
               />
             </div>
           ))}
+
+          <div>
+            <label className={labelCls}>7. Areas of Expertise</label>
+            <p className={hintCls}>e.g. Leadership, Technology, Law, Business, Education, Healthcare — separate with commas.</p>
+            <input
+              className={textareaCls}
+              value={expertiseInput}
+              onChange={e => setExpertiseInput(e.target.value)}
+              placeholder="Leadership, Technology, Public Speaking"
+            />
+          </div>
         </div>
 
         <div className="sticky bottom-0 flex justify-end gap-2 px-6 py-4 border-t border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card">

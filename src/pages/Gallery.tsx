@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Plus, ImagePlus, Pencil, Check } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Plus, ImagePlus, Pencil, Check, Trash2, Tag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { AddAlbumModal } from '../components/gallery/AddAlbumModal';
 import { AddPhotosModal } from '../components/gallery/AddPhotosModal';
 import type { Album } from '../types';
-import { canAddContent } from '../lib/permissions';
+import { canAddContent, canDelete } from '../lib/permissions';
 
 const CATEGORIES: { key: Album['category'] | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -23,8 +23,9 @@ interface Props {
 }
 
 export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
-  const { data, currentProfile, updateAlbum } = useApp();
+  const { data, currentProfile, updateAlbum, removeAlbum, removePhoto } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
+  const canRemove = canDelete(currentProfile?.role);
   const [category, setCategory] = useState<Album['category'] | 'all'>('all');
   const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -32,13 +33,29 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   const [showAddPhotos, setShowAddPhotos] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [editingFeatured, setEditingFeatured] = useState(false);
 
   const albums = category === 'all' ? data.albums : data.albums.filter(a => a.category === category);
   const openAlbum = data.albums.find(a => a.id === openAlbumId);
   const albumPhotos = openAlbum ? data.photos.filter(p => p.albumId === openAlbum.id) : [];
   const lightboxPhoto = lightboxIndex !== null ? albumPhotos[lightboxIndex] : null;
+  const featuredMember = openAlbum?.featuredMemberId ? data.members.find(m => m.id === openAlbum.featuredMemberId) : undefined;
 
-  useEffect(() => { setEditingTitle(false); }, [openAlbumId]);
+  useEffect(() => { setEditingTitle(false); setEditingFeatured(false); }, [openAlbumId]);
+
+  const handleDeleteAlbum = (albumId: string, title: string) => {
+    if (window.confirm(`Delete the album "${title}" and all of its photos? This can't be undone.`)) {
+      removeAlbum(albumId);
+      if (openAlbumId === albumId) setOpenAlbumId(null);
+    }
+  };
+
+  const handleDeletePhoto = (photoId: string) => {
+    if (window.confirm('Delete this photo? This can\'t be undone.')) {
+      removePhoto(photoId);
+      setLightboxIndex(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -72,20 +89,33 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {albums.map(album => {
             const count = data.photos.filter(p => p.albumId === album.id).length;
+            const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
             return (
-              <button
-                key={album.id}
-                onClick={() => setOpenAlbumId(album.id)}
-                className="group text-left rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow"
-              >
-                <div className="h-36 overflow-hidden bg-heritage-cream-200">
-                  <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
-                </div>
-                <div className="p-3">
-                  <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
-                  <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} photo{count !== 1 && 's'}</p>
-                </div>
-              </button>
+              <div key={album.id} className="group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
+                {canRemove && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
+                    className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                    aria-label="Delete album"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+                <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
+                  <div className="h-36 overflow-hidden bg-heritage-cream-200">
+                    <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
+                    {featured && (
+                      <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-0.5 truncate">
+                        <Tag size={11} className="shrink-0" /> About {fullName(featured)}
+                      </p>
+                    )}
+                    <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} photo{count !== 1 && 's'}</p>
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -95,14 +125,24 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             <button onClick={() => setOpenAlbumId(null)} className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1">
               <ChevronLeft size={16} /> All albums
             </button>
-            {canAdd && (
-              <button
-                onClick={() => setShowAddPhotos(true)}
-                className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg"
-              >
-                <ImagePlus size={16} /> Add Photos
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {canAdd && (
+                <button
+                  onClick={() => setShowAddPhotos(true)}
+                  className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg"
+                >
+                  <ImagePlus size={16} /> Add Photos
+                </button>
+              )}
+              {canRemove && (
+                <button
+                  onClick={() => handleDeleteAlbum(openAlbum.id, openAlbum.title)}
+                  className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-sm font-medium px-3 py-2 rounded-lg border border-red-200 dark:border-red-900"
+                >
+                  <Trash2 size={15} /> Delete Album
+                </button>
+              )}
+            </div>
           </div>
           <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text mt-3 flex items-center gap-2">
             {editingTitle ? (
@@ -144,7 +184,32 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
               </>
             )}
           </h3>
-          <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted mb-4">{openAlbum.description}</p>
+          <div className="mt-1.5">
+            {editingFeatured ? (
+              <select
+                autoFocus
+                className="text-xs rounded-md border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                value={openAlbum.featuredMemberId ?? ''}
+                onChange={e => { updateAlbum(openAlbum.id, { featuredMemberId: e.target.value || undefined }); setEditingFeatured(false); }}
+                onBlur={() => setEditingFeatured(false)}
+              >
+                <option value="">No one in particular</option>
+                {data.members.map(m => (
+                  <option key={m.id} value={m.id}>{fullName(m)}</option>
+                ))}
+              </select>
+            ) : (
+              <button
+                onClick={() => canAdd && setEditingFeatured(true)}
+                className={`text-xs flex items-center gap-1 ${featuredMember ? 'text-heritage-gold-600 dark:text-heritage-gold-400' : 'text-heritage-green-400 dark:text-heritage-dark-muted'} ${canAdd ? 'hover:underline' : ''}`}
+                disabled={!canAdd}
+              >
+                <Tag size={11} />
+                {featuredMember ? `About ${fullName(featuredMember)}` : (canAdd ? 'Tag who this album is about' : '')}
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted mb-4 mt-1">{openAlbum.description}</p>
           {albumPhotos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">
               <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">No photos yet — be the first to add one.</p>
@@ -152,9 +217,20 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {albumPhotos.map((p, i) => (
-                <button key={p.id} onClick={() => setLightboxIndex(i)} className="rounded-lg overflow-hidden border border-heritage-cream-300 dark:border-heritage-dark-border">
-                  <img src={p.url} className="w-full h-32 object-cover hover:scale-105 transition-transform" alt={p.caption ?? ''} />
-                </button>
+                <div key={p.id} className="group relative rounded-lg overflow-hidden border border-heritage-cream-300 dark:border-heritage-dark-border">
+                  {canRemove && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletePhoto(p.id); }}
+                      className="absolute top-1.5 right-1.5 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+                      aria-label="Delete photo"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                  <button onClick={() => setLightboxIndex(i)} className="block w-full">
+                    <img src={p.url} className="w-full h-32 object-cover hover:scale-105 transition-transform" alt={p.caption ?? ''} />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -178,6 +254,14 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
       {lightboxPhoto && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
           <button onClick={() => setLightboxIndex(null)} className="absolute top-5 right-5 text-white/80 hover:text-white"><X size={26} /></button>
+          {canRemove && lightboxPhoto && (
+            <button
+              onClick={() => handleDeletePhoto(lightboxPhoto.id)}
+              className="absolute top-5 left-5 flex items-center gap-1.5 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm"
+            >
+              <Trash2 size={15} /> Delete
+            </button>
+          )}
           {lightboxIndex! > 0 && (
             <button onClick={() => setLightboxIndex(i => (i ?? 0) - 1)} className="absolute left-4 text-white/70 hover:text-white"><ChevronLeft size={32} /></button>
           )}

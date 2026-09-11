@@ -9,6 +9,7 @@ import { Sudoku } from '../components/games/Sudoku';
 import { ScrabbleTiles } from '../components/games/ScrabbleTiles';
 import { Canasta } from '../components/games/Canasta';
 import { useApp } from '../context/AppContext';
+import { resolveDisplayName } from '../lib/names';
 import type { GameKey as ScoredGameKey } from '../types';
 
 export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards' | 'sudoku' | 'scrabbleTiles';
@@ -115,7 +116,9 @@ export const Games: React.FC = () => {
       if (!s.profileId) continue;
       const existing = byProfile.get(s.profileId) ?? {
         profileId: s.profileId,
-        playerName: s.playerName,
+        // Show the name the account is linked to (family member or profile
+        // display name) rather than a raw email that may have been stored on the score.
+        playerName: resolveDisplayName(data, s.profileId, s.playerName),
         total: 0,
         gamesPlayed: new Set<ScoredGameKey>(),
         byGame: {},
@@ -127,7 +130,7 @@ export const Games: React.FC = () => {
     }
 
     return Array.from(byProfile.values()).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [data.gameScores]);
+  }, [data.gameScores, data.profiles, data.members]);
 
   const winner = leaderboard[0];
 

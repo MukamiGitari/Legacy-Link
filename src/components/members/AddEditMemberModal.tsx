@@ -34,6 +34,12 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const [restingPlace, setRestingPlace] = useState(existing?.restingPlace ?? '');
   const [occupation, setOccupation] = useState(existing?.occupation ?? '');
   const [bio, setBio] = useState(existing?.bio ?? '');
+  const [professionalTitle, setProfessionalTitle] = useState(existing?.professionalTitle ?? '');
+  const [currentOrganization, setCurrentOrganization] = useState(existing?.currentOrganization ?? '');
+  const [location, setLocation] = useState(existing?.location ?? '');
+  const [contactLinks, setContactLinks] = useState(existing?.contactLinks ?? '');
+  const [hasPet, setHasPet] = useState(existing?.hasPet ?? false);
+  const [petName, setPetName] = useState(existing?.petName ?? '');
   const [avatarUrl, setAvatarUrl] = useState(existing?.avatarUrl ?? AVATAR_PRESETS[0]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
@@ -76,6 +82,9 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
       isLiving, dateOfBirth: dob || undefined, dateOfPassing: !isLiving ? (dop || undefined) : undefined,
       birthPlace: birthPlace || undefined, restingPlace: restingPlace || undefined,
       occupation: occupation || undefined, bio: bio || undefined, avatarUrl,
+      professionalTitle: professionalTitle || undefined, currentOrganization: currentOrganization || undefined,
+      location: location || undefined, contactLinks: contactLinks || undefined,
+      hasPet, petName: hasPet ? (petName || undefined) : undefined,
     };
 
     let savedId: string;
@@ -228,6 +237,36 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
             <div className="col-span-2">
               <label className={labelCls}>Occupation</label>
               <input className={inputCls} value={occupation} onChange={e => setOccupation(e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Professional title</label>
+              <input className={inputCls} value={professionalTitle} onChange={e => setProfessionalTitle(e.target.value)} placeholder="e.g. Senior Partner" />
+            </div>
+            <div>
+              <label className={labelCls}>Current organization</label>
+              <input className={inputCls} value={currentOrganization} onChange={e => setCurrentOrganization(e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>Location</label>
+              <input className={inputCls} value={location} onChange={e => setLocation(e.target.value)} placeholder="Current city/region" />
+            </div>
+            <div className="col-span-2">
+              <label className={labelCls}>Contact / website links</label>
+              <textarea rows={2} className={inputCls} value={contactLinks} onChange={e => setContactLinks(e.target.value)} placeholder={"One link per line, e.g.\nlinkedin.com/in/username\nexample.com"} />
+            </div>
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 text-sm text-heritage-green-800 dark:text-heritage-dark-text">
+                <input type="checkbox" checked={hasPet} onChange={e => setHasPet(e.target.checked)} className="rounded border-heritage-cream-400" />
+                Has a pet
+              </label>
+              {hasPet && (
+                <input
+                  className={`${inputCls} mt-2`}
+                  value={petName}
+                  onChange={e => setPetName(e.target.value)}
+                  placeholder="Pet's name"
+                />
+              )}
             </div>
             <div className="col-span-2">
               <label className={labelCls}>Biography</label>
