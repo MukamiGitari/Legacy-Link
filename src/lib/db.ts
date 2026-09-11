@@ -12,7 +12,7 @@ import { supabase } from './supabase';
 import type {
   FamilyDataset, Family, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, InvitationCode, AuditLogEntry,
-  Biography, LegacyContribution, LanguageEntry, RestorationCode, TriviaScore,
+  Biography, LegacyContribution, LanguageEntry, RestorationCode, TriviaScore, GameScore,
 } from '../types';
 
 function must() {
@@ -111,6 +111,11 @@ const mapTriviaScore = (r: any): TriviaScore => ({
   category: r.category, score: r.score, totalQuestions: r.total_questions, createdAt: r.created_at,
 });
 
+const mapGameScore = (r: any): GameScore => ({
+  id: r.id, familyId: r.family_id, profileId: r.profile_id, playerName: r.player_name,
+  gameKey: r.game_key, points: r.points, createdAt: r.created_at,
+});
+
 const mapRestorationCode = (r: any): RestorationCode => ({
   id: r.id, familyId: r.family_id, profileId: r.profile_id, code: r.code,
   createdAt: r.created_at, redeemedAt: r.redeemed_at ?? undefined,
@@ -145,7 +150,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
     memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
     biosRes, legacyRes, legacyTagsRes, languageRes,
-    profilesRes, invitesRes, auditRes, triviaRes,
+    profilesRes, invitesRes, auditRes, triviaRes, gameScoresRes,
   ] = await Promise.all([
     db.from('families').select('*').eq('id', familyId).single(),
     db.from('members').select('*').eq('family_id', familyId),
@@ -166,13 +171,14 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     db.from('invitation_codes').select('*').eq('family_id', familyId),
     db.from('audit_log').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).limit(200),
     db.from('trivia_scores').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).limit(200),
+    db.from('game_scores').select('*').eq('family_id', familyId).order('created_at', { ascending: false }).limit(500),
   ]);
 
   const firstError = [
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
     memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
     biosRes, legacyRes, legacyTagsRes, languageRes,
-    profilesRes, invitesRes, auditRes, triviaRes,
+    profilesRes, invitesRes, auditRes, triviaRes, gameScoresRes,
   ].find(r => r.error)?.error;
   if (firstError) throw firstError;
 
@@ -215,6 +221,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     legacyContributions: (legacyRes.data ?? []).map(r => mapLegacyContribution(r, tagsByContribution)),
     languageEntries: (languageRes.data ?? []).map(mapLanguageEntry),
     triviaScores: (triviaRes.data ?? []).map(mapTriviaScore),
+    gameScores: (gameScoresRes.data ?? []).map(mapGameScore),
     // Stories (collaborative story builder game) are local-only for now — not yet
     // backed by a Supabase table, so online-mode families start each session fresh.
     stories: [],
@@ -601,6 +608,14 @@ export async function insertTriviaScore(s: TriviaScore) {
   const { error } = await must().from('trivia_scores').insert({
     id: s.id, family_id: s.familyId, profile_id: s.profileId, player_name: s.playerName,
     category: s.category, score: s.score, total_questions: s.totalQuestions, created_at: s.createdAt,
+  });
+  if (error) throw error;
+}
+
+export async function insertGameScore(s: GameScore) {
+  const { error } = await must().from('game_scores').insert({
+    id: s.id, family_id: s.familyId, profile_id: s.profileId, player_name: s.playerName,
+    game_key: s.gameKey, points: s.points, created_at: s.createdAt,
   });
   if (error) throw error;
 }

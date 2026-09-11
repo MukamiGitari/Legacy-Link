@@ -9,7 +9,7 @@ const ROUND_SIZE = 6;
 type Stage = 'menu' | 'playing' | 'result';
 
 export const BirthdayBingo: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { data } = useApp();
+  const { data, recordGameScore } = useApp();
   const [stage, setStage] = useState<Stage>('menu');
   const [round, setRound] = useState<BirthdayBingoRound | null>(null);
   const [picks, setPicks] = useState<string[]>([]); // member ids, in the order the player picked them
@@ -138,7 +138,10 @@ export const BirthdayBingo: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {!checked && allPicked && (
             <div className="flex justify-end mt-5">
               <button
-                onClick={() => setChecked(true)}
+                onClick={() => {
+                  setChecked(true);
+                  recordGameScore('birthdayBingo', correctCount * 10);
+                }}
                 className="px-4 py-2 text-sm rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 text-white font-medium"
               >
                 Check order

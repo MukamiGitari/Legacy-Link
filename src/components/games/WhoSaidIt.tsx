@@ -8,7 +8,7 @@ const ROUND_SIZE = 6;
 type Stage = 'menu' | 'playing' | 'result';
 
 export const WhoSaidIt: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { data } = useApp();
+  const { data, recordGameScore } = useApp();
   const [stage, setStage] = useState<Stage>('menu');
   const [questions, setQuestions] = useState<WhoSaidItQuestion[]>([]);
   const [qIndex, setQIndex] = useState(0);
@@ -34,6 +34,8 @@ export const WhoSaidIt: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const next = () => {
     if (qIndex + 1 >= questions.length) {
+      // `score` already reflects this question's answer (updated in answer()).
+      recordGameScore('whoSaidIt', score * 10);
       setStage('result');
     } else {
       setQIndex(i => i + 1);

@@ -1,6 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, RotateCcw, Sparkles, Grid3x3, Eraser } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 import { generateSudoku, isSolved, findConflicts, type SudokuDifficulty, type Grid } from '../../lib/sudoku';
+
+// Points awarded on a solve, by difficulty — harder puzzles are worth more on the
+// combined family leaderboard.
+const SOLVE_POINTS: Record<SudokuDifficulty, number> = { easy: 30, medium: 50, hard: 80 };
 
 type Stage = 'menu' | 'playing' | 'solved';
 
@@ -10,15 +15,37 @@ const DIFFICULTIES: { key: SudokuDifficulty; label: string; blurb: string }[] = 
   { key: 'hard', label: 'Hard', blurb: 'Few clues — for the family sudoku champion.' },
 ];
 
+/** True if placing `val` at (row, col) wouldn't repeat a number already in that
+ *  row, column, or 3x3 box. Erasing (val === 0) is always allowed. */
+function isPlacementValid(board: Grid, row: number, col: number, val: number): boolean {
+  if (val === 0) return true;
+  for (let i = 0; i < 9; i++) {
+    if (i !== col && board[row][i] === val) return false;
+    if (i !== row && board[i][col] === val) return false;
+  }
+  const boxRow = row - (row % 3);
+  const boxCol = col - (col % 3);
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if ((boxRow + r !== row || boxCol + c !== col) && board[boxRow + r][boxCol + c] === val) return false;
+    }
+  }
+  return true;
+}
+
 export const Sudoku: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const { recordGameScore } = useApp();
   const [stage, setStage] = useState<Stage>('menu');
+  const [difficulty, setDifficulty] = useState<SudokuDifficulty>('easy');
   const [givens, setGivens] = useState<Grid | null>(null);
   const [solution, setSolution] = useState<Grid | null>(null);
   const [board, setBoard] = useState<Grid | null>(null);
   const [selected, setSelected] = useState<[number, number] | null>(null);
+  const [blockedCell, setBlockedCell] = useState<string | null>(null);
 
-  const start = (difficulty: SudokuDifficulty) => {
-    const { puzzle, solution: sol } = generateSudoku(difficulty);
+  const start = (diff: SudokuDifficulty) => {
+    const { puzzle, solution: sol } = generateSudoku(diff);
+    setDifficulty(diff);
     setGivens(puzzle);
     setSolution(sol);
     setBoard(puzzle.map(row => [...row]));
@@ -32,10 +59,19 @@ export const Sudoku: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (!board || !givens || !selected) return;
     const [row, col] = selected;
     if (givens[row][col] !== 0) return; // can't overwrite an original clue
+    // A number that already appears in this row, column, or box is rejected outright
+    // rather than just highlighted in red — so the board can never end up showing the
+    // same number twice in one line.
+    if (!isPlacementValid(board, row, col, val)) {
+      setBlockedCell(`${row}-${col}`);
+      setTimeout(() => setBlockedCell(null), 400);
+      return;
+    }
     const next = board.map(r => [...r]);
     next[row][col] = val;
     setBoard(next);
     if (solution && isSolved(next, solution)) {
+      recordGameScore('sudoku', SOLVE_POINTS[difficulty]);
       setStage('solved');
     }
   };
@@ -79,6 +115,7 @@ export const Sudoku: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 const isGiven = givens[r][c] !== 0;
                 const isSelected = selected?.[0] === r && selected?.[1] === c;
                 const hasConflict = conflicts.has(`${r}-${c}`);
+                const isBlocked = blockedCell === `${r}-${c}`;
                 return (
                   <button
                     key={`${r}-${c}`}
@@ -89,9 +126,10 @@ export const Sudoku: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       ${c % 3 === 0 ? 'border-l-2 border-l-heritage-green-800 dark:border-l-heritage-dark-text' : ''}
                       ${r === 8 ? 'border-b-2 border-b-heritage-green-800 dark:border-b-heritage-dark-text' : ''}
                       ${c === 8 ? 'border-r-2 border-r-heritage-green-800 dark:border-r-heritage-dark-text' : ''}
-                      ${isSelected ? 'bg-heritage-gold-100 dark:bg-heritage-gold-900/30' : 'bg-white dark:bg-heritage-dark-card'}
+                      ${isBlocked ? 'bg-red-100 dark:bg-red-900/40' : isSelected ? 'bg-heritage-gold-100 dark:bg-heritage-gold-900/30' : 'bg-white dark:bg-heritage-dark-card'}
                       ${isGiven ? 'text-heritage-green-900 dark:text-heritage-dark-text' : 'text-heritage-green-700 dark:text-heritage-gold-400'}
                       ${hasConflict ? 'text-red-600 dark:text-red-400' : ''}
+                      transition-colors
                     `}
                   >
                     {val !== 0 ? val : ''}

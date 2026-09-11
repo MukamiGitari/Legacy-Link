@@ -207,6 +207,7 @@ export interface FamilyDataset {
   legacyContributions: LegacyContribution[];
   languageEntries: LanguageEntry[];
   triviaScores: TriviaScore[];
+  gameScores: GameScore[];
   stories: Story[];
   profiles: Profile[];
   invitationCodes: InvitationCode[];
@@ -303,6 +304,22 @@ export interface RestorationCode {
   code: string;
   createdAt: string;
   redeemedAt?: string;
+}
+
+/** Every game in the Games hub that can contribute points to the combined family leaderboard. */
+export type GameKey = 'trivia' | 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'sudoku' | 'flashcards';
+
+/** One completed round of any non-trivia game, kept for the combined family leaderboard.
+ *  Trivia keeps its own richer `TriviaScore` record (with category), but every round — trivia
+ *  included — is also summed together here so the leaderboard can rank players across all games. */
+export interface GameScore {
+  id: string;
+  familyId: string;
+  profileId: string;
+  playerName: string;
+  gameKey: GameKey;
+  points: number;
+  createdAt: string;
 }
 
 export type TriviaCategory = 'our_family' | 'history' | 'geography';

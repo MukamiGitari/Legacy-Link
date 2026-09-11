@@ -291,6 +291,24 @@ create index if not exists idx_trivia_scores_family on trivia_scores(family_id);
 create index if not exists idx_trivia_scores_category on trivia_scores(family_id, category);
 
 -- ----------------------------------------------------------------------------
+-- game_scores: completed rounds of ANY family game (trivia included — every
+-- trivia round also inserts a row here), for the combined leaderboard that
+-- sums points across every game and crowns one overall winner.
+-- ----------------------------------------------------------------------------
+create table if not exists game_scores (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references families(id) on delete cascade,
+  profile_id uuid not null references profiles(id) on delete cascade,
+  player_name text not null,
+  game_key text not null check (game_key in ('trivia', 'guessWho', 'birthdayBingo', 'whoSaidIt', 'sudoku', 'flashcards')),
+  points int not null check (points >= 0),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_game_scores_family on game_scores(family_id);
+create index if not exists idx_game_scores_profile on game_scores(family_id, profile_id);
+
+-- ----------------------------------------------------------------------------
 -- restoration_codes: one-time, admin-issued codes that let a locked-out family
 -- member set a new password without knowing their old one.
 -- ----------------------------------------------------------------------------
@@ -364,6 +382,7 @@ alter table restoration_codes enable row level security;
 alter table invitation_codes enable row level security;
 alter table audit_log enable row level security;
 alter table trivia_scores enable row level security;
+alter table game_scores enable row level security;
 
 create or replace function current_family_id()
 returns uuid
@@ -537,6 +556,15 @@ drop policy if exists trivia_scores_insert on trivia_scores;
 create policy trivia_scores_select on trivia_scores for select
   using (family_id = current_family_id());
 create policy trivia_scores_insert on trivia_scores for insert
+  with check (family_id = current_family_id() and profile_id = auth.uid());
+
+-- game_scores: same rules as trivia_scores — anyone in the family can see the
+-- combined leaderboard; a score can only ever be recorded for your own profile.
+drop policy if exists game_scores_select on game_scores;
+drop policy if exists game_scores_insert on game_scores;
+create policy game_scores_select on game_scores for select
+  using (family_id = current_family_id());
+create policy game_scores_insert on game_scores for insert
   with check (family_id = current_family_id() and profile_id = auth.uid());
 
 -- family-photos storage bucket: public read, family-scoped writes (see the

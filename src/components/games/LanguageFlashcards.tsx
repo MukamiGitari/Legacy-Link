@@ -16,7 +16,7 @@ const TYPE_LABEL: Record<LanguageFlashcard['entryType'], string> = {
 };
 
 export const LanguageFlashcards: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const { data } = useApp();
+  const { data, recordGameScore } = useApp();
   const [stage, setStage] = useState<Stage>('menu');
   const [deck, setDeck] = useState<LanguageFlashcard[]>([]);
   const [index, setIndex] = useState(0);
@@ -36,8 +36,10 @@ export const LanguageFlashcards: React.FC<{ onBack: () => void }> = ({ onBack })
   const current = deck[index];
 
   const mark = (correct: boolean) => {
-    if (correct) setGotIt(g => g + 1);
+    const finalGotIt = correct ? gotIt + 1 : gotIt;
+    if (correct) setGotIt(finalGotIt);
     if (index + 1 >= deck.length) {
+      recordGameScore('flashcards', finalGotIt * 10);
       setStage('result');
     } else {
       setIndex(i => i + 1);

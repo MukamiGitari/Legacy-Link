@@ -391,6 +391,501 @@ export const languageEntries: LanguageEntry[] = [
     meaning: 'It\u2019s like removing a hyena from a pit. A man pulled a trapped hyena out of a pit out of pity, only for the hyena to then demand an arm or leg to eat since it was starving. The man tricked it into stepping onto its back to reach a "fattest arm" supposedly nearby, then climbed out and left it behind. Directed at people who are never grateful for good deeds done for them.',
     contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-03-18T09:50:00Z',
   },
+  {
+    id: 'lang32', familyId: FAMILY_ID, entryType: 'word', term: 'Muuga',
+    meaning: 'Hello / how are you',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:00:00Z',
+  },
+  {
+    id: 'lang33', familyId: FAMILY_ID, entryType: 'word', term: 'Mwari',
+    meaning: 'Girl / daughter',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:01:00Z',
+  },
+  {
+    id: 'lang34', familyId: FAMILY_ID, entryType: 'word', term: 'Muji',
+    meaning: 'Home',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:02:00Z',
+  },
+  {
+    id: 'lang35', familyId: FAMILY_ID, entryType: 'word', term: 'Ruuji',
+    meaning: 'Water',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:03:00Z',
+  },
+  {
+    id: 'lang36', familyId: FAMILY_ID, entryType: 'word', term: 'Naarua / Umunthi',
+    meaning: 'Today',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:04:00Z',
+  },
+  {
+    id: 'lang37', familyId: FAMILY_ID, entryType: 'word', term: 'Ruju',
+    meaning: 'Tomorrow',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:05:00Z',
+  },
+  {
+    id: 'lang38', familyId: FAMILY_ID, entryType: 'word', term: 'Thimu',
+    meaning: 'Phone',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:06:00Z',
+  },
+  {
+    id: 'lang39', familyId: FAMILY_ID, entryType: 'word', term: 'Mucore',
+    meaning: 'Friend',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:07:00Z',
+  },
+  {
+    id: 'lang40', familyId: FAMILY_ID, entryType: 'word', term: 'Uka / Nju',
+    meaning: 'Come here',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:08:00Z',
+  },
+  {
+    id: 'lang41', familyId: FAMILY_ID, entryType: 'word', term: 'Ndaka',
+    meaning: 'Boy',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:09:00Z',
+  },
+  {
+    id: 'lang42', familyId: FAMILY_ID, entryType: 'word', term: 'Muthaka',
+    meaning: 'Circumcised boy',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:10:00Z',
+  },
+  {
+    id: 'lang43', familyId: FAMILY_ID, entryType: 'word', term: 'Nja',
+    meaning: 'Outside',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:11:00Z',
+  },
+  {
+    id: 'lang44', familyId: FAMILY_ID, entryType: 'word', term: 'Juju',
+    meaning: 'Grandparent',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:12:00Z',
+  },
+  {
+    id: 'lang45', familyId: FAMILY_ID, entryType: 'word', term: 'Baaba',
+    meaning: 'Father',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:13:00Z',
+  },
+  {
+    id: 'lang46', familyId: FAMILY_ID, entryType: 'word', term: 'Bwatinda atia',
+    meaning: 'How was your day',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:14:00Z',
+  },
+  {
+    id: 'lang47', familyId: FAMILY_ID, entryType: 'word', term: 'Tinda bwega',
+    meaning: 'Good day',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:15:00Z',
+  },
+  {
+    id: 'lang48', familyId: FAMILY_ID, entryType: 'word', term: 'Butharimwe',
+    meaning: 'Be blessed',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:16:00Z',
+  },
+  {
+    id: 'lang49', familyId: FAMILY_ID, entryType: 'word', term: 'Mama wega / Lala bwega',
+    meaning: 'Sleep well',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:17:00Z',
+  },
+  {
+    id: 'lang50', familyId: FAMILY_ID, entryType: 'word', term: 'Ii',
+    meaning: 'Yes',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:18:00Z',
+  },
+  {
+    id: 'lang51', familyId: FAMILY_ID, entryType: 'word', term: 'Ari',
+    meaning: 'No',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:19:00Z',
+  },
+  {
+    id: 'lang52', familyId: FAMILY_ID, entryType: 'word', term: 'Ibwega',
+    meaning: 'Thank you',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:20:00Z',
+  },
+  {
+    id: 'lang53', familyId: FAMILY_ID, entryType: 'word', term: 'Twete / Tuthi',
+    meaning: "Let's go",
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:21:00Z',
+  },
+  {
+    id: 'lang54', familyId: FAMILY_ID, entryType: 'word', term: 'Twonane',
+    meaning: 'See you',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:22:00Z',
+  },
+  {
+    id: 'lang55', familyId: FAMILY_ID, entryType: 'word', term: 'Mbeca',
+    meaning: 'Money',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:23:00Z',
+  },
+  {
+    id: 'lang56', familyId: FAMILY_ID, entryType: 'word', term: 'Muno',
+    meaning: 'More',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:24:00Z',
+  },
+  {
+    id: 'lang57', familyId: FAMILY_ID, entryType: 'word', term: 'Atia',
+    meaning: 'How',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:25:00Z',
+  },
+  {
+    id: 'lang58', familyId: FAMILY_ID, entryType: 'word', term: 'Ntina mbeca',
+    meaning: 'I have no money',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:26:00Z',
+  },
+  {
+    id: 'lang59', familyId: FAMILY_ID, entryType: 'word', term: 'Murimi',
+    meaning: 'Farmer',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:27:00Z',
+  },
+  {
+    id: 'lang60', familyId: FAMILY_ID, entryType: 'word', term: 'Murui',
+    meaning: 'Cook',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:28:00Z',
+  },
+  {
+    id: 'lang61', familyId: FAMILY_ID, entryType: 'word', term: 'Mwiti',
+    meaning: 'Traveller',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:29:00Z',
+  },
+  {
+    id: 'lang62', familyId: FAMILY_ID, entryType: 'word', term: 'Mukoobi',
+    meaning: 'Borrower',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:30:00Z',
+  },
+  {
+    id: 'lang63', familyId: FAMILY_ID, entryType: 'word', term: 'Mpeempe',
+    meaning: 'Maize',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:31:00Z',
+  },
+  {
+    id: 'lang64', familyId: FAMILY_ID, entryType: 'word', term: 'Bangi',
+    meaning: 'Others (referring to people)',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:32:00Z',
+  },
+  {
+    id: 'lang65', familyId: FAMILY_ID, entryType: 'word', term: 'Muntu',
+    meaning: 'Man',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:33:00Z',
+  },
+  {
+    id: 'lang66', familyId: FAMILY_ID, entryType: 'word', term: 'Muka',
+    meaning: 'Woman',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:34:00Z',
+  },
+  {
+    id: 'lang67', familyId: FAMILY_ID, entryType: 'word', term: 'Thaambia',
+    meaning: 'Wash',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:35:00Z',
+  },
+  {
+    id: 'lang68', familyId: FAMILY_ID, entryType: 'word', term: 'Cukuru',
+    meaning: 'School',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:36:00Z',
+  },
+  {
+    id: 'lang69', familyId: FAMILY_ID, entryType: 'word', term: 'Nkoro',
+    meaning: 'Heart',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:37:00Z',
+  },
+  {
+    id: 'lang70', familyId: FAMILY_ID, entryType: 'word', term: 'Njuri',
+    meaning: 'Council of elders',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:38:00Z',
+  },
+  {
+    id: 'lang71', familyId: FAMILY_ID, entryType: 'word', term: 'Giti',
+    meaning: 'Chair',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:39:00Z',
+  },
+  {
+    id: 'lang72', familyId: FAMILY_ID, entryType: 'word', term: 'Kabeti',
+    meaning: 'Small wallet / purse',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:40:00Z',
+  },
+  {
+    id: 'lang73', familyId: FAMILY_ID, entryType: 'word', term: 'Mwiji',
+    meaning: 'Boy',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:41:00Z',
+  },
+  {
+    id: 'lang74', familyId: FAMILY_ID, entryType: 'word', term: 'Ucuru',
+    meaning: 'Porridge',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:42:00Z',
+  },
+  {
+    id: 'lang75', familyId: FAMILY_ID, entryType: 'word', term: 'Nda',
+    meaning: 'Stomach',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:43:00Z',
+  },
+  {
+    id: 'lang76', familyId: FAMILY_ID, entryType: 'word', term: 'Gitanda',
+    meaning: 'Bed',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:44:00Z',
+  },
+  {
+    id: 'lang77', familyId: FAMILY_ID, entryType: 'word', term: 'Chai',
+    meaning: 'Tea',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:45:00Z',
+  },
+  {
+    id: 'lang78', familyId: FAMILY_ID, entryType: 'word', term: 'Kauwa',
+    meaning: 'Coffee',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:46:00Z',
+  },
+  {
+    id: 'lang79', familyId: FAMILY_ID, entryType: 'word', term: 'Chukari',
+    meaning: 'Sugar',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:47:00Z',
+  },
+  {
+    id: 'lang80', familyId: FAMILY_ID, entryType: 'word', term: 'Mugate',
+    meaning: 'Bread',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:48:00Z',
+  },
+  {
+    id: 'lang81', familyId: FAMILY_ID, entryType: 'word', term: 'Ngari',
+    meaning: 'Car',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:49:00Z',
+  },
+  {
+    id: 'lang82', familyId: FAMILY_ID, entryType: 'word', term: 'Irinda',
+    meaning: 'Dress',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:50:00Z',
+  },
+  {
+    id: 'lang83', familyId: FAMILY_ID, entryType: 'word', term: 'Shati',
+    meaning: 'Shirt',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:51:00Z',
+  },
+  {
+    id: 'lang84', familyId: FAMILY_ID, entryType: 'word', term: 'Kiratu',
+    meaning: 'Shoe',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:52:00Z',
+  },
+  {
+    id: 'lang85', familyId: FAMILY_ID, entryType: 'word', term: 'Ng\'ombe',
+    meaning: 'Cow',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:53:00Z',
+  },
+  {
+    id: 'lang86', familyId: FAMILY_ID, entryType: 'word', term: 'Mburi',
+    meaning: 'Goat',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:54:00Z',
+  },
+  {
+    id: 'lang87', familyId: FAMILY_ID, entryType: 'word', term: 'Ngondu',
+    meaning: 'Sheep',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:55:00Z',
+  },
+  {
+    id: 'lang88', familyId: FAMILY_ID, entryType: 'word', term: 'Nguku',
+    meaning: 'Hen',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:56:00Z',
+  },
+  {
+    id: 'lang89', familyId: FAMILY_ID, entryType: 'word', term: 'Iria',
+    meaning: 'Milk',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T10:57:00Z',
+  },
+  {
+    id: 'lang90', familyId: FAMILY_ID, entryType: 'word', term: 'Yuku / Mbuku',
+    meaning: 'Book',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T10:58:00Z',
+  },
+  {
+    id: 'lang91', familyId: FAMILY_ID, entryType: 'word', term: 'Karamu',
+    meaning: 'Pencil / pen',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T10:59:00Z',
+  },
+  {
+    id: 'lang92', familyId: FAMILY_ID, entryType: 'word', term: 'Nduka',
+    meaning: 'Shop',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:00:00Z',
+  },
+  {
+    id: 'lang93', familyId: FAMILY_ID, entryType: 'word', term: 'Mugunda',
+    meaning: 'Farm',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:01:00Z',
+  },
+  {
+    id: 'lang94', familyId: FAMILY_ID, entryType: 'word', term: 'Mwanki',
+    meaning: 'Fire / hot',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:02:00Z',
+  },
+  {
+    id: 'lang95', familyId: FAMILY_ID, entryType: 'word', term: 'Mpio',
+    meaning: 'Cold',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:03:00Z',
+  },
+  {
+    id: 'lang96', familyId: FAMILY_ID, entryType: 'word', term: 'Riua',
+    meaning: 'Sun',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:04:00Z',
+  },
+  {
+    id: 'lang97', familyId: FAMILY_ID, entryType: 'word', term: 'Mweri',
+    meaning: 'Moon',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:05:00Z',
+  },
+  {
+    id: 'lang98', familyId: FAMILY_ID, entryType: 'word', term: 'Mbura',
+    meaning: 'Rain',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:06:00Z',
+  },
+  {
+    id: 'lang99', familyId: FAMILY_ID, entryType: 'word', term: 'Ruo',
+    meaning: 'Rain',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:07:00Z',
+  },
+  {
+    id: 'lang100', familyId: FAMILY_ID, entryType: 'word', term: 'Ina',
+    meaning: 'Sing',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:08:00Z',
+  },
+  {
+    id: 'lang101', familyId: FAMILY_ID, entryType: 'word', term: 'Murungu',
+    meaning: 'God',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:09:00Z',
+  },
+  {
+    id: 'lang102', familyId: FAMILY_ID, entryType: 'word', term: 'Kanisa',
+    meaning: 'Church',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:10:00Z',
+  },
+  {
+    id: 'lang103', familyId: FAMILY_ID, entryType: 'word', term: 'Vatiri',
+    meaning: 'Priest',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:11:00Z',
+  },
+  {
+    id: 'lang104', familyId: FAMILY_ID, entryType: 'word', term: 'Mubea',
+    meaning: 'Pastor',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:12:00Z',
+  },
+  {
+    id: 'lang105', familyId: FAMILY_ID, entryType: 'word', term: 'Mwana',
+    meaning: 'Baby',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:13:00Z',
+  },
+  {
+    id: 'lang106', familyId: FAMILY_ID, entryType: 'word', term: 'Mutanongina',
+    meaning: 'Brother',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:14:00Z',
+  },
+  {
+    id: 'lang107', familyId: FAMILY_ID, entryType: 'word', term: 'Mwarongina',
+    meaning: 'Sister',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:15:00Z',
+  },
+  {
+    id: 'lang108', familyId: FAMILY_ID, entryType: 'word', term: 'Kameme',
+    meaning: 'Radio',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:16:00Z',
+  },
+  {
+    id: 'lang109', familyId: FAMILY_ID, entryType: 'word', term: 'Mwarimu',
+    meaning: 'Teacher',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:17:00Z',
+  },
+  {
+    id: 'lang110', familyId: FAMILY_ID, entryType: 'word', term: 'Ndaktari',
+    meaning: 'Doctor',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:18:00Z',
+  },
+  {
+    id: 'lang111', familyId: FAMILY_ID, entryType: 'word', term: 'Kuru / Nkui',
+    meaning: 'Dog',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:19:00Z',
+  },
+  {
+    id: 'lang112', familyId: FAMILY_ID, entryType: 'word', term: 'Mpaka',
+    meaning: 'Cat',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:20:00Z',
+  },
+  {
+    id: 'lang113', familyId: FAMILY_ID, entryType: 'word', term: 'Kiegeri',
+    meaning: 'Broom',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:21:00Z',
+  },
+  {
+    id: 'lang114', familyId: FAMILY_ID, entryType: 'word', term: 'Thani',
+    meaning: 'Plate',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:22:00Z',
+  },
+  {
+    id: 'lang115', familyId: FAMILY_ID, entryType: 'word', term: 'Gikombe',
+    meaning: 'Cup',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:23:00Z',
+  },
+  {
+    id: 'lang116', familyId: FAMILY_ID, entryType: 'word', term: 'Gichiko',
+    meaning: 'Spoon',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:24:00Z',
+  },
+  {
+    id: 'lang117', familyId: FAMILY_ID, entryType: 'word', term: 'Gachiu / Kayu',
+    meaning: 'Knife',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:25:00Z',
+  },
+  {
+    id: 'lang118', familyId: FAMILY_ID, entryType: 'word', term: 'Uma',
+    meaning: 'Fork',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:26:00Z',
+  },
+  {
+    id: 'lang119', familyId: FAMILY_ID, entryType: 'word', term: 'Meno',
+    meaning: 'Tooth / teeth',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:27:00Z',
+  },
+  {
+    id: 'lang120', familyId: FAMILY_ID, entryType: 'word', term: 'Kanyua',
+    meaning: 'Mouth',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:28:00Z',
+  },
+  {
+    id: 'lang121', familyId: FAMILY_ID, entryType: 'word', term: 'Njara',
+    meaning: 'Hand',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:29:00Z',
+  },
+  {
+    id: 'lang122', familyId: FAMILY_ID, entryType: 'word', term: 'Kuguru',
+    meaning: 'Foot',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:30:00Z',
+  },
+  {
+    id: 'lang123', familyId: FAMILY_ID, entryType: 'word', term: 'Kiara',
+    meaning: 'Toe',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:31:00Z',
+  },
+  {
+    id: 'lang124', familyId: FAMILY_ID, entryType: 'word', term: 'Thibitari',
+    meaning: 'Hospital',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:32:00Z',
+  },
+  {
+    id: 'lang125', familyId: FAMILY_ID, entryType: 'word', term: 'Ikwa',
+    meaning: 'Yams',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:33:00Z',
+  },
+  {
+    id: 'lang126', familyId: FAMILY_ID, entryType: 'word', term: 'Mulango',
+    meaning: 'Door',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:34:00Z',
+  },
+  {
+    id: 'lang127', familyId: FAMILY_ID, entryType: 'word', term: 'Ndigu',
+    meaning: 'Bananas',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:35:00Z',
+  },
+  {
+    id: 'lang128', familyId: FAMILY_ID, entryType: 'word', term: 'Kuanda',
+    meaning: 'To plant',
+    contributedByProfileId: 'prof1', contributedByName: 'John Kobia', createdAt: '2026-09-11T11:36:00Z',
+  },
+  {
+    id: 'lang129', familyId: FAMILY_ID, entryType: 'word', term: 'Kuandika',
+    meaning: 'To write',
+    contributedByProfileId: 'prof2', contributedByName: 'Catherine Kobia', createdAt: '2026-09-11T11:37:00Z',
+  },
+  {
+    id: 'lang130', familyId: FAMILY_ID, entryType: 'word', term: 'Kuthoma',
+    meaning: 'To read',
+    contributedByProfileId: 'prof3', contributedByName: 'Faith Muthomi', createdAt: '2026-09-11T11:38:00Z',
+  },
 ];
 
 export const profiles: Profile[] = [
@@ -428,6 +923,7 @@ export function buildSeedDataset(): FamilyDataset {
     legacyContributions,
     languageEntries,
     triviaScores,
+    gameScores: [],
     stories: [],
     profiles,
     invitationCodes: [],

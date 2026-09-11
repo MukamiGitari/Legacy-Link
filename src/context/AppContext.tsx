@@ -3,7 +3,7 @@ import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, TreeTemplate, Profile, Role, RelationshipType,
   Biography, LegacyContribution, LanguageEntry, LanguageEntryType, AppNotification,
-  TriviaCategory, TriviaScore, Story, StoryEntry,
+  TriviaCategory, TriviaScore, Story, StoryEntry, GameKey, GameScore,
 } from '../types';
 import { buildSeedDataset } from '../data/seed';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
@@ -30,6 +30,7 @@ function loadFromStorage(): FamilyDataset {
         legacyContributions: parsed.legacyContributions ?? [],
         languageEntries: parsed.languageEntries ?? [],
         triviaScores: parsed.triviaScores ?? [],
+        gameScores: parsed.gameScores ?? [],
         stories: parsed.stories ?? [],
         restorationCodes: parsed.restorationCodes ?? [],
         notifications: parsed.notifications ?? [],
@@ -124,6 +125,10 @@ interface AppContextValue {
 
   // trivia & leaderboard
   recordTriviaScore: (category: TriviaCategory, score: number, totalQuestions: number) => void;
+  /** Logs a completed round of any game (Guess Who, Birthday Bingo, Who Said It, Sudoku,
+   *  Flashcards) so it counts toward the combined family leaderboard. Trivia rounds call
+   *  recordTriviaScore instead, which also feeds the combined leaderboard automatically. */
+  recordGameScore: (gameKey: GameKey, points: number) => void;
 
   // collaborative story builder game
   startStory: (title: string, seedPrompt: string, turnOrderProfileIds: string[]) => Story;
@@ -536,6 +541,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, triviaScores: [entry, ...prev.triviaScores] }));
     if (isOnlineMode) persist('trivia score', () => db.insertTriviaScore(entry));
     logActivity(`Scored ${score}/${totalQuestions} in Family Trivia`, 'trivia_score');
+    // Trivia points feed the combined leaderboard too, scaled the same way every other
+    // game's points are (roughly 10 pts per correct answer), so one round of trivia is
+    // worth about the same as one round of any other game.
+    recordGameScoreEntry('trivia', score * 10);
+  };
+
+  /** Shared by recordGameScore and recordTriviaScore so every game's points land in one place. */
+  const recordGameScoreEntry = (gameKey: GameKey, points: number) => {
+    const entry: GameScore = {
+      id: newId(),
+      familyId: data.family.id,
+      profileId: currentProfile?.id ?? '',
+      playerName: currentProfile?.displayName ?? 'A family member',
+      gameKey,
+      points,
+      createdAt: new Date().toISOString(),
+    };
+    setData(prev => ({ ...prev, gameScores: [entry, ...prev.gameScores] }));
+    if (isOnlineMode) persist('game score', () => db.insertGameScore(entry));
+  };
+
+  const recordGameScore: AppContextValue['recordGameScore'] = (gameKey, points) => {
+    recordGameScoreEntry(gameKey, points);
+    logActivity(`Scored ${points} pts in ${gameKey}`, 'game_score');
   };
 
   // Stories are kept local-only (see db.ts comment) — no Supabase persist calls here.
@@ -908,6 +937,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveBiography, addLegacyContribution, removeLegacyContribution,
     addLanguageEntry, updateLanguageEntry, removeLanguageEntry,
     recordTriviaScore,
+    recordGameScore,
     startStory, addStoryEntry, saveStoryAsMemory, abandonStory,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
     addProfile, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode,
