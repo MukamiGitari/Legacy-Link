@@ -44,6 +44,7 @@ const App: React.FC = () => {
   };
 
   const openMemberDrawer = (id: string) => {
+    setMobileSidebarOpen(false);
     setDrawerMemberId(id);
   };
 
@@ -54,14 +55,29 @@ const App: React.FC = () => {
   };
 
   const openEditModal = (id: string) => {
+    setMobileSidebarOpen(false);
     setModalMemberId(id);
     setDrawerMemberId(null);
+  };
+
+  const openAddModal = () => {
+    setMobileSidebarOpen(false);
+    setShowAddModal(true);
   };
 
   const viewFullTree = (anchorId: string) => {
     setPage('tree');
     setDrawerMemberId(anchorId);
   };
+
+  // Lock background scroll while any full-screen drawer/modal is open, so the
+  // page behind it can't scroll or show its own scrollbar underneath the
+  // overlay (the cause of the "cut out" look when a drawer opens on mobile).
+  React.useEffect(() => {
+    const anyOverlayOpen = Boolean(drawerMemberId || modalMemberId || showAddModal || mobileSidebarOpen);
+    document.body.style.overflow = anyOverlayOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [drawerMemberId, modalMemberId, showAddModal, mobileSidebarOpen]);
 
   if (isLoading) {
     return (
@@ -88,7 +104,7 @@ const App: React.FC = () => {
         <Topbar
           page={page}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-          onAddMember={() => setShowAddModal(true)}
+          onAddMember={openAddModal}
           canAddMember={canAddContent(currentProfile?.role)}
         />
 

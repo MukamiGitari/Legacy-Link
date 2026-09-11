@@ -52,7 +52,7 @@ export interface Album {
   id: string;
   familyId: string;
   title: string;
-  category: 'weddings' | 'reunions' | 'childhood' | 'historical' | 'memorials' | 'holidays';
+  category: 'weddings' | 'reunions' | 'childhood' | 'historical' | 'memorials' | 'holidays' | 'birthdays';
   description?: string;
   coverPhotoUrl?: string;
 }
@@ -307,7 +307,7 @@ export interface RestorationCode {
 }
 
 /** Every game in the Games hub that can contribute points to the combined family leaderboard. */
-export type GameKey = 'trivia' | 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'sudoku' | 'flashcards';
+export type GameKey = 'trivia' | 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'sudoku' | 'flashcards' | 'scrabbleTiles';
 
 /** One completed round of any non-trivia game, kept for the combined family leaderboard.
  *  Trivia keeps its own richer `TriviaScore` record (with category), but every round — trivia

@@ -16,7 +16,7 @@ const PAGE_TITLES: Record<Page, string> = {
   events: 'Events Calendar',
   announcements: 'Announcements',
   chronicle: 'Family History Chronicle',
-  dictionary: 'Language & Sayings',
+  dictionary: 'Heritage Vault',
   trivia: 'Family Trivia',
   games: 'Games',
   admin: 'Admin Suite',

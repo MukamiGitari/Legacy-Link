@@ -7,6 +7,7 @@ const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
   { key: 'weddings', label: 'Weddings' },
   { key: 'reunions', label: 'Reunions' },
   { key: 'childhood', label: 'Childhood' },
+  { key: 'birthdays', label: 'Birthdays' },
   { key: 'historical', label: 'Historical' },
   { key: 'memorials', label: 'Memorials' },
   { key: 'holidays', label: 'Holidays' },

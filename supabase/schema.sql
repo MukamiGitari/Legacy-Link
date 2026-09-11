@@ -300,7 +300,7 @@ create table if not exists game_scores (
   family_id uuid not null references families(id) on delete cascade,
   profile_id uuid not null references profiles(id) on delete cascade,
   player_name text not null,
-  game_key text not null check (game_key in ('trivia', 'guessWho', 'birthdayBingo', 'whoSaidIt', 'sudoku', 'flashcards')),
+  game_key text not null check (game_key in ('trivia', 'guessWho', 'birthdayBingo', 'whoSaidIt', 'sudoku', 'flashcards', 'scrabbleTiles')),
   points int not null check (points >= 0),
   created_at timestamptz not null default now()
 );

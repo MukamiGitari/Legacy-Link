@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { page: 'events', label: 'Events', icon: CalendarDays },
   { page: 'announcements', label: 'Announcements', icon: Megaphone },
   { page: 'chronicle', label: 'Chronicle', icon: ScrollText },
-  { page: 'dictionary', label: 'Language & Sayings', icon: Languages },
+  { page: 'dictionary', label: 'Heritage Vault', icon: Languages },
   { page: 'trivia', label: 'Family Trivia', icon: Brain },
   { page: 'games', label: 'Games', icon: Gamepad2 },
   { page: 'admin', label: 'Admin Suite', icon: ShieldCheck, adminOnly: true },

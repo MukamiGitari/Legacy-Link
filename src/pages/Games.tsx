@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { UserSearch, ListOrdered, Quote, PenLine, Layers, Grid3x3, Trophy, Crown, type LucideIcon } from 'lucide-react';
+import { UserSearch, ListOrdered, Quote, PenLine, Layers, Grid3x3, Trophy, Crown, Grid2x2, Spade, type LucideIcon } from 'lucide-react';
 import { GuessWho } from '../components/games/GuessWho';
 import { BirthdayBingo } from '../components/games/BirthdayBingo';
 import { WhoSaidIt } from '../components/games/WhoSaidIt';
 import { StoryBuilder } from '../components/games/StoryBuilder';
 import { LanguageFlashcards } from '../components/games/LanguageFlashcards';
 import { Sudoku } from '../components/games/Sudoku';
+import { ScrabbleTiles } from '../components/games/ScrabbleTiles';
+import { Canasta } from '../components/games/Canasta';
 import { useApp } from '../context/AppContext';
 import type { GameKey as ScoredGameKey } from '../types';
 
-export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards' | 'sudoku';
+export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards' | 'sudoku' | 'scrabbleTiles';
+export type TableGameKey = 'canasta';
 
 const SCORED_GAME_LABEL: Record<ScoredGameKey, string> = {
   trivia: 'Trivia',
@@ -18,6 +21,7 @@ const SCORED_GAME_LABEL: Record<ScoredGameKey, string> = {
   whoSaidIt: 'Who Said It',
   sudoku: 'Sudoku',
   flashcards: 'Flashcards',
+  scrabbleTiles: 'Scrabble Tiles',
 };
 
 interface GameMeta {
@@ -64,13 +68,37 @@ const GAMES: GameMeta[] = [
     icon: Grid3x3,
     description: 'A classic number puzzle — three difficulty levels, play solo any time.',
   },
+  {
+    key: 'scrabbleTiles',
+    label: 'Scrabble Tiles',
+    icon: Grid2x2,
+    description: 'Unscramble letter tiles pulled from the Heritage Vault and family names.',
+  },
+];
+
+interface TableGameMeta {
+  key: TableGameKey;
+  label: string;
+  icon: LucideIcon;
+  description: string;
+}
+
+const TABLE_GAMES: TableGameMeta[] = [
+  {
+    key: 'canasta',
+    label: 'Canasta',
+    icon: Spade,
+    description: "Grab real cards and let this keep score — melds, canastas, and going-out bonuses included.",
+  },
 ];
 
 export const Games: React.FC = () => {
   const { data } = useApp();
   const [active, setActive] = useState<GameKey | null>(null);
+  const [activeTableGame, setActiveTableGame] = useState<TableGameKey | null>(null);
 
   const back = () => setActive(null);
+  const backFromTableGame = () => setActiveTableGame(null);
 
   // Every round of every game (including trivia) lands in data.gameScores, so the
   // leaderboard sums points per player across ALL games to produce one overall winner.
@@ -109,6 +137,8 @@ export const Games: React.FC = () => {
   if (active === 'storyBuilder') return <StoryBuilder onBack={back} />;
   if (active === 'flashcards') return <LanguageFlashcards onBack={back} />;
   if (active === 'sudoku') return <Sudoku onBack={back} />;
+  if (active === 'scrabbleTiles') return <ScrabbleTiles onBack={back} />;
+  if (activeTableGame === 'canasta') return <Canasta onBack={backFromTableGame} />;
 
   return (
     <div className="space-y-6">
@@ -116,27 +146,6 @@ export const Games: React.FC = () => {
         Family games, built from your own family's members, memories, and language dictionary.
         Play solo, or pass the device around at the next reunion.
       </p>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {GAMES.map(({ key, label, icon: Icon, description }) => (
-          <button
-            key={key}
-            onClick={() => setActive(key)}
-            className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 hover:border-heritage-gold-400 hover:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Icon size={16} className="text-heritage-gold-500" />
-              <span className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">
-                {label}
-              </span>
-            </div>
-            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted leading-relaxed">
-              {description}
-            </p>
-            <p className="text-xs text-heritage-gold-600 font-medium mt-3">Play →</p>
-          </button>
-        ))}
-      </div>
 
       <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5">
         <div className="flex items-center gap-2 mb-1">
@@ -147,7 +156,7 @@ export const Games: React.FC = () => {
         </div>
         <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted mb-4">
           Every round of every game counts — points are summed across Trivia, Guess Who, Birthday
-          Bingo, Who Said It, Sudoku, and Flashcards to crown one overall family champion.
+          Bingo, Who Said It, Sudoku, Flashcards, and Scrabble Tiles to crown one overall family champion.
         </p>
 
         {leaderboard.length === 0 ? (
@@ -194,6 +203,53 @@ export const Games: React.FC = () => {
             <Crown size={12} /> {winner.playerName} is the current family game champion with {winner.total} points.
           </p>
         )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {GAMES.map(({ key, label, icon: Icon, description }) => (
+          <button
+            key={key}
+            onClick={() => setActive(key)}
+            className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 hover:border-heritage-gold-400 hover:shadow-sm transition-all"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Icon size={16} className="text-heritage-gold-500" />
+              <span className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">
+                {label}
+              </span>
+            </div>
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted leading-relaxed">
+              {description}
+            </p>
+            <p className="text-xs text-heritage-gold-600 font-medium mt-3">Play →</p>
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <p className="text-xs uppercase tracking-wide font-medium text-heritage-green-500 dark:text-heritage-dark-muted mb-2">
+          Card &amp; table games
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TABLE_GAMES.map(({ key, label, icon: Icon, description }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTableGame(key)}
+              className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 hover:border-heritage-gold-400 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Icon size={16} className="text-heritage-gold-500" />
+                <span className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">
+                  {label}
+                </span>
+              </div>
+              <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted leading-relaxed">
+                {description}
+              </p>
+              <p className="text-xs text-heritage-gold-600 font-medium mt-3">Play →</p>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

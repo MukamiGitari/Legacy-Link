@@ -136,3 +136,70 @@ export function buildLanguageFlashcardDeck(data: FamilyDataset, count: number): 
   }));
   return deck;
 }
+
+// ---------------------------------------------------------------------------
+// Scrabble Tiles — unscramble a word drawn from the family dictionary (or, if
+// that's thin, a relative's first name) using letter tiles scored like Scrabble.
+// ---------------------------------------------------------------------------
+
+// Standard English Scrabble letter values.
+const LETTER_VALUES: Record<string, number> = {
+  A: 1, B: 3, C: 3, D: 2, E: 1, F: 4, G: 2, H: 4, I: 1, J: 8, K: 5, L: 1, M: 3,
+  N: 1, O: 1, P: 3, Q: 10, R: 1, S: 1, T: 1, U: 1, V: 4, W: 4, X: 8, Y: 4, Z: 10,
+};
+
+export function tileValue(letter: string): number {
+  return LETTER_VALUES[letter.toUpperCase()] ?? 1;
+}
+
+export interface ScrabbleTile {
+  id: string;
+  letter: string;
+}
+
+export interface ScrabbleWord {
+  id: string;
+  answer: string; // uppercase letters only, no spaces
+  clue: string;
+  source: 'dictionary' | 'name';
+  tiles: ScrabbleTile[]; // shuffled, ready to place
+  points: number; // sum of letter values, awarded on a correct solve
+}
+
+function toLetters(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z]/g, '');
+}
+
+export function buildScrabbleRound(data: FamilyDataset, count: number): ScrabbleWord[] {
+  const fromDictionary = data.languageEntries
+    .map(e => ({ letters: toLetters(e.term), clue: e.meaning, source: 'dictionary' as const }))
+    .filter(w => w.letters.length >= 3 && w.letters.length <= 9);
+
+  const fromNames = data.members
+    .map(m => ({ letters: toLetters(m.firstName), clue: "A family member's first name", source: 'name' as const }))
+    .filter(w => w.letters.length >= 3 && w.letters.length <= 9);
+
+  const seen = new Set<string>();
+  const pool = shuffle([...fromDictionary, ...fromNames]).filter(w => {
+    if (seen.has(w.letters)) return false;
+    seen.add(w.letters);
+    return true;
+  });
+
+  return pool.slice(0, count).map((w, i) => {
+    const letters = w.letters.split('');
+    let scrambled = shuffle(letters);
+    // Make sure the tiles don't already sit in solved order.
+    if (scrambled.join('') === letters.join('') && letters.length > 1) {
+      scrambled = [scrambled[1], scrambled[0], ...scrambled.slice(2)];
+    }
+    return {
+      id: `scrabble-${i}-${w.letters}`,
+      answer: w.letters,
+      clue: w.clue,
+      source: w.source,
+      tiles: scrambled.map((letter, idx) => ({ id: `t${idx}-${letter}`, letter })),
+      points: letters.reduce((sum, l) => sum + tileValue(l), 0),
+    };
+  });
+}
