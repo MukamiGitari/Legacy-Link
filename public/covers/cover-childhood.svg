@@ -1,0 +1,11 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Childhood illustration of a teddy bear">
+<rect width="400" height="300" fill="#faf7f5"/>
+<circle cx="160" cy="105" r="26" fill="#a68066"/>
+<circle cx="240" cy="105" r="26" fill="#a68066"/>
+<circle cx="200" cy="150" r="70" fill="#be9d85"/>
+<circle cx="178" cy="140" r="10" fill="#3e2e27"/>
+<circle cx="222" cy="140" r="10" fill="#3e2e27"/>
+<ellipse cx="200" cy="168" rx="24" ry="18" fill="#f3ece6"/>
+<circle cx="200" cy="158" r="7" fill="#3e2e27"/>
+<rect x="150" y="228" width="100" height="16" rx="6" fill="#8b654e"/>
+</svg>

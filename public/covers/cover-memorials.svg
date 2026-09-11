@@ -1,0 +1,12 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Memorial candle and white flowers illustration">
+<rect width="400" height="300" fill="#f2f7f4"/>
+<rect x="185" y="130" width="30" height="90" fill="#ece3d2"/>
+<ellipse cx="200" cy="115" rx="10" ry="17" fill="#d4af37"/>
+<ellipse cx="200" cy="105" rx="5" ry="10" fill="#f5edd2"/>
+<circle cx="140" cy="235" r="22" fill="#ffffff" stroke="#e1ede6" stroke-width="2"/>
+<circle cx="260" cy="235" r="22" fill="#ffffff" stroke="#e1ede6" stroke-width="2"/>
+<circle cx="200" cy="248" r="22" fill="#ffffff" stroke="#e1ede6" stroke-width="2"/>
+<circle cx="140" cy="235" r="6" fill="#c5a059"/>
+<circle cx="260" cy="235" r="6" fill="#c5a059"/>
+<circle cx="200" cy="248" r="6" fill="#c5a059"/>
+</svg>

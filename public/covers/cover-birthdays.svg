@@ -1,0 +1,11 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Birthday cake with candle illustration">
+<rect width="400" height="300" fill="#fbf8ee"/>
+<rect x="120" y="185" width="160" height="55" rx="10" fill="#c5a059"/>
+<rect x="140" y="150" width="120" height="40" rx="10" fill="#dfc270"/>
+<rect x="192" y="112" width="16" height="40" fill="#ebd9a3"/>
+<ellipse cx="200" cy="105" rx="9" ry="14" fill="#a68241"/>
+<circle cx="150" cy="205" r="6" fill="#ffffff"/>
+<circle cx="200" cy="212" r="6" fill="#ffffff"/>
+<circle cx="250" cy="205" r="6" fill="#ffffff"/>
+<rect x="140" y="252" width="120" height="14" rx="6" fill="#846332"/>
+</svg>

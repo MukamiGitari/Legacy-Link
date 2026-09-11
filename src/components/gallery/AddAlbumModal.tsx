@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, ImagePlus } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { fullName } from '../../lib/lineage';
 import type { Album } from '../../types';
+import { defaultCoverFor } from '../../lib/albumCovers';
 
 const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
   { key: 'weddings', label: 'Weddings' },
@@ -13,8 +14,6 @@ const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
   { key: 'memorials', label: 'Memorials' },
   { key: 'holidays', label: 'Holidays' },
 ];
-
-const FALLBACK_COVER = '/photos/framed_wood_reunion_small.jpg';
 
 interface Props {
   onClose: () => void;
@@ -51,7 +50,7 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
       title: title.trim(),
       category,
       description: description.trim() || undefined,
-      coverPhotoUrl: coverPhotoUrl || FALLBACK_COVER,
+      coverPhotoUrl: coverPhotoUrl || defaultCoverFor(category),
       featuredMemberId: featuredMemberId || undefined,
     });
     onCreated(album.id);
@@ -76,14 +75,10 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
             <label className={labelCls}>Cover photo</label>
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-heritage-cream-200 flex items-center justify-center border border-heritage-cream-400 dark:border-heritage-dark-border shrink-0">
-                {coverPreview ? (
-                  <img src={coverPreview} className="w-full h-full object-cover" alt="" />
-                ) : (
-                  <ImagePlus size={18} className="text-heritage-green-400" />
-                )}
+                <img src={coverPreview || defaultCoverFor(category)} className="w-full h-full object-cover" alt="" />
               </div>
               <span className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
-                Choose an image, or leave blank for a default cover
+                {coverPreview ? 'Custom cover selected' : `Using the default ${CATEGORY_OPTIONS.find(c => c.key === category)?.label.toLowerCase()} cover — choose an image to replace it`}
               </span>
               <input type="file" accept="image/*" className="hidden" onChange={e => handleCoverFile(e.target.files?.[0])} />
             </label>

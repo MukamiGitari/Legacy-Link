@@ -1,0 +1,10 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wrapped holiday gift box illustration">
+<rect width="400" height="300" fill="#e1ede6"/>
+<rect x="130" y="150" width="140" height="100" rx="10" fill="#2c5445"/>
+<rect x="130" y="150" width="140" height="26" fill="#1b382b"/>
+<rect x="188" y="150" width="24" height="100" fill="#c5a059"/>
+<rect x="130" y="188" width="140" height="24" fill="#c5a059"/>
+<circle cx="180" cy="130" r="16" fill="#dfc270"/>
+<circle cx="220" cy="130" r="16" fill="#dfc270"/>
+<rect x="150" y="266" width="100" height="14" rx="6" fill="#386b57"/>
+</svg>
