@@ -86,12 +86,14 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
       </div>
 
       {!openAlbum ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {albums.map(album => {
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
+          {albums.map((album, i) => {
             const count = data.photos.filter(p => p.albumId === album.id).length;
             const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
+            // Vary the cover height a little so the grid reads as masonry rather than a uniform grid.
+            const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
             return (
-              <div key={album.id} className="group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
+              <div key={album.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
                 {canRemove && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
@@ -102,7 +104,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                   </button>
                 )}
                 <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
-                  <div className="h-36 overflow-hidden bg-heritage-cream-200">
+                  <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
                     <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
                   </div>
                   <div className="p-3">
