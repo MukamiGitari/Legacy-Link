@@ -21,11 +21,11 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onSelectMember }) => {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 3);
 
-  const stats = [
-    { label: 'Family Members', value: data.members.length, icon: Users },
-    { label: 'Living Members', value: living, icon: Users },
-    { label: 'Generations', value: generations, icon: TreePine },
-    { label: 'Photos Archived', value: data.photos.length, icon: Image },
+  const stats: { label: string; value: number; icon: typeof Users; page: Page }[] = [
+    { label: 'Family Members', value: data.members.length, icon: Users, page: 'directory' },
+    { label: 'Living Members', value: living, icon: Users, page: 'directory' },
+    { label: 'Generations', value: generations, icon: TreePine, page: 'tree' },
+    { label: 'Photos Archived', value: data.photos.length, icon: Image, page: 'gallery' },
   ];
 
   return (
@@ -49,12 +49,16 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onSelectMember }) => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-4 shadow-soft">
+        {stats.map(({ label, value, icon: Icon, page }) => (
+          <button
+            key={label}
+            onClick={() => onNavigate(page)}
+            className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-4 shadow-soft hover:shadow-soft-lg hover:border-heritage-green-500 dark:hover:border-heritage-gold-400 transition-all"
+          >
             <Icon size={18} className="text-heritage-gold-500 mb-2" />
             <p className="text-2xl font-serif text-heritage-green-900 dark:text-heritage-dark-text">{value}</p>
             <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">{label}</p>
-          </div>
+          </button>
         ))}
       </div>
 

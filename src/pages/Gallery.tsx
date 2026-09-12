@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, ImagePlus, Pencil, Check, Trash2, Tag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -19,6 +19,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   // Three levels deep: category chooser -> albums inside that category -> an album's photos.
   const [activeCategory, setActiveCategory] = useState<Album['category'] | null>(null);
   const [pageDirection, setPageDirection] = useState<'forward' | 'backward'>('forward');
+  const [slideIndex, setSlideIndex] = useState(0);
   const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showAddAlbum, setShowAddAlbum] = useState(false);
@@ -26,6 +27,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [editingFeatured, setEditingFeatured] = useState(false);
+  const touchStartX = useRef<number | null>(null);
 
   const albums = activeCategory ? data.albums.filter(a => a.category === activeCategory) : [];
   const openAlbum = data.albums.find(a => a.id === openAlbumId);
@@ -35,6 +37,17 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
 
   const openCategory = (key: Album['category']) => { setPageDirection('forward'); setActiveCategory(key); };
   const closeCategory = () => { setPageDirection('backward'); setActiveCategory(null); setOpenAlbumId(null); };
+
+  const handleSlideTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleSlideTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) {
+      if (dx < 0) setSlideIndex(i => Math.min(i + 1, CATEGORY_OPTIONS.length - 1));
+      else setSlideIndex(i => Math.max(i - 1, 0));
+    }
+    touchStartX.current = null;
+  };
 
   useEffect(() => { setEditingTitle(false); setEditingFeatured(false); }, [openAlbumId]);
 
@@ -58,28 +71,81 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
         <>
           <div>
             <h2 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text">Family Gallery</h2>
-            <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">Pick a category to see — or start — the albums inside it.</p>
+            <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">Swipe or use the arrows to browse categories, then jump into the albums inside one.</p>
           </div>
-          <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
+
+          <div
+            className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border select-none touch-pan-y"
+            onTouchStart={handleSlideTouchStart}
+            onTouchEnd={handleSlideTouchEnd}
+          >
             {CATEGORY_OPTIONS.map((c, i) => {
               const count = data.albums.filter(a => a.category === c.key).length;
-              const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
+              const isActive = i === slideIndex;
               return (
-                <button
+                <div
                   key={c.key}
-                  onClick={() => openCategory(c.key)}
-                  className="break-inside-avoid mb-4 block w-full text-left group rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow"
+                  className={`absolute inset-0 transition-transform duration-500 ease-out ${isActive ? '' : 'pointer-events-none'}`}
+                  style={{ transform: `translateX(${(i - slideIndex) * 100}%)` }}
+                  aria-hidden={!isActive}
                 >
-                  <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
-                    <img src={defaultCoverFor(c.key)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
+                  <img src={defaultCoverFor(c.key)} className="w-full h-full object-cover" alt={c.label} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 flex items-end justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-serif text-xl sm:text-2xl text-white drop-shadow-sm truncate">{c.label}</p>
+                      <p className="text-xs sm:text-sm text-white/90 mt-1">{count} album{count !== 1 && 's'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => openCategory(c.key)}
+                        className="text-xs sm:text-sm font-medium px-3 py-2 rounded-lg bg-white/90 hover:bg-white text-heritage-green-800 whitespace-nowrap"
+                      >
+                        View albums
+                      </button>
+                      {canAdd && (
+                        <button
+                          onClick={() => { openCategory(c.key); setShowAddAlbum(true); }}
+                          className="flex items-center gap-1.5 text-xs sm:text-sm font-medium px-3 py-2 rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 text-white whitespace-nowrap"
+                        >
+                          <Plus size={14} /> New Album
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text">{c.label}</p>
-                    <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} album{count !== 1 && 's'}</p>
-                  </div>
-                </button>
+                </div>
               );
             })}
+
+            {slideIndex > 0 && (
+              <button
+                onClick={() => setSlideIndex(i => Math.max(i - 1, 0))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/85 hover:bg-white text-heritage-green-800 rounded-full p-2 shadow-sm"
+                aria-label="Previous category"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            {slideIndex < CATEGORY_OPTIONS.length - 1 && (
+              <button
+                onClick={() => setSlideIndex(i => Math.min(i + 1, CATEGORY_OPTIONS.length - 1))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/85 hover:bg-white text-heritage-green-800 rounded-full p-2 shadow-sm"
+                aria-label="Next category"
+              >
+                <ChevronRight size={18} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 mt-3">
+            {CATEGORY_OPTIONS.map((c, i) => (
+              <button
+                key={c.key}
+                onClick={() => setSlideIndex(i)}
+                className={`h-1.5 rounded-full transition-all ${i === slideIndex ? 'w-5 bg-heritage-green-800 dark:bg-heritage-gold-400' : 'w-1.5 bg-heritage-cream-400 dark:bg-heritage-dark-border'}`}
+                aria-label={`Go to ${c.label}`}
+              />
+            ))}
           </div>
         </>
       ) : (

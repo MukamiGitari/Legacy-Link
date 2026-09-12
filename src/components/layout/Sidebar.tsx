@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  TreePine, LayoutDashboard, Users, Image, BookHeart, CalendarDays,
+  TreePine, LayoutDashboard, Image, BookHeart, CalendarDays,
   Megaphone, ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, ChefHat, type LucideIcon,
 } from 'lucide-react';
 import type { Page } from '../../App';
@@ -18,7 +18,6 @@ const NAV_ITEMS: NavItem[] = [
   { page: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { page: 'myFamily', label: 'My Family', icon: UsersRound },
   { page: 'tree', label: 'Family Tree', icon: TreePine },
-  { page: 'directory', label: 'Members', icon: Users },
   { page: 'gallery', label: 'Family Gallery', icon: Image },
   { page: 'cookbook', label: 'Family Cookbook', icon: ChefHat },
   { page: 'memories', label: 'Memories', icon: BookHeart },
