@@ -1,5 +1,5 @@
 # Legacy Link (🌿)
-> *"Our Roots, Our Story, Our Legacy."* 
+> *"Our Roots, Our Story, Our Legacy."*
 
 A production-ready, interactive digital family heritage archive, genealogy platform, and multi-template family tree system.
 
@@ -24,7 +24,7 @@ All six templates run against the exact same underlying family relational databa
 - **Add / Edit Member Modal**: Rich biographical form with avatar preset picker, date of birth/passing, resting place, occupation, and relationship linker.
 
 ### 3. 📸 Family Media & Storytelling Archive
-- **Family Photo Gallery**: Album categorization (*Weddings, Reunions, Childhood, Historical, Memorials, Holidays*) with full-screen lightbox viewer and member face-tag navigation.
+- **Family Gallery**: Browse by category (*Childhood, Birthdays, Graduations, Weddings, Legends/History, Reunions, Memorials, Holidays*) in a masonry layout, with a page-turn transition into the albums inside each category (which families create themselves), a full-screen lightbox viewer, and member face-tag navigation.
 - **Family Memories**: Storytelling format with photos and author attribution (e.g., *"Grandmother's Wedding Day & The Silk Shawl (1960)"*).
 - **Events Calendar**: Milestone scheduler with RSVP attendance tracking (*Reunions, Birthdays, Memorials, Meetings*).
 - **Announcements**: Broadcast noticeboard with priority badges (*Urgent, Important, Normal*).

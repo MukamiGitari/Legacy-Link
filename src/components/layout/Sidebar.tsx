@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { page: 'myFamily', label: 'My Family', icon: UsersRound },
   { page: 'tree', label: 'Family Tree', icon: TreePine },
   { page: 'directory', label: 'Members', icon: Users },
-  { page: 'gallery', label: 'Photo Gallery', icon: Image },
+  { page: 'gallery', label: 'Family Gallery', icon: Image },
   { page: 'cookbook', label: 'Family Cookbook', icon: ChefHat },
   { page: 'memories', label: 'Memories', icon: BookHeart },
   { page: 'events', label: 'Events', icon: CalendarDays },

@@ -2,21 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, ImagePlus, Pencil, Check, Trash2, Tag } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
-import { AddAlbumModal } from '../components/gallery/AddAlbumModal';
+import { AddAlbumModal, CATEGORY_OPTIONS } from '../components/gallery/AddAlbumModal';
 import { AddPhotosModal } from '../components/gallery/AddPhotosModal';
 import type { Album } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
-
-const CATEGORIES: { key: Album['category'] | 'all'; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'weddings', label: 'Weddings' },
-  { key: 'reunions', label: 'Reunions' },
-  { key: 'childhood', label: 'Childhood' },
-  { key: 'birthdays', label: 'Birthdays' },
-  { key: 'historical', label: 'Historical' },
-  { key: 'memorials', label: 'Memorials' },
-  { key: 'holidays', label: 'Holidays' },
-];
+import { defaultCoverFor } from '../lib/albumCovers';
 
 interface Props {
   onSelectMember: (id: string) => void;
@@ -26,7 +16,9 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   const { data, currentProfile, updateAlbum, removeAlbum, removePhoto } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
   const canRemove = canDelete(currentProfile?.role);
-  const [category, setCategory] = useState<Album['category'] | 'all'>('all');
+  // Three levels deep: category chooser -> albums inside that category -> an album's photos.
+  const [activeCategory, setActiveCategory] = useState<Album['category'] | null>(null);
+  const [pageDirection, setPageDirection] = useState<'forward' | 'backward'>('forward');
   const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [showAddAlbum, setShowAddAlbum] = useState(false);
@@ -35,11 +27,14 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   const [titleDraft, setTitleDraft] = useState('');
   const [editingFeatured, setEditingFeatured] = useState(false);
 
-  const albums = category === 'all' ? data.albums : data.albums.filter(a => a.category === category);
+  const albums = activeCategory ? data.albums.filter(a => a.category === activeCategory) : [];
   const openAlbum = data.albums.find(a => a.id === openAlbumId);
   const albumPhotos = openAlbum ? data.photos.filter(p => p.albumId === openAlbum.id) : [];
   const lightboxPhoto = lightboxIndex !== null ? albumPhotos[lightboxIndex] : null;
   const featuredMember = openAlbum?.featuredMemberId ? data.members.find(m => m.id === openAlbum.featuredMemberId) : undefined;
+
+  const openCategory = (key: Album['category']) => { setPageDirection('forward'); setActiveCategory(key); };
+  const closeCategory = () => { setPageDirection('backward'); setActiveCategory(null); setOpenAlbumId(null); };
 
   useEffect(() => { setEditingTitle(false); setEditingFeatured(false); }, [openAlbumId]);
 
@@ -59,73 +54,106 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(c => (
-            <button
-              key={c.key}
-              onClick={() => { setCategory(c.key); setOpenAlbumId(null); }}
-              className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
-                ${category === c.key
-                  ? 'bg-heritage-green-800 border-heritage-green-800 text-white'
-                  : 'bg-white dark:bg-heritage-dark-hover border-heritage-cream-400 dark:border-heritage-dark-border text-heritage-green-700 dark:text-heritage-dark-muted hover:border-heritage-green-500'
-                }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        {!openAlbum && canAdd && (
-          <button
-            onClick={() => setShowAddAlbum(true)}
-            className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg shrink-0"
-          >
-            <Plus size={16} /> New Album
-          </button>
-        )}
-      </div>
-
-      {!openAlbum ? (
-        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-          {albums.map((album, i) => {
-            const count = data.photos.filter(p => p.albumId === album.id).length;
-            const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
-            // Vary the cover height a little so the grid reads as masonry rather than a uniform grid.
-            const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
-            return (
-              <div key={album.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
-                {canRemove && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
-                    className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
-                    aria-label="Delete album"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-                <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
+      {!activeCategory ? (
+        <>
+          <div>
+            <h2 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text">Family Gallery</h2>
+            <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">Pick a category to see — or start — the albums inside it.</p>
+          </div>
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
+            {CATEGORY_OPTIONS.map((c, i) => {
+              const count = data.albums.filter(a => a.category === c.key).length;
+              const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => openCategory(c.key)}
+                  className="break-inside-avoid mb-4 block w-full text-left group rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow"
+                >
                   <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
-                    <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
+                    <img src={defaultCoverFor(c.key)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
                   </div>
                   <div className="p-3">
-                    <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
-                    {featured && (
-                      <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-0.5 truncate">
-                        <Tag size={11} className="shrink-0" /> About {fullName(featured)}
-                      </p>
-                    )}
-                    <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} photo{count !== 1 && 's'}</p>
+                    <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text">{c.label}</p>
+                    <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} album{count !== 1 && 's'}</p>
                   </div>
                 </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="gallery-page-perspective">
+        <div key={openAlbum ? `album-${openAlbum.id}` : `category-${activeCategory}`} className={pageDirection === 'forward' ? 'gallery-page-turn-forward' : 'gallery-page-turn-backward'}>
+
+      {!openAlbum && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <button onClick={closeCategory} className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1">
+            <ChevronLeft size={16} /> All categories
+          </button>
+          {canAdd && (
+            <button
+              onClick={() => setShowAddAlbum(true)}
+              className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg shrink-0"
+            >
+              <Plus size={16} /> New Album
+            </button>
+          )}
         </div>
+      )}
+
+      {!openAlbum ? (
+        <>
+          <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-3">
+            {CATEGORY_OPTIONS.find(c => c.key === activeCategory)?.label}
+          </h3>
+          {albums.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">
+              <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">No albums here yet{canAdd ? ' — start one!' : '.'}</p>
+            </div>
+          ) : (
+          <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
+            {albums.map((album, i) => {
+              const count = data.photos.filter(p => p.albumId === album.id).length;
+              const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
+              // Vary the cover height a little so the grid reads as masonry rather than a uniform grid.
+              const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
+              return (
+                <div key={album.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
+                  {canRemove && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
+                      className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                      aria-label="Delete album"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                  <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
+                    <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
+                      <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
+                      {featured && (
+                        <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-0.5 truncate">
+                          <Tag size={11} className="shrink-0" /> About {fullName(featured)}
+                        </p>
+                      )}
+                      <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} photo{count !== 1 && 's'}</p>
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          )}
+        </>
       ) : (
         <div>
           <div className="flex items-center justify-between mb-1">
             <button onClick={() => setOpenAlbumId(null)} className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1">
-              <ChevronLeft size={16} /> All albums
+              <ChevronLeft size={16} /> {CATEGORY_OPTIONS.find(c => c.key === activeCategory)?.label} albums
             </button>
             <div className="flex items-center gap-2">
               {canAdd && (
@@ -239,8 +267,13 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
         </div>
       )}
 
+        </div>
+        </div>
+      )}
+
       {showAddAlbum && (
         <AddAlbumModal
+          lockedCategory={activeCategory ?? undefined}
           onClose={() => setShowAddAlbum(false)}
           onCreated={(albumId) => {
             setShowAddAlbum(false);

@@ -5,12 +5,13 @@ import { fullName } from '../../lib/lineage';
 import type { Album } from '../../types';
 import { defaultCoverFor } from '../../lib/albumCovers';
 
-const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
-  { key: 'weddings', label: 'Weddings' },
-  { key: 'reunions', label: 'Reunions' },
+export const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
   { key: 'childhood', label: 'Childhood' },
   { key: 'birthdays', label: 'Birthdays' },
-  { key: 'historical', label: 'Historical' },
+  { key: 'graduations', label: 'Graduations' },
+  { key: 'weddings', label: 'Weddings' },
+  { key: 'historical', label: 'Legends/History' },
+  { key: 'reunions', label: 'Reunions' },
   { key: 'memorials', label: 'Memorials' },
   { key: 'holidays', label: 'Holidays' },
 ];
@@ -18,12 +19,16 @@ const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
 interface Props {
   onClose: () => void;
   onCreated: (albumId: string) => void;
+  /** When set, the new album is created directly inside this category and the
+   * category picker is hidden — used when "New Album" is opened from within
+   * a category in the Family Gallery, since the category is already implied. */
+  lockedCategory?: Album['category'];
 }
 
-export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
+export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated, lockedCategory }) => {
   const { data, addAlbum } = useApp();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<Album['category']>('holidays');
+  const [category, setCategory] = useState<Album['category']>(lockedCategory ?? 'childhood');
   const [description, setDescription] = useState('');
   const [coverPhotoUrl, setCoverPhotoUrl] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
@@ -64,7 +69,9 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
         className="relative w-full max-w-md bg-white dark:bg-heritage-dark-card rounded-2xl shadow-soft-lg overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border">
-          <h2 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">New Album</h2>
+          <h2 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">
+            {lockedCategory ? `New ${CATEGORY_OPTIONS.find(c => c.key === lockedCategory)?.label} Album` : 'New Album'}
+          </h2>
           <button type="button" onClick={onClose} className="text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900">
             <X size={20} />
           </button>
@@ -99,12 +106,14 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
             </select>
           </div>
 
-          <div>
-            <label className={labelCls}>Category</label>
-            <select className={inputCls} value={category} onChange={e => setCategory(e.target.value as Album['category'])}>
-              {CATEGORY_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </div>
+          {!lockedCategory && (
+            <div>
+              <label className={labelCls}>Category</label>
+              <select className={inputCls} value={category} onChange={e => setCategory(e.target.value as Album['category'])}>
+                {CATEGORY_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className={labelCls}>Description</label>

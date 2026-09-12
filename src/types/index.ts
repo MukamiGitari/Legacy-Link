@@ -64,7 +64,7 @@ export interface Album {
   id: string;
   familyId: string;
   title: string;
-  category: 'weddings' | 'reunions' | 'childhood' | 'historical' | 'memorials' | 'holidays' | 'birthdays';
+  category: 'weddings' | 'reunions' | 'childhood' | 'historical' | 'memorials' | 'holidays' | 'birthdays' | 'graduations';
   description?: string;
   coverPhotoUrl?: string;
   /** The family member this album is about (e.g. "Grandma's 80th Birthday" → Grandma). Shown as a tag next to the album title. */

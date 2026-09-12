@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, UtensilsCrossed, Pencil, Check, Trash2, Tag, ChefHat, Star, Clock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
-import { AddCookbookAlbumModal } from '../components/cookbook/AddCookbookAlbumModal';
 import { AddRecipeModal } from '../components/cookbook/AddRecipeModal';
+import { defaultCookbookCoverFor } from '../lib/albumCovers';
 import type { Recipe, RecipeCategory } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
 
@@ -80,29 +80,41 @@ const SECTION_ILLUSTRATION: Record<RecipeCategory, string> = {
 };
 
 export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
-  const { data, currentProfile, updateCookbookAlbum, removeCookbookAlbum, removeRecipe } = useApp();
+  const { data, currentProfile, addCookbookAlbum, updateCookbookAlbum, removeRecipe } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
   const canRemove = canDelete(currentProfile?.role);
 
-  const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [openCategory, setOpenCategory] = useState<RecipeCategory | null>(null);
   const [pageDirection, setPageDirection] = useState<'forward' | 'backward'>('forward');
   const [slideIndex, setSlideIndex] = useState(0);
-  const [showAddAlbum, setShowAddAlbum] = useState(false);
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [editingFeatured, setEditingFeatured] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  // The app only ever shows one family cookbook — there's no "create another
+  // cookbook" flow. If the family doesn't have one yet, quietly provision the
+  // single default album the first time someone who can add content visits.
+  const hasRequestedCreate = useRef(false);
 
-  const openAlbum = data.cookbookAlbums.find(a => a.id === openAlbumId);
+  const openAlbum = data.cookbookAlbums[0];
   const albumRecipes = openAlbum ? data.recipes.filter(r => r.albumId === openAlbum.id) : [];
   const categoryRecipes = openCategory ? albumRecipes.filter(r => r.category === openCategory) : [];
   const openRecipe = openRecipeId ? data.recipes.find(r => r.id === openRecipeId) : undefined;
   const featuredMember = openAlbum?.featuredMemberId ? data.members.find(m => m.id === openAlbum.featuredMemberId) : undefined;
 
-  useEffect(() => { setEditingTitle(false); setEditingFeatured(false); setOpenCategory(null); setSlideIndex(0); }, [openAlbumId]);
+  useEffect(() => {
+    if (!openAlbum && canAdd && !hasRequestedCreate.current) {
+      hasRequestedCreate.current = true;
+      addCookbookAlbum({
+        title: '📖 Family Cookbook',
+        style: 'traditional',
+        description: "A warm, heirloom-style book with recipes, food photos, and family-story sections.",
+        coverPhotoUrl: defaultCookbookCoverFor('traditional'),
+      });
+    }
+  }, [openAlbum, canAdd, addCookbookAlbum]);
 
   const handleSlideTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleSlideTouchEnd = (e: React.TouchEvent) => {
@@ -118,12 +130,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   const openChapter = (category: RecipeCategory) => { setPageDirection('forward'); setOpenCategory(category); };
   const closeChapter = () => { setPageDirection('backward'); setOpenCategory(null); };
 
-  const handleDeleteAlbum = (albumId: string, title: string) => {
-    if (window.confirm(`Delete the cookbook "${title}" and all of its recipes? This can't be undone.`)) {
-      removeCookbookAlbum(albumId);
-      if (openAlbumId === albumId) setOpenAlbumId(null);
-    }
-  };
 
   const handleDeleteRecipe = (recipeId: string) => {
     if (window.confirm("Delete this recipe? This can't be undone.")) {
@@ -135,75 +141,23 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   return (
     <div className="space-y-5">
       {!openAlbum ? (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text">Family Cookbook</h2>
-              <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">Heirloom recipes, food photos, and the stories behind them.</p>
-            </div>
-            {canAdd && (
-              <button
-                onClick={() => setShowAddAlbum(true)}
-                className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg shrink-0"
-              >
-                <Plus size={16} /> New Cookbook
-              </button>
-            )}
-          </div>
-
-          {data.cookbookAlbums.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">
-              <ChefHat size={24} className="mx-auto text-heritage-green-400 mb-2" />
-              <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">No cookbooks yet — start one to preserve the family's recipes.</p>
-            </div>
-          ) : (
-            <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-              {data.cookbookAlbums.map((album, i) => {
-                const count = data.recipes.filter(r => r.albumId === album.id).length;
-                const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
-                const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
-                return (
-                  <div key={album.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
-                    {canRemove && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
-                        className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
-                        aria-label="Delete cookbook"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                    <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
-                      <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
-                        <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
-                      </div>
-                      <div className="p-3">
-                        <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
-                        {featured && (
-                          <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-0.5 truncate">
-                            <Tag size={11} className="shrink-0" /> Dedicated to {fullName(featured)}
-                          </p>
-                        )}
-                        <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} recipe{count !== 1 && 's'}</p>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+        <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">
+          <ChefHat size={24} className="mx-auto text-heritage-green-400 mb-2" />
+          <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">
+            {canAdd ? 'Setting up the family cookbook…' : "The family cookbook hasn't been started yet."}
+          </p>
+        </div>
       ) : (
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <button
-              onClick={() => (openCategory ? closeChapter() : setOpenAlbumId(null))}
-              className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1"
-            >
-              <ChevronLeft size={16} /> {openCategory ? openAlbum.title : 'All cookbooks'}
-            </button>
-            <div className="flex items-center gap-2">
-              {openCategory && canAdd && (
+          {openCategory && (
+            <div className="flex items-center justify-between mb-1">
+              <button
+                onClick={closeChapter}
+                className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1"
+              >
+                <ChevronLeft size={16} /> {openAlbum.title}
+              </button>
+              {canAdd && (
                 <button
                   onClick={() => setShowAddRecipe(true)}
                   className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg"
@@ -211,16 +165,8 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                   <UtensilsCrossed size={16} /> Add Recipe
                 </button>
               )}
-              {!openCategory && canRemove && (
-                <button
-                  onClick={() => handleDeleteAlbum(openAlbum.id, openAlbum.title)}
-                  className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-sm font-medium px-3 py-2 rounded-lg border border-red-200 dark:border-red-900"
-                >
-                  <Trash2 size={15} /> Delete Cookbook
-                </button>
-              )}
             </div>
-          </div>
+          )}
 
           <div className="cookbook-page-perspective">
           <div key={openCategory ?? 'slider'} className={pageDirection === 'forward' ? 'cookbook-page-turn-forward' : 'cookbook-page-turn-backward'}>
@@ -466,16 +412,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
           </div>
           </div>
         </div>
-      )}
-
-      {showAddAlbum && (
-        <AddCookbookAlbumModal
-          onClose={() => setShowAddAlbum(false)}
-          onCreated={(albumId) => {
-            setShowAddAlbum(false);
-            setOpenAlbumId(albumId);
-          }}
-        />
       )}
 
       {showAddRecipe && openAlbum && (

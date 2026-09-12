@@ -13,6 +13,7 @@ export const DEFAULT_ALBUM_COVERS: Record<Album['category'], string> = {
   historical: '/covers/cover-historical.svg',
   memorials: '/covers/cover-memorials.svg',
   holidays: '/covers/cover-holidays.svg',
+  graduations: '/covers/cover-graduations.svg',
 };
 
 export function defaultCoverFor(category: Album['category']): string {

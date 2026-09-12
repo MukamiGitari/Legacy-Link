@@ -1,0 +1,10 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Graduation cap and diploma illustration">
+<rect width="400" height="300" fill="#fbf8ee"/>
+<polygon points="200,110 305,148 200,186 95,148" fill="#386b57" stroke="#2c5445" stroke-width="3"/>
+<polygon points="200,186 275,159 275,190 200,214 125,190 125,159" fill="#2c5445"/>
+<circle cx="305" cy="148" r="4" fill="#846332"/>
+<line x1="305" y1="148" x2="305" y2="200" stroke="#846332" stroke-width="2.5"/>
+<circle cx="305" cy="205" r="7" fill="#dfc270" stroke="#c5a059" stroke-width="1.5"/>
+<rect x="150" y="222" width="100" height="14" rx="3" fill="#c5a059"/>
+<rect x="160" y="204" width="80" height="30" rx="3" fill="#fdf8ee" stroke="#c5a059" stroke-width="1.5" transform="rotate(-4 200 219)"/>
+</svg>

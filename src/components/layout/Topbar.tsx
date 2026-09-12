@@ -11,7 +11,7 @@ const PAGE_TITLES: Record<Page, string> = {
   tree: 'Family Tree',
   directory: 'Member Directory',
   profile: 'Member Profile',
-  gallery: 'Photo Gallery',
+  gallery: 'Family Gallery',
   cookbook: 'Family Cookbook',
   memories: 'Family Memories',
   events: 'Events Calendar',

@@ -67,6 +67,27 @@
   }
 }
 
+/* ---- Family Gallery: same page-turn treatment between the category chooser
+   and the albums inside a category, reusing the cookbook keyframes above. ---- */
+.gallery-page-perspective {
+  perspective: 1800px;
+}
+.gallery-page-turn-forward {
+  transform-origin: left center;
+  animation: cookbook-page-turn-forward 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  backface-visibility: hidden;
+}
+.gallery-page-turn-backward {
+  transform-origin: right center;
+  animation: cookbook-page-turn-backward 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-page-turn-forward, .gallery-page-turn-backward {
+    animation-duration: 0.01s;
+  }
+}
+
 /* ---- Pure-CSS org-chart connectors, used by the Classic/Minimalist/Heritage trees ---- */
 .org-tree {
   display: table;
