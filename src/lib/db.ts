@@ -70,6 +70,7 @@ const mapRecipe = (r: any): Recipe => ({
   id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
   isVegetarian: r.is_vegetarian ?? false,
   photoUrl: r.photo_url ?? undefined, ingredients: r.ingredients ?? [], instructions: r.instructions ?? [],
+  cookTime: r.cook_time ?? undefined,
   familyStory: r.family_story ?? undefined, contributedByMemberId: r.contributed_by_member_id ?? undefined,
   createdAt: r.created_at,
 });
@@ -446,6 +447,7 @@ export async function insertRecipe(r: Recipe) {
     id: r.id, album_id: r.albumId, family_id: r.familyId, title: r.title, category: r.category,
     is_vegetarian: r.isVegetarian ?? false,
     photo_url: r.photoUrl ?? null, ingredients: r.ingredients, instructions: r.instructions,
+    cook_time: r.cookTime ?? null,
     family_story: r.familyStory ?? null, contributed_by_member_id: r.contributedByMemberId ?? null,
     created_at: r.createdAt,
   });
@@ -460,6 +462,7 @@ export async function updateRecipeRow(id: string, patch: Partial<Omit<Recipe, 'i
   if (patch.photoUrl !== undefined) row.photo_url = patch.photoUrl ?? null;
   if (patch.ingredients !== undefined) row.ingredients = patch.ingredients;
   if (patch.instructions !== undefined) row.instructions = patch.instructions;
+  if (patch.cookTime !== undefined) row.cook_time = patch.cookTime ?? null;
   if (patch.familyStory !== undefined) row.family_story = patch.familyStory ?? null;
   if (patch.contributedByMemberId !== undefined) row.contributed_by_member_id = patch.contributedByMemberId ?? null;
   const { error } = await must().from('recipes').update(row).eq('id', id);

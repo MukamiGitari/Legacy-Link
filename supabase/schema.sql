@@ -158,6 +158,7 @@ create table if not exists recipes (
   photo_url text,
   ingredients text[] not null default '{}',
   instructions text[] not null default '{}',
+  cook_time text,
   family_story text,
   contributed_by_member_id uuid references members(id) on delete set null,
   created_at timestamptz not null default now()

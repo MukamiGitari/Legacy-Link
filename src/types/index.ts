@@ -116,6 +116,8 @@ export interface Recipe {
   photoUrl?: string;
   ingredients: string[];
   instructions: string[];
+  /** Free-text so it can read "45 min", "1 hr 30 min", "Overnight + 20 min bake", etc. */
+  cookTime?: string;
   /** The heirloom "family-story" section — who made this, when, and why it matters. */
   familyStory?: string;
   contributedByMemberId?: string;

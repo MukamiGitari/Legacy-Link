@@ -34,6 +34,39 @@
   color: theme('colors.heritage.dark.text');
 }
 
+/* ---- Cookbook: page-turn transition between the category slider and a chapter ----
+   The hinge sits on the leading edge in the direction of travel, so opening a
+   chapter feels like swinging a page open from the spine, and going back
+   feels like it swinging shut the other way — rather than a hard cut. */
+.cookbook-page-perspective {
+  perspective: 1800px;
+}
+@keyframes cookbook-page-turn-forward {
+  from { transform: rotateY(-92deg); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: rotateY(0deg); opacity: 1; }
+}
+@keyframes cookbook-page-turn-backward {
+  from { transform: rotateY(92deg); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: rotateY(0deg); opacity: 1; }
+}
+.cookbook-page-turn-forward {
+  transform-origin: left center;
+  animation: cookbook-page-turn-forward 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  backface-visibility: hidden;
+}
+.cookbook-page-turn-backward {
+  transform-origin: right center;
+  animation: cookbook-page-turn-backward 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cookbook-page-turn-forward, .cookbook-page-turn-backward {
+    animation-duration: 0.01s;
+  }
+}
+
 /* ---- Pure-CSS org-chart connectors, used by the Classic/Minimalist/Heritage trees ---- */
 .org-tree {
   display: table;

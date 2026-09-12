@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Star } from 'lucide-react';
+import { X, Star, Clock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { fullName } from '../../lib/lineage';
 import type { RecipeCategory } from '../../types';
@@ -14,17 +14,20 @@ const CATEGORY_OPTIONS: { key: RecipeCategory; label: string }[] = [
 interface Props {
   albumId: string;
   onClose: () => void;
+  /** When adding a recipe from inside an already-open category, lock the section to it. */
+  initialCategory?: RecipeCategory;
 }
 
-export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose }) => {
+export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCategory }) => {
   const { data, addRecipe } = useApp();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<RecipeCategory>('main');
+  const [category, setCategory] = useState<RecipeCategory>(initialCategory ?? 'main');
   const [isVegetarian, setIsVegetarian] = useState(false);
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const [ingredientsText, setIngredientsText] = useState('');
   const [instructionsText, setInstructionsText] = useState('');
+  const [cookTime, setCookTime] = useState('');
   const [familyStory, setFamilyStory] = useState('');
   const [contributedByMemberId, setContributedByMemberId] = useState('');
 
@@ -55,6 +58,7 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose }) => {
       photoUrl: photoUrl || undefined,
       ingredients,
       instructions,
+      cookTime: cookTime.trim() || undefined,
       familyStory: familyStory.trim() || undefined,
       contributedByMemberId: contributedByMemberId || undefined,
     });
@@ -98,22 +102,28 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose }) => {
 
           <div>
             <label className={labelCls}>Section</label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORY_OPTIONS.map(c => (
-                <button
-                  type="button"
-                  key={c.key}
-                  onClick={() => setCategory(c.key)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
-                    ${category === c.key
-                      ? 'bg-heritage-green-800 border-heritage-green-800 text-white'
-                      : 'bg-white dark:bg-heritage-dark-hover border-heritage-cream-400 dark:border-heritage-dark-border text-heritage-green-700 dark:text-heritage-dark-muted hover:border-heritage-green-500'
-                    }`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
+            {initialCategory ? (
+              <span className="inline-block text-xs font-medium px-3 py-1.5 rounded-full bg-heritage-green-800 text-white">
+                {CATEGORY_OPTIONS.find(c => c.key === initialCategory)?.label}
+              </span>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {CATEGORY_OPTIONS.map(c => (
+                  <button
+                    type="button"
+                    key={c.key}
+                    onClick={() => setCategory(c.key)}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors
+                      ${category === c.key
+                        ? 'bg-heritage-green-800 border-heritage-green-800 text-white'
+                        : 'bg-white dark:bg-heritage-dark-hover border-heritage-cream-400 dark:border-heritage-dark-border text-heritage-green-700 dark:text-heritage-dark-muted hover:border-heritage-green-500'
+                      }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -129,6 +139,19 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose }) => {
             >
               <Star size={13} fill={isVegetarian ? 'currentColor' : 'none'} /> Vegetarian
             </button>
+          </div>
+
+          <div>
+            <label className={labelCls}>Cook time</label>
+            <div className="relative">
+              <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-green-400" />
+              <input
+                className={`${inputCls} pl-8`}
+                value={cookTime}
+                onChange={e => setCookTime(e.target.value)}
+                placeholder="e.g. 45 min, or 1 hr 30 min"
+              />
+            </div>
           </div>
 
           <div>
