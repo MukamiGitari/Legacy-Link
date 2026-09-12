@@ -55,6 +55,12 @@ create table if not exists members (
   resting_place text,
   occupation text,
   bio text,
+  professional_title text,
+  current_organization text,
+  location text,
+  contact_links text,
+  has_pet boolean not null default false,
+  pet_name text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -95,6 +101,7 @@ create table if not exists albums (
     check (category in ('weddings','reunions','childhood','historical','memorials','holidays')),
   description text,
   cover_photo_url text,
+  featured_member_id uuid references members(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -118,6 +125,45 @@ create table if not exists photo_tags (
 
 create index if not exists idx_photos_album on photos(album_id);
 create index if not exists idx_photo_tags_member on photo_tags(member_id);
+
+-- ----------------------------------------------------------------------------
+-- cookbook_albums + recipes: the Family Cookbook (e.g. "Traditional Family
+-- Cookbook") — recipes organized into four sections (Breakfast, Main meals,
+-- Snacks, Desserts), each with a food photo and a family-story section, plus
+-- an independent "vegetarian" flag rendered as a star badge on the recipe
+-- card. Same shape as albums/photos
+-- above: one cookbook album holds many recipes, and deleting the album
+-- cascades to its recipes.
+-- ----------------------------------------------------------------------------
+create table if not exists cookbook_albums (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references families(id) on delete cascade,
+  title text not null,
+  style text not null default 'traditional'
+    check (style in ('traditional')),
+  description text,
+  cover_photo_url text,
+  featured_member_id uuid references members(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists recipes (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references cookbook_albums(id) on delete cascade,
+  family_id uuid not null references families(id) on delete cascade,
+  title text not null,
+  category text not null
+    check (category in ('breakfast','main','snacks','desserts')),
+  is_vegetarian boolean not null default false,
+  photo_url text,
+  ingredients text[] not null default '{}',
+  instructions text[] not null default '{}',
+  family_story text,
+  contributed_by_member_id uuid references members(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_recipes_album on recipes(album_id);
 
 -- ----------------------------------------------------------------------------
 -- Storage: real photo/avatar uploads instead of base64 data URLs.
@@ -212,15 +258,19 @@ create table if not exists biographies (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references families(id) on delete cascade,
   member_id uuid not null references members(id) on delete cascade unique,
-  at_a_glance text,
-  early_life_family text,
-  young_adulthood text,
-  marriage_family_life text,
-  work_achievements_passions text,
-  stories_memories_title text,
-  stories_memories text,
-  later_years text,
+  -- Basic Profile (name, title, photo, organization, location, contact links)
+  -- lives on the members row itself; this table holds the rest of the
+  -- Legacy Link biography template, sections 2-11.
+  professional_summary text,
+  early_life_background text,
+  education text,
+  career_journey text,
+  professional_achievements text,
+  areas_of_expertise text[],
+  community_contributions text,
+  personal_philosophy text,
   legacy text,
+  personal_life text,
   updated_by_profile_id uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -369,6 +419,8 @@ alter table relationships enable row level security;
 alter table albums enable row level security;
 alter table photos enable row level security;
 alter table photo_tags enable row level security;
+alter table cookbook_albums enable row level security;
+alter table recipes enable row level security;
 alter table memories enable row level security;
 alter table events enable row level security;
 alter table event_rsvps enable row level security;
@@ -440,7 +492,8 @@ begin
   foreach t in array array[
     'members','relationships','albums','photos','photo_tags',
     'memories','events','event_rsvps','announcements','chronicle_eras',
-    'biographies','legacy_contributions','language_entries'
+    'biographies','legacy_contributions','language_entries',
+    'cookbook_albums','recipes'
   ]
   loop
     execute format($f$ drop policy if exists %I_select on %I; $f$, t, t);

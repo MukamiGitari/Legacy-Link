@@ -4,6 +4,7 @@ import type {
   FamilyEvent, Announcement, ChronicleEra, TreeTemplate, Profile, Role, RelationshipType,
   Biography, LegacyContribution, LanguageEntry, LanguageEntryType, AppNotification,
   TriviaCategory, TriviaScore, Story, StoryEntry, GameKey, GameScore,
+  CookbookAlbum, Recipe,
 } from '../types';
 import { buildSeedDataset } from '../data/seed';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
@@ -35,6 +36,8 @@ function loadFromStorage(): FamilyDataset {
         stories: parsed.stories ?? [],
         restorationCodes: parsed.restorationCodes ?? [],
         notifications: parsed.notifications ?? [],
+        cookbookAlbums: parsed.cookbookAlbums ?? [],
+        recipes: parsed.recipes ?? [],
       };
     }
   } catch {
@@ -106,6 +109,14 @@ interface AppContextValue {
   removeAlbum: (id: string) => void;
   addPhoto: (p: Omit<Photo, 'id' | 'familyId'>) => Photo;
   removePhoto: (id: string) => void;
+
+  // cookbook (recipe albums + recipes)
+  addCookbookAlbum: (a: Omit<CookbookAlbum, 'id' | 'familyId'>) => CookbookAlbum;
+  updateCookbookAlbum: (id: string, patch: Partial<Pick<CookbookAlbum, 'title' | 'style' | 'description' | 'coverPhotoUrl' | 'featuredMemberId'>>) => void;
+  removeCookbookAlbum: (id: string) => void;
+  addRecipe: (r: Omit<Recipe, 'id' | 'familyId' | 'createdAt'>) => Recipe;
+  updateRecipe: (id: string, patch: Partial<Omit<Recipe, 'id' | 'familyId' | 'albumId' | 'createdAt'>>) => void;
+  removeRecipe: (id: string) => void;
 
   // memories / events / announcements
   addMemory: (m: Omit<Memory, 'id' | 'familyId' | 'createdAt'>) => void;
@@ -421,6 +432,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, photos: prev.photos.filter(p => p.id !== id) }));
     if (isOnlineMode) persist('remove photo', () => db.deletePhotoRow(id));
     logActivity(`Deleted a photo`, 'photo');
+  };
+
+  const addCookbookAlbum: AppContextValue['addCookbookAlbum'] = (a) => {
+    const album: CookbookAlbum = { ...a, id: newId(), familyId: data.family.id };
+    setData(prev => ({ ...prev, cookbookAlbums: [...prev.cookbookAlbums, album] }));
+    if (isOnlineMode) persist('add cookbook album', () => db.insertCookbookAlbum(album));
+    logActivity(`Created cookbook "${album.title}"`, 'cookbookAlbum');
+    return album;
+  };
+
+  const updateCookbookAlbum: AppContextValue['updateCookbookAlbum'] = (id, patch) => {
+    setData(prev => ({ ...prev, cookbookAlbums: prev.cookbookAlbums.map(a => (a.id === id ? { ...a, ...patch } : a)) }));
+    if (isOnlineMode) persist('update cookbook album', () => db.updateCookbookAlbumRow(id, patch));
+    if (patch.title) logActivity(`Renamed a cookbook to "${patch.title}"`, 'cookbookAlbum');
+  };
+
+  const removeCookbookAlbum: AppContextValue['removeCookbookAlbum'] = (id) => {
+    setData(prev => ({
+      ...prev,
+      cookbookAlbums: prev.cookbookAlbums.filter(a => a.id !== id),
+      recipes: prev.recipes.filter(r => r.albumId !== id),
+    }));
+    if (isOnlineMode) persist('remove cookbook album', () => db.deleteCookbookAlbumRow(id));
+    logActivity(`Deleted a cookbook`, 'cookbookAlbum');
+  };
+
+  const addRecipe: AppContextValue['addRecipe'] = (r) => {
+    const recipe: Recipe = { ...r, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
+    setData(prev => ({ ...prev, recipes: [...prev.recipes, recipe] }));
+    if (isOnlineMode) persist('add recipe', () => db.insertRecipe(recipe));
+    logActivity(`Added recipe "${recipe.title}"`, 'recipe');
+    return recipe;
+  };
+
+  const updateRecipe: AppContextValue['updateRecipe'] = (id, patch) => {
+    setData(prev => ({ ...prev, recipes: prev.recipes.map(r => (r.id === id ? { ...r, ...patch } : r)) }));
+    if (isOnlineMode) persist('update recipe', () => db.updateRecipeRow(id, patch));
+    logActivity(`Updated a recipe`, 'recipe');
+  };
+
+  const removeRecipe: AppContextValue['removeRecipe'] = (id) => {
+    setData(prev => ({ ...prev, recipes: prev.recipes.filter(r => r.id !== id) }));
+    if (isOnlineMode) persist('remove recipe', () => db.deleteRecipeRow(id));
+    logActivity(`Deleted a recipe`, 'recipe');
   };
 
   const addMemory: AppContextValue['addMemory'] = (m) => {
@@ -971,6 +1026,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
     addAlbum, updateAlbum, removeAlbum, addPhoto, removePhoto,
+    addCookbookAlbum, updateCookbookAlbum, removeCookbookAlbum, addRecipe, updateRecipe, removeRecipe,
     addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
     saveBiography, addLegacyContribution, removeLegacyContribution,
     addLanguageEntry, updateLanguageEntry, removeLanguageEntry,

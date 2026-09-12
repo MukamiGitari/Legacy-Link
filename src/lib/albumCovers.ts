@@ -1,4 +1,4 @@
-import type { Album } from '../types';
+import type { Album, CookbookAlbumStyle } from '../types';
 
 /**
  * Default cartoon-style cover art shown for an album when no custom cover
@@ -17,4 +17,13 @@ export const DEFAULT_ALBUM_COVERS: Record<Album['category'], string> = {
 
 export function defaultCoverFor(category: Album['category']): string {
   return DEFAULT_ALBUM_COVERS[category];
+}
+
+/** Same idea as DEFAULT_ALBUM_COVERS, but for Cookbook albums (keyed by style, not category). */
+export const DEFAULT_COOKBOOK_COVERS: Record<CookbookAlbumStyle, string> = {
+  traditional: '/covers/cover-cookbook.svg',
+};
+
+export function defaultCookbookCoverFor(style: CookbookAlbumStyle): string {
+  return DEFAULT_COOKBOOK_COVERS[style];
 }

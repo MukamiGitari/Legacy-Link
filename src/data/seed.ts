@@ -1,7 +1,7 @@
 import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, Biography, LegacyContribution,
-  LanguageEntry, TriviaScore,
+  LanguageEntry, TriviaScore, CookbookAlbum, Recipe,
 } from '../types';
 
 const FAMILY_ID = 'family-kobia-kiogora';
@@ -130,6 +130,90 @@ export const photos: Photo[] = [
   { id: 'p3', albumId: 'al3', familyId: FAMILY_ID, url: '/photos/scene_kids_garden.jpg', caption: 'Peter and Susan on the farm, 1962', takenAt: '1962-04-01', taggedMemberIds: ['m3','m5'] },
   { id: 'p4', albumId: 'al4', familyId: FAMILY_ID, url: '/photos/scene_grandmas_garden.jpg', caption: 'The original homestead house', takenAt: '1958-01-01', taggedMemberIds: [] },
   { id: 'p5', albumId: 'al6', familyId: FAMILY_ID, url: '/photos/scene_dinner_selfie.jpg', caption: 'Christmas lunch, 2021', takenAt: '2021-12-25', taggedMemberIds: ['m9','m10','m17','m18'] },
+];
+
+export const cookbookAlbums: CookbookAlbum[] = [
+  { id: 'cb1', familyId: FAMILY_ID, title: '📖 Traditional Family Cookbook', style: 'traditional',
+    description: "A warm, heirloom-style book with recipes, food photos, and family-story sections — everything Naomi cooked, and everything her children and grandchildren still make in her memory.",
+    coverPhotoUrl: '/photos/scene_kitchen.jpg', featuredMemberId: 'm2' },
+];
+
+export const recipes: Recipe[] = [
+  // Breakfast
+  { id: 'rc1', albumId: 'cb1', familyId: FAMILY_ID, title: 'Naomi\'s Mandazi', category: 'breakfast',
+    photoUrl: 'https://images.unsplash.com/photo-1626200926749-93447a3e0d0a?w=800',
+    ingredients: ['3 cups all-purpose flour', '1/2 cup sugar', '2 tsp baking powder', '1/2 tsp ground cardamom', '1 cup coconut milk', '2 tbsp melted butter', 'Oil for frying'],
+    instructions: ['Whisk the flour, sugar, baking powder, and cardamom together.', 'Stir in the coconut milk and melted butter until a soft dough forms.', 'Knead gently for 5 minutes, then rest covered for 30 minutes.', 'Roll out and cut into triangles.', 'Fry in medium-hot oil until golden on both sides, then drain on paper towels.'],
+    familyStory: 'Naomi made these every Sunday before church, frying the first batch while the rest of the house was still asleep. The smell of cardamom drifting down the hallway was how her children knew what day it was.',
+    contributedByMemberId: 'm4', createdAt: '2026-02-01T08:00:00Z' },
+  { id: 'rc2', albumId: 'cb1', familyId: FAMILY_ID, title: 'Homestead Uji (Fermented Porridge)', category: 'breakfast',
+    photoUrl: 'https://images.unsplash.com/photo-1615486364918-fb3b60c1e0dd?w=800',
+    ingredients: ['2 cups millet or sorghum flour', '6 cups water', '1/2 cup plain yogurt or leftover uji for fermenting', 'Sugar or honey to taste'],
+    instructions: ['Mix the flour with 2 cups of cold water into a smooth paste.', 'Stir in the yogurt, cover, and leave at room temperature for 24 hours to ferment slightly.', 'Bring the remaining water to a boil, then whisk in the fermented paste.', 'Simmer, stirring constantly, for 10 minutes until thickened.', 'Sweeten to taste and serve warm.'],
+    familyStory: 'Reuben insisted on uji before any farm work — he used to say a man who skipped it "would be blown off the terraces by lunchtime."',
+    contributedByMemberId: 'm3', createdAt: '2026-02-01T08:05:00Z' },
+
+  // Main meals
+  { id: 'rc3', albumId: 'cb1', familyId: FAMILY_ID, title: 'Sunday Vegetable Pilau', category: 'main',
+    photoUrl: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=800',
+    ingredients: ['2 cups basmati rice', '2 carrots, diced', '1 cup green peas', '2 potatoes, cubed', '1 onion, sliced', '3 cups vegetable stock', '1 tbsp pilau masala', '2 cloves, 1 cinnamon stick', 'Salt to taste'],
+    instructions: ['Fry the onion in oil until deep golden, then add the cloves, cinnamon, and pilau masala.', 'Add the potatoes and carrots and stir to coat in the spices.', 'Stir in the rice, then pour in the vegetable stock and salt.', 'Bring to a boil, then cover and simmer on low heat for 20 minutes.', 'Fold in the peas for the last 5 minutes and let the pot rest, covered, before serving.'],
+    familyStory: 'Every reunion at the homestead ends the same way: James at the stove arguing with Peter about how much cinnamon the pot really needs, while the grandchildren circle waiting for the first plate.',
+    contributedByMemberId: 'm7', createdAt: '2026-02-01T08:10:00Z' },
+  { id: 'rc4', albumId: 'cb1', familyId: FAMILY_ID, title: 'Naomi\'s Githeri', category: 'main',
+    photoUrl: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800',
+    ingredients: ['3 cups maize and beans (mixed, soaked overnight)', '1 onion, chopped', '2 tomatoes, chopped', '2 carrots, diced', '1 tsp curry powder', 'Salt to taste'],
+    instructions: ['Boil the soaked maize and beans until tender, about 1 hour.', 'In a separate pot, sauté the onion until soft, then add tomatoes and curry powder.', 'Add the carrots and cooked maize-beans mixture with a little of its cooking liquid.', 'Simmer together for 15 minutes and season with salt before serving.'],
+    familyStory: 'This was the one dish Naomi could stretch to feed anyone who showed up unannounced — and in Nkubu, someone always did.',
+    contributedByMemberId: 'm5', createdAt: '2026-02-01T08:15:00Z' },
+  { id: 'rc5', albumId: 'cb1', familyId: FAMILY_ID, title: 'Mukimo (Mashed Greens & Potatoes)', category: 'main',
+    photoUrl: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800',
+    ingredients: ['1 kg potatoes, peeled and cubed', '2 cups pumpkin leaves or spinach', '1 cup fresh maize kernels', '1 cup green peas', 'Salt to taste'],
+    instructions: ['Boil the potatoes and maize together until soft.', 'Add the peas and greens for the last 5 minutes of cooking.', 'Drain, reserving a little cooking water, then mash everything together until well combined.', 'Season with salt and serve alongside stewed meat.'],
+    familyStory: 'Alice learned to make this standing on a stool next to Naomi\'s cooking fire, and still mashes it the same way — "by feel, not by time," as Naomi used to say.',
+    contributedByMemberId: 'm4', createdAt: '2026-02-01T08:20:00Z' },
+
+  // Snacks
+  { id: 'rc6', albumId: 'cb1', familyId: FAMILY_ID, title: 'Roasted Mahindi (Corn) with Chili-Lime', category: 'snacks',
+    photoUrl: 'https://images.unsplash.com/photo-1601315379734-3c99f9e39c37?w=800',
+    ingredients: ['4 ears fresh corn, husked', 'Juice of 2 limes', '1 tsp chili powder', 'Pinch of salt'],
+    instructions: ['Roast the corn directly over hot coals, turning often, until lightly charred all over.', 'Mix the lime juice, chili powder, and salt.', 'Brush the mixture over the hot corn and serve immediately.'],
+    familyStory: 'Sold from a cart just outside the Chogoria school gate — Naomi\'s students still say they can\'t smell roasted corn without thinking of her.',
+    contributedByMemberId: 'm14', createdAt: '2026-02-01T08:25:00Z' },
+  { id: 'rc7', albumId: 'cb1', familyId: FAMILY_ID, title: 'Vegetable Samosas', category: 'snacks',
+    photoUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800',
+    ingredients: ['2 potatoes, boiled and mashed', '1 cup green peas', '1 carrot, finely diced', '1 onion, finely chopped', '1 tsp curry powder', '1 tsp garam masala', 'Samosa pastry sheets', 'Oil for frying'],
+    instructions: ['Sauté the onion and carrot until soft, then stir in the curry powder and garam masala.', 'Add the mashed potato and peas, mix well, and season with salt.', 'Cool the filling completely before assembling.', 'Fold the pastry into cones, fill, and seal the edges with a flour paste.', 'Deep-fry until golden and crisp, then drain before serving.'],
+    familyStory: 'The 2019 reunion ran out of samosas twice — Ruth\'s now-legendary batch has become the thing every cousin asks about before they even arrive.',
+    contributedByMemberId: 'm8', createdAt: '2026-02-01T08:30:00Z' },
+
+  // Desserts
+  { id: 'rc8', albumId: 'cb1', familyId: FAMILY_ID, title: 'Kaimati (Sweet Dumplings)', category: 'desserts',
+    photoUrl: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800',
+    ingredients: ['2 cups flour', '1 tsp yeast', '1/2 cup sugar', '1 cup warm water', 'Oil for frying', '1 cup sugar syrup flavored with cardamom'],
+    instructions: ['Mix the flour, yeast, sugar, and warm water into a thick batter; let rise for 1 hour.', 'Drop spoonfuls of batter into hot oil and fry until golden brown and puffed.', 'Drain briefly, then dip immediately into the warm cardamom syrup.', 'Serve warm or at room temperature.'],
+    familyStory: 'Reserved for Christmas and big celebrations only — Naomi kept the syrup recipe a closely guarded secret until she finally taught it to Grace the year before she passed.',
+    contributedByMemberId: 'm15', createdAt: '2026-02-01T08:35:00Z' },
+  { id: 'rc9', albumId: 'cb1', familyId: FAMILY_ID, title: 'Sweet Potato & Coconut Pudding', category: 'desserts',
+    photoUrl: 'https://images.unsplash.com/photo-1541288097308-7b8e3f58c4c6?w=800',
+    ingredients: ['1 kg orange sweet potatoes, peeled and grated', '1 cup coconut milk', '1/2 cup sugar', '1/2 tsp ground cinnamon', '2 tbsp butter'],
+    instructions: ['Mix the grated sweet potato with the coconut milk, sugar, and cinnamon.', 'Pour into a greased baking dish and dot with butter.', 'Bake at 180°C (350°F) for 45 minutes until set and golden on top.', 'Cool slightly before slicing and serving.'],
+    familyStory: 'Naomi grew the sweet potatoes herself on the terrace closest to the house — Susan still plants that same patch every season "so the pudding tastes right."',
+    contributedByMemberId: 'm5', createdAt: '2026-02-01T08:40:00Z' },
+
+  // Main meals (vegetarian)
+  { id: 'rc10', albumId: 'cb1', familyId: FAMILY_ID, title: 'Sukuma Wiki (Braised Collard Greens)', category: 'main', isVegetarian: true,
+    photoUrl: 'https://images.unsplash.com/photo-1607532941433-304659e8198a?w=800',
+    ingredients: ['1 large bunch collard greens or kale, finely shredded', '1 onion, sliced', '2 tomatoes, chopped', '1 green bell pepper, sliced', '2 tbsp cooking oil', 'Salt to taste'],
+    instructions: ['Heat the oil and sauté the onion until translucent.', 'Add the tomatoes and bell pepper and cook until softened.', 'Stir in the shredded greens a handful at a time, cooking until wilted.', 'Season with salt and simmer for 5 more minutes before serving alongside ugali or mukimo.'],
+    familyStory: 'Naomi grew sukuma along the fence line so there was always a handful within reach — she used to say a homestead without greens by the door "wasn\'t really keeping house."',
+    contributedByMemberId: 'm4', createdAt: '2026-02-01T08:45:00Z' },
+  { id: 'rc11', albumId: 'cb1', familyId: FAMILY_ID, title: 'Ndengu (Green Gram) Coconut Stew', category: 'main', isVegetarian: true,
+    photoUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800',
+    ingredients: ['2 cups green gram (ndengu), soaked overnight', '1 onion, chopped', '2 tomatoes, chopped', '1 cup coconut milk', '1 tsp curry powder', 'Salt to taste'],
+    instructions: ['Boil the soaked green gram until tender, about 30–40 minutes, then drain.', 'Sauté the onion until soft, add the tomatoes and curry powder, and cook until it forms a thick base.', 'Stir in the cooked green gram and coconut milk.', 'Simmer for 10 minutes, season with salt, and serve with rice or chapati.'],
+    familyStory: 'Catherine\'s go-to dish for Lent, learned over the phone from Alice one bite-by-bite Sunday call — it\'s now the first thing she teaches any cousin who says they "can\'t cook."',
+    contributedByMemberId: 'm11', createdAt: '2026-02-01T08:50:00Z' },
 ];
 
 export const memories: Memory[] = [
@@ -920,6 +1004,8 @@ export function buildSeedDataset(): FamilyDataset {
     relationships,
     albums,
     photos,
+    cookbookAlbums,
+    recipes,
     memories,
     events,
     announcements,

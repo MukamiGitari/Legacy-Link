@@ -12,6 +12,7 @@ const PAGE_TITLES: Record<Page, string> = {
   directory: 'Member Directory',
   profile: 'Member Profile',
   gallery: 'Photo Gallery',
+  cookbook: 'Family Cookbook',
   memories: 'Family Memories',
   events: 'Events Calendar',
   announcements: 'Announcements',

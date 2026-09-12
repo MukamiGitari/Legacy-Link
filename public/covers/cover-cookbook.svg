@@ -1,0 +1,18 @@
+<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Open recipe book illustration">
+<rect width="400" height="300" fill="#e1ede6"/>
+<path d="M60 90 C110 72 150 72 200 92 L200 226 C150 206 110 206 60 224 Z" fill="#fdf8ee"/>
+<path d="M340 90 C290 72 250 72 200 92 L200 226 C250 206 290 206 340 224 Z" fill="#fdf8ee"/>
+<path d="M60 90 C110 72 150 72 200 92 L200 226 C150 206 110 206 60 224 Z" fill="none" stroke="#c5a059" stroke-width="3"/>
+<path d="M340 90 C290 72 250 72 200 92 L200 226 C250 206 290 206 340 224 Z" fill="none" stroke="#c5a059" stroke-width="3"/>
+<rect x="196" y="88" width="8" height="140" fill="#c5a059"/>
+<line x1="76" y1="112" x2="176" y2="100" stroke="#2c5445" stroke-width="3" stroke-linecap="round"/>
+<line x1="76" y1="132" x2="176" y2="120" stroke="#2c5445" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+<line x1="76" y1="152" x2="176" y2="140" stroke="#2c5445" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+<line x1="76" y1="172" x2="176" y2="160" stroke="#2c5445" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+<circle cx="270" cy="140" r="34" fill="#dfc270"/>
+<path d="M244 132 q26 -18 52 0 q-4 22 -26 30 q-22 -8 -26 -30 Z" fill="#386b57"/>
+<circle cx="256" cy="180" r="8" fill="#2c5445"/>
+<circle cx="278" cy="184" r="6" fill="#2c5445"/>
+<circle cx="266" cy="192" r="5" fill="#2c5445"/>
+<path d="M120 214 C160 200 240 200 280 214" stroke="#386b57" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+</svg>

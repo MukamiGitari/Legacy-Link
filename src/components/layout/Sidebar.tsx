@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   TreePine, LayoutDashboard, Users, Image, BookHeart, CalendarDays,
-  Megaphone, ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, type LucideIcon,
+  Megaphone, ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, ChefHat, type LucideIcon,
 } from 'lucide-react';
 import type { Page } from '../../App';
 import { useApp } from '../../context/AppContext';
@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { page: 'tree', label: 'Family Tree', icon: TreePine },
   { page: 'directory', label: 'Members', icon: Users },
   { page: 'gallery', label: 'Photo Gallery', icon: Image },
+  { page: 'cookbook', label: 'Family Cookbook', icon: ChefHat },
   { page: 'memories', label: 'Memories', icon: BookHeart },
   { page: 'events', label: 'Events', icon: CalendarDays },
   { page: 'announcements', label: 'Announcements', icon: Megaphone },

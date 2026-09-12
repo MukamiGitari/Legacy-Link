@@ -81,6 +81,47 @@ export interface Photo {
   taggedMemberIds: string[];
 }
 
+/**
+ * Which visual/editorial style a cookbook album is presented in. Only
+ * 'traditional' ships today (a warm, heirloom-style book with food photos and
+ * family-story sections), but this is kept as its own field — rather than
+ * folded into title/description — so more album styles can be offered later
+ * (e.g. a modern minimalist layout, a holiday-specific book) without a schema
+ * change, the same way Album['category'] anticipates more photo categories.
+ */
+export type CookbookAlbumStyle = 'traditional';
+
+export interface CookbookAlbum {
+  id: string;
+  familyId: string;
+  title: string;
+  style: CookbookAlbumStyle;
+  description?: string;
+  coverPhotoUrl?: string;
+  /** The family member this cookbook is about/dedicated to (e.g. "Grandma's Recipe Box"). */
+  featuredMemberId?: string;
+}
+
+/** The four sections a recipe can live under — rendered as masonry slides, in this order. */
+export type RecipeCategory = 'breakfast' | 'main' | 'snacks' | 'desserts';
+
+export interface Recipe {
+  id: string;
+  albumId: string;
+  familyId: string;
+  title: string;
+  category: RecipeCategory;
+  /** Shown as a star badge on the recipe card, independent of its section. */
+  isVegetarian?: boolean;
+  photoUrl?: string;
+  ingredients: string[];
+  instructions: string[];
+  /** The heirloom "family-story" section — who made this, when, and why it matters. */
+  familyStory?: string;
+  contributedByMemberId?: string;
+  createdAt: string;
+}
+
 export interface Memory {
   id: string;
   familyId: string;
@@ -227,6 +268,8 @@ export interface FamilyDataset {
   relationships: Relationship[];
   albums: Album[];
   photos: Photo[];
+  cookbookAlbums: CookbookAlbum[];
+  recipes: Recipe[];
   memories: Memory[];
   events: FamilyEvent[];
   announcements: Announcement[];

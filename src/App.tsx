@@ -11,6 +11,7 @@ import { MyFamily } from './pages/MyFamily';
 import { Directory } from './pages/Directory';
 import { MemberProfile } from './pages/MemberProfile';
 import { Gallery } from './pages/Gallery';
+import { Cookbook } from './pages/Cookbook';
 import { Memories } from './pages/Memories';
 import { Events } from './pages/Events';
 import { Announcements } from './pages/Announcements';
@@ -24,7 +25,7 @@ import { isAdminRole, canAddContent } from './lib/permissions';
 import { ShieldAlert } from 'lucide-react';
 
 export type Page =
-  | 'dashboard' | 'myFamily' | 'tree' | 'directory' | 'profile' | 'gallery'
+  | 'dashboard' | 'myFamily' | 'tree' | 'directory' | 'profile' | 'gallery' | 'cookbook'
   | 'memories' | 'events' | 'announcements' | 'chronicle' | 'dictionary' | 'trivia' | 'games' | 'admin';
 
 const App: React.FC = () => {
@@ -122,6 +123,7 @@ const App: React.FC = () => {
             />
           )}
           {page === 'gallery' && <Gallery onSelectMember={openMemberDrawer} />}
+          {page === 'cookbook' && <Cookbook onSelectMember={openMemberDrawer} />}
           {page === 'memories' && <Memories onSelectMember={openMemberDrawer} />}
           {page === 'events' && <Events />}
           {page === 'announcements' && <Announcements />}

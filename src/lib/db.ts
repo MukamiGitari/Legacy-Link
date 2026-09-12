@@ -13,6 +13,7 @@ import type {
   FamilyDataset, Family, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, InvitationCode, AuditLogEntry,
   Biography, LegacyContribution, LanguageEntry, RestorationCode, TriviaScore, GameScore,
+  CookbookAlbum, Recipe,
 } from '../types';
 
 function must() {
@@ -57,6 +58,20 @@ const mapPhoto = (r: any, tagsByPhoto: Map<string, string[]>): Photo => ({
   id: r.id, albumId: r.album_id, familyId: r.family_id, url: r.url,
   caption: r.caption ?? undefined, takenAt: r.taken_at ?? undefined,
   taggedMemberIds: tagsByPhoto.get(r.id) ?? [],
+});
+
+const mapCookbookAlbum = (r: any): CookbookAlbum => ({
+  id: r.id, familyId: r.family_id, title: r.title, style: r.style,
+  description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+  featuredMemberId: r.featured_member_id ?? undefined,
+});
+
+const mapRecipe = (r: any): Recipe => ({
+  id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
+  isVegetarian: r.is_vegetarian ?? false,
+  photoUrl: r.photo_url ?? undefined, ingredients: r.ingredients ?? [], instructions: r.instructions ?? [],
+  familyStory: r.family_story ?? undefined, contributedByMemberId: r.contributed_by_member_id ?? undefined,
+  createdAt: r.created_at,
 });
 
 const mapMemory = (r: any): Memory => ({
@@ -153,6 +168,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
 
   const [
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
+    cookbookAlbumsRes, recipesRes,
     memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
     biosRes, legacyRes, legacyTagsRes, languageRes,
     profilesRes, invitesRes, auditRes, triviaRes, gameScoresRes,
@@ -163,6 +179,8 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     db.from('albums').select('*').eq('family_id', familyId),
     db.from('photos').select('*').eq('family_id', familyId),
     db.from('photo_tags').select('photo_id, member_id'),
+    db.from('cookbook_albums').select('*').eq('family_id', familyId),
+    db.from('recipes').select('*').eq('family_id', familyId),
     db.from('memories').select('*').eq('family_id', familyId).order('created_at', { ascending: false }),
     db.from('events').select('*').eq('family_id', familyId),
     db.from('event_rsvps').select('event_id, member_id, status'),
@@ -181,6 +199,7 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
 
   const firstError = [
     familyRes, membersRes, relRes, albumsRes, photosRes, tagsRes,
+    cookbookAlbumsRes, recipesRes,
     memoriesRes, eventsRes, rsvpsRes, announceRes, eraRes,
     biosRes, legacyRes, legacyTagsRes, languageRes,
     profilesRes, invitesRes, auditRes, triviaRes, gameScoresRes,
@@ -218,6 +237,8 @@ export async function fetchFamilyDataset(familyId: string): Promise<FamilyDatase
     relationships: (relRes.data ?? []).map(mapRelationship),
     albums: (albumsRes.data ?? []).map(mapAlbum),
     photos: (photosRes.data ?? []).map(r => mapPhoto(r, tagsByPhoto)),
+    cookbookAlbums: (cookbookAlbumsRes.data ?? []).map(mapCookbookAlbum),
+    recipes: (recipesRes.data ?? []).map(mapRecipe),
     memories: (memoriesRes.data ?? []).map(mapMemory),
     events: (eventsRes.data ?? []).map(r => mapEvent(r, rsvpsByEvent)),
     announcements: (announceRes.data ?? []).map(mapAnnouncement),
@@ -391,6 +412,62 @@ export async function updateAlbumRow(id: string, patch: Partial<Pick<Album, 'tit
 /** Deletes an album and (via `on delete cascade` in the schema) all of its photos and photo tags with it. */
 export async function deleteAlbumRow(id: string) {
   const { error } = await must().from('albums').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function insertCookbookAlbum(a: CookbookAlbum) {
+  const { error } = await must().from('cookbook_albums').insert({
+    id: a.id, family_id: a.familyId, title: a.title, style: a.style,
+    description: a.description ?? null, cover_photo_url: a.coverPhotoUrl ?? null,
+    featured_member_id: a.featuredMemberId ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function updateCookbookAlbumRow(id: string, patch: Partial<Pick<CookbookAlbum, 'title' | 'style' | 'description' | 'coverPhotoUrl' | 'featuredMemberId'>>) {
+  const row: Record<string, unknown> = {};
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.style !== undefined) row.style = patch.style;
+  if (patch.description !== undefined) row.description = patch.description ?? null;
+  if (patch.coverPhotoUrl !== undefined) row.cover_photo_url = patch.coverPhotoUrl ?? null;
+  if (patch.featuredMemberId !== undefined) row.featured_member_id = patch.featuredMemberId ?? null;
+  const { error } = await must().from('cookbook_albums').update(row).eq('id', id);
+  if (error) throw error;
+}
+
+/** Deletes a cookbook album and (via `on delete cascade` in the schema) all of its recipes with it. */
+export async function deleteCookbookAlbumRow(id: string) {
+  const { error } = await must().from('cookbook_albums').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function insertRecipe(r: Recipe) {
+  const { error } = await must().from('recipes').insert({
+    id: r.id, album_id: r.albumId, family_id: r.familyId, title: r.title, category: r.category,
+    is_vegetarian: r.isVegetarian ?? false,
+    photo_url: r.photoUrl ?? null, ingredients: r.ingredients, instructions: r.instructions,
+    family_story: r.familyStory ?? null, contributed_by_member_id: r.contributedByMemberId ?? null,
+    created_at: r.createdAt,
+  });
+  if (error) throw error;
+}
+
+export async function updateRecipeRow(id: string, patch: Partial<Omit<Recipe, 'id' | 'familyId' | 'albumId' | 'createdAt'>>) {
+  const row: Record<string, unknown> = {};
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.category !== undefined) row.category = patch.category;
+  if (patch.isVegetarian !== undefined) row.is_vegetarian = patch.isVegetarian;
+  if (patch.photoUrl !== undefined) row.photo_url = patch.photoUrl ?? null;
+  if (patch.ingredients !== undefined) row.ingredients = patch.ingredients;
+  if (patch.instructions !== undefined) row.instructions = patch.instructions;
+  if (patch.familyStory !== undefined) row.family_story = patch.familyStory ?? null;
+  if (patch.contributedByMemberId !== undefined) row.contributed_by_member_id = patch.contributedByMemberId ?? null;
+  const { error } = await must().from('recipes').update(row).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteRecipeRow(id: string) {
+  const { error } = await must().from('recipes').delete().eq('id', id);
   if (error) throw error;
 }
 
