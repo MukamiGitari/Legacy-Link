@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  TreePine, LayoutDashboard, Image, BookHeart, CalendarDays,
-  Megaphone, ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, ChefHat, type LucideIcon,
+  Home, Users, Image, ChefHat, TreePine, BookHeart,
+  ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, type LucideIcon,
 } from 'lucide-react';
 import type { Page } from '../../App';
 import { useApp } from '../../context/AppContext';
@@ -15,14 +15,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { page: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { page: 'myFamily', label: 'My Family', icon: UsersRound },
+  { page: 'dashboard', label: 'Home', icon: Home },
   { page: 'tree', label: 'Family Tree', icon: TreePine },
-  { page: 'gallery', label: 'Family Gallery', icon: Image },
+  { page: 'gallery', label: 'Albums', icon: Image },
   { page: 'cookbook', label: 'Family Cookbook', icon: ChefHat },
   { page: 'memories', label: 'Memories', icon: BookHeart },
-  { page: 'events', label: 'Events', icon: CalendarDays },
-  { page: 'announcements', label: 'Announcements', icon: Megaphone },
+  { page: 'myFamily', label: 'My Family', icon: UsersRound },
+  { page: 'directory', label: 'Members', icon: Users },
   { page: 'chronicle', label: 'Chronicle', icon: ScrollText },
   { page: 'dictionary', label: 'Heritage Vault', icon: Languages },
   { page: 'trivia', label: 'Family Trivia', icon: Brain },

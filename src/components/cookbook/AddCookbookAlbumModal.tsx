@@ -2,17 +2,11 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { fullName } from '../../lib/lineage';
-import type { Album } from '../../types';
-import { defaultCoverFor } from '../../lib/albumCovers';
+import type { CookbookAlbumStyle } from '../../types';
+import { defaultCookbookCoverFor } from '../../lib/albumCovers';
 
-const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
-  { key: 'childhood', label: 'Childhood' },
-  { key: 'birthdays', label: 'Birthdays' },
-  { key: 'graduations', label: 'Graduations' },
-  { key: 'weddings', label: 'Weddings' },
-  { key: 'reunions', label: 'Reunions' },
-  { key: 'historical', label: 'Historical' },
-  { key: 'memorials', label: 'Memorials' },
+const STYLE_OPTIONS: { key: CookbookAlbumStyle; label: string; description: string }[] = [
+  { key: 'traditional', label: '📖 Traditional Family Cookbook', description: 'A warm, heirloom-style book with recipes, food photos, and family-story sections.' },
 ];
 
 interface Props {
@@ -20,11 +14,11 @@ interface Props {
   onCreated: (albumId: string) => void;
 }
 
-export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
-  const { data, addAlbum } = useApp();
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<Album['category']>('childhood');
-  const [description, setDescription] = useState('');
+export const AddCookbookAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
+  const { data, addCookbookAlbum } = useApp();
+  const [style, setStyle] = useState<CookbookAlbumStyle>('traditional');
+  const [title, setTitle] = useState(STYLE_OPTIONS[0].label);
+  const [description, setDescription] = useState(STYLE_OPTIONS[0].description);
   const [coverPhotoUrl, setCoverPhotoUrl] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
   const [featuredMemberId, setFeaturedMemberId] = useState('');
@@ -46,11 +40,11 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    const album = addAlbum({
+    const album = addCookbookAlbum({
       title: title.trim(),
-      category,
+      style,
       description: description.trim() || undefined,
-      coverPhotoUrl: coverPhotoUrl || defaultCoverFor(category),
+      coverPhotoUrl: coverPhotoUrl || defaultCookbookCoverFor(style),
       featuredMemberId: featuredMemberId || undefined,
     });
     onCreated(album.id);
@@ -64,7 +58,7 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
         className="relative w-full max-w-md bg-white dark:bg-heritage-dark-card rounded-2xl shadow-soft-lg overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border">
-          <h2 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">New Album</h2>
+          <h2 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">New Cookbook</h2>
           <button type="button" onClick={onClose} className="text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900">
             <X size={20} />
           </button>
@@ -75,22 +69,43 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
             <label className={labelCls}>Cover photo</label>
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-heritage-cream-200 flex items-center justify-center border border-heritage-cream-400 dark:border-heritage-dark-border shrink-0">
-                <img src={coverPreview || defaultCoverFor(category)} className="w-full h-full object-cover" alt="" />
+                <img src={coverPreview || defaultCookbookCoverFor(style)} className="w-full h-full object-cover" alt="" />
               </div>
               <span className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
-                {coverPreview ? 'Custom cover selected' : `Using the default ${CATEGORY_OPTIONS.find(c => c.key === category)?.label.toLowerCase()} cover — choose an image to replace it`}
+                {coverPreview ? 'Custom cover selected' : 'Using the default cookbook cover — choose an image to replace it'}
               </span>
               <input type="file" accept="image/*" className="hidden" onChange={e => handleCoverFile(e.target.files?.[0])} />
             </label>
           </div>
 
           <div>
-            <label className={labelCls}>Album title *</label>
-            <input required className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Summer Reunion 2026" />
+            <label className={labelCls}>Album option</label>
+            <div className="space-y-2">
+              {STYLE_OPTIONS.map(s => (
+                <button
+                  type="button"
+                  key={s.key}
+                  onClick={() => { setStyle(s.key); if (!title.trim() || title === STYLE_OPTIONS.find(o => o.key === style)?.label) setTitle(s.label); }}
+                  className={`w-full text-left rounded-lg border px-3 py-2.5 transition-colors
+                    ${style === s.key
+                      ? 'bg-heritage-green-800 border-heritage-green-800 text-white'
+                      : 'bg-white dark:bg-heritage-dark-hover border-heritage-cream-400 dark:border-heritage-dark-border text-heritage-green-900 dark:text-heritage-dark-text hover:border-heritage-green-500'
+                    }`}
+                >
+                  <p className="text-sm font-medium">{s.label}</p>
+                  <p className={`text-xs mt-0.5 ${style === s.key ? 'text-heritage-cream-200' : 'text-heritage-green-500 dark:text-heritage-dark-muted'}`}>{s.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
-            <label className={labelCls}>Who is this about? (optional)</label>
+            <label className={labelCls}>Cookbook title *</label>
+            <input required className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Traditional Family Cookbook" />
+          </div>
+
+          <div>
+            <label className={labelCls}>Dedicated to (optional)</label>
             <select className={inputCls} value={featuredMemberId} onChange={e => setFeaturedMemberId(e.target.value)}>
               <option value="">No one in particular</option>
               {data.members.map(m => (
@@ -100,21 +115,14 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
           </div>
 
           <div>
-            <label className={labelCls}>Category</label>
-            <select className={inputCls} value={category} onChange={e => setCategory(e.target.value as Album['category'])}>
-              {CATEGORY_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </div>
-
-          <div>
             <label className={labelCls}>Description</label>
-            <textarea rows={3} className={inputCls} value={description} onChange={e => setDescription(e.target.value)} placeholder="What's this album about?" />
+            <textarea rows={3} className={inputCls} value={description} onChange={e => setDescription(e.target.value)} placeholder="What's this cookbook about?" />
           </div>
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-heritage-cream-300 dark:border-heritage-dark-border">
           <button type="button" onClick={onClose} className="px-3.5 py-2 text-sm rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">Cancel</button>
-          <button type="submit" className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 text-white font-medium">Create album</button>
+          <button type="submit" className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 hover:bg-heritage-green-700 text-white font-medium">Create cookbook</button>
         </div>
       </form>
     </div>

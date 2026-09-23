@@ -6,14 +6,13 @@ import type { Album, CookbookAlbumStyle } from '../types';
  * app's heritage green / gold / cream palette.
  */
 export const DEFAULT_ALBUM_COVERS: Record<Album['category'], string> = {
-  weddings: '/covers/cover-weddings.svg',
-  reunions: '/covers/cover-reunions.svg',
   childhood: '/covers/cover-childhood.svg',
   birthdays: '/covers/cover-birthdays.svg',
+  graduations: '/covers/cover-graduations.svg',
+  weddings: '/covers/cover-weddings.svg',
+  reunions: '/covers/cover-reunions.svg',
   historical: '/covers/cover-historical.svg',
   memorials: '/covers/cover-memorials.svg',
-  holidays: '/covers/cover-holidays.svg',
-  graduations: '/covers/cover-graduations.svg',
 };
 
 export function defaultCoverFor(category: Album['category']): string {

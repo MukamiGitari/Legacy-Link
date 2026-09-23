@@ -1,0 +1,43 @@
+name = "legacy-link-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# R2 bucket binding — lets the Worker read/write directly if ever needed,
+# though uploads/downloads mainly go through presigned URLs (see services/r2.js).
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "legacy-link-media"
+
+# Hyperdrive pools/proxies the TCP connection to your regular Postgres
+# instance, since Workers can't hold long-lived raw TCP pools themselves.
+# Create with: wrangler hyperdrive create legacy-link-db --connection-string="postgres://..."
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "0dd11eb6d33f4efe8b35a01a77bff7bb"
+localConnectionString = "postgresql://neondb_owner:<YOUR_NEON_PASSWORD>@ep-wild-hat-a5mc2fhj-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# Native Cloudflare rate limiting — no external KV/Durable Object needed.
+[[unsafe.bindings]]
+name = "AUTH_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[[unsafe.bindings]]
+name = "API_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 120, period = 60 }
+
+# Non-secret config
+[vars]
+FRONTEND_ORIGIN = "https://legacy-link.pages.dev"
+R2_BUCKET_NAME = "legacy-link-media"
+R2_ENDPOINT = "https://6db9d44c4bc1b0f7fd80969dd52fb4af.r2.cloudflarestorage.com"
+
+# Set these with `wrangler secret put <NAME>` — never commit real values:
+#   JWT_ACCESS_SECRET
+#   FAMILY_INVITE_CODE
+#   R2_ACCESS_KEY_ID
+#   R2_SECRET_ACCESS_KEY

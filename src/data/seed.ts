@@ -120,7 +120,7 @@ export const albums: Album[] = [
     description: 'Early photographs of the coffee terraces and original house.', coverPhotoUrl: '/photos/scene_grandmas_garden.jpg' },
   { id: 'al5', familyId: FAMILY_ID, title: "Remembering Reuben & Naomi", category: 'memorials',
     description: 'A tribute album shared at both memorial services.', coverPhotoUrl: '/photos/framed_wood_elders.jpg' },
-  { id: 'al6', familyId: FAMILY_ID, title: 'Christmas at the Homestead', category: 'holidays',
+  { id: 'al6', familyId: FAMILY_ID, title: 'Christmas at the Homestead', category: 'reunions',
     description: 'The annual gathering, every December since 1985.', coverPhotoUrl: '/photos/scene_dinner_selfie.jpg' },
 ];
 

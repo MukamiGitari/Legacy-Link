@@ -253,7 +253,7 @@ export const Admin: React.FC = () => {
       {tab === 'family' && (
         <div className="max-w-xl rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-6 space-y-4">
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
-            This is what shows on the Dashboard, the Chronicle, and the sidebar for everyone in the family.
+            This is what shows on the Home page, the Chronicle, and the sidebar for everyone in the family.
           </p>
           <div>
             <label className="block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Family name *</label>

@@ -53,6 +53,13 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    host: true
-  }
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'https://legacy-link-api.heritagehub.workers.dev',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

@@ -1,0 +1,8 @@
+[
+  {
+    "AllowedOrigins": ["https://legacy-link.pages.dev"],
+    "AllowedMethods": ["PUT", "GET"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 300
+  }
+]

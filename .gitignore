@@ -1,14 +1,26 @@
 # Dependencies
 node_modules/
+worker/node_modules/
 
 # Build output
 dist/
 dist-ssr/
+worker/dist/
 
-# Env files (never commit real Supabase keys)
+# Env files & sensitive connection strings
 .env
 .env.local
 .env.*.local
+worker/.dev.vars
+worker/supabase_conn.txt
+worker/auth_users.csv
+worker/*.json
+!worker/package.json
+!worker/package-lock.json
+!worker/wrangler.toml
+
+# Wrangler local cache
+.wrangler/
 
 # Editor/OS
 .vscode/*

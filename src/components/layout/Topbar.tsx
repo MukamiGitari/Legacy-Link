@@ -6,12 +6,12 @@ import type { Page } from '../../App';
 import * as db from '../../lib/db';
 
 const PAGE_TITLES: Record<Page, string> = {
-  dashboard: 'Dashboard',
+  dashboard: 'Home',
   myFamily: 'My Family',
   tree: 'Family Tree',
   directory: 'Member Directory',
   profile: 'Member Profile',
-  gallery: 'Family Gallery',
+  gallery: 'Photo Gallery',
   cookbook: 'Family Cookbook',
   memories: 'Family Memories',
   events: 'Events Calendar',

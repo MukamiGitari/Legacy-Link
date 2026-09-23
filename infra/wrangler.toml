@@ -1,0 +1,13 @@
+# Cloudflare Pages picks up build settings from its dashboard for most
+# projects, but this file documents the equivalent config / lets you
+# deploy via `wrangler pages deploy` from CI.
+
+name = "legacy-link"
+pages_build_output_dir = "dist"
+
+[build]
+command = "npm install && npm run build"
+
+# Set these in the Cloudflare Pages dashboard (Settings > Environment
+# variables), not here — this file is committed to git.
+# VITE_API_BASE_URL = "https://legacy-link-api.heritagehub.workers.dev"
