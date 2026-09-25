@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 
 import authRoutes from './routes/auth.js';
-import mediaRoutes from './routes/media.js';
 import recipeRoutes from './routes/recipes.js';
 import familyRoutes from './routes/family.js';
 import albumRoutes from './routes/albums.js';
@@ -17,7 +16,6 @@ app.use('*', async (c, next) => {
   const corsMiddleware = cors({ origin: c.env.FRONTEND_ORIGIN, credentials: true });
   return corsMiddleware(c, next);
 });
-app.use('/api/media/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/recipes/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/family/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/albums/*', rateLimit('API_RATE_LIMITER'));
@@ -26,7 +24,6 @@ app.use('/api/features/*', rateLimit('API_RATE_LIMITER'));
 app.get('/api/health', (c) => c.json({ ok: true }));
 
 app.route('/api/auth', authRoutes);
-app.route('/api/media', mediaRoutes);
 app.route('/api/recipes', recipeRoutes);
 app.route('/api/family', familyRoutes);
 app.route('/api/albums', albumRoutes);

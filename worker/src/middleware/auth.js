@@ -11,6 +11,7 @@ export async function requireAuth(c, next) {
   try {
     const payload = await verifyAccessToken(c.env, token);
     c.set('user', { id: payload.sub, role: payload.role });
+    c.set('userId', payload.sub);
     await next();
   } catch {
     return c.json({ error: 'Invalid or expired access token' }, 401);

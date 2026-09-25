@@ -15,6 +15,8 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api';
+
 interface RequestOptions {
   method?: string;
   body?: any;
@@ -30,7 +32,7 @@ async function request<T = any>(path: string, { method = 'GET', body, retry = tr
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
     credentials: 'include', // sends and receives the httpOnly refresh cookie
@@ -58,7 +60,7 @@ async function request<T = any>(path: string, { method = 'GET', body, retry = tr
 
 export async function refreshAccessToken(): Promise<boolean> {
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -79,20 +81,19 @@ export const api = {
 };
 
 export async function uploadFileToR2({
-  category,
   file,
-  recipeId,
+  albumId,
 }: {
-  category: 'photos' | 'documents' | 'videos' | 'recipe-images';
+  category?: string;
   file: File;
   recipeId?: string;
+  albumId?: string;
 }) {
-  const { uploadUrl, key } = await api.post('/media/presign-upload', {
-    category,
+  const { uploadUrl, key } = await api.post<{ uploadUrl: string; key: string }>('/albums/photos/presign-upload', {
+    albumId,
     filename: file.name,
     contentType: file.type,
     sizeBytes: file.size,
-    recipeId,
   });
 
   const putRes = await fetch(uploadUrl, {
@@ -105,12 +106,5 @@ export async function uploadFileToR2({
     throw new Error('Upload to storage failed');
   }
 
-  return api.post('/media', {
-    category,
-    key,
-    filename: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
-    recipeId,
-  });
+  return { key, url: key };
 }

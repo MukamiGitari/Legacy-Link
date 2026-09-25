@@ -94,7 +94,7 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
 
       <div className="ml-auto flex items-center gap-2 md:gap-3">
         <span
-          title={isOnlineMode ? 'Connected to Supabase' : 'Standalone local storage mode'}
+          title={isOnlineMode ? 'Connected to Cloudflare Worker & Neon DB' : 'Standalone local storage mode'}
           className="hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-heritage-green-100 text-heritage-green-700 dark:bg-heritage-dark-hover dark:text-heritage-dark-muted"
         >
           {isOnlineMode ? <Wifi size={13} /> : <WifiOff size={13} />}

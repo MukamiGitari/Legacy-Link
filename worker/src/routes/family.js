@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { withClient } from '../db.js';
-import { requireAuth } from '../middleware/requireAuth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const family = new Hono();
 family.use('*', requireAuth);

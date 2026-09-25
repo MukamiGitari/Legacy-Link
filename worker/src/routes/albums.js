@@ -48,7 +48,7 @@ const photoCreateSchema = z.object({
 });
 
 const presignSchema = z.object({
-  albumId: z.string().uuid(),
+  albumId: z.string().uuid().optional(),
   filename: z.string().min(1).max(255),
   contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
   sizeBytes: z.number().positive().max(25 * 1024 * 1024),
@@ -223,11 +223,13 @@ albums.post('/photos/presign-upload', async (c) => {
       return c.json({ error: 'Guests cannot upload photos' }, 403);
     }
 
-    const albumRes = await client.query(
-      `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
-      [albumId, profile.family_id],
-    );
-    if (albumRes.rowCount === 0) return c.json({ error: 'Album not found' }, 404);
+    if (albumId) {
+      const albumRes = await client.query(
+        `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
+        [albumId, profile.family_id],
+      );
+      if (albumRes.rowCount === 0) return c.json({ error: 'Album not found' }, 404);
+    }
 
     const key = buildKey('photos', filename);
     const uploadUrl = await getUploadUrl(c.env, key, contentType);
