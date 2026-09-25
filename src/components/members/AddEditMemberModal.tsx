@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import type { Gender } from '../../types';
 import { canDelete } from '../../lib/permissions';
 import { getParents, getSpouses } from '../../lib/lineage';
-import * as db from '../../lib/db';
+import { uploadFileToR2 } from '../../lib/api';
 
 const AVATAR_PRESETS = ['aria', 'kaari', 'kanyoro', 'kiogora', 'mworia', 'kaburu', 'kathurima', 'kobia']
   .map(seed => `https://api.dicebear.com/7.x/personas/svg?seed=${seed}`);
@@ -115,8 +115,8 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
     if (avatarFile && isOnlineMode) {
       setSavingPhoto(true);
       try {
-        const hostedUrl = await db.uploadAvatarFile(data.family.id, savedId, avatarFile);
-        updateMember(savedId, { avatarUrl: hostedUrl });
+        const media = await uploadFileToR2({ category: 'photos', file: avatarFile });
+        updateMember(savedId, { avatarUrl: media.url || media.key });
       } catch (err) {
         pushToast(`Saved, but the photo upload failed: ${err instanceof Error ? err.message : 'unknown error'}`);
       } finally {

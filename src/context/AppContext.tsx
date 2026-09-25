@@ -7,38 +7,46 @@ import type {
   CookbookAlbum, Recipe,
 } from '../types';
 import { buildSeedDataset } from '../data/seed';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { registerCredential, verifyCredential, resetCredentialPassword } from '../lib/localAuth';
-import { nameFromEmail } from '../lib/names';
-import * as db from '../lib/db';
+import { api, setAccessToken, refreshAccessToken } from '../lib/api';
 
 const STORAGE_KEY = 'heritage-hub-dataset-v1';
 const SESSION_KEY = 'heritage-hub-session-v1';
 const AUTH_KEY = 'legacy-link-auth-v1';
-/** Google OAuth redirects the whole page away and back, so an invite code entered
- *  on the "Join Family" tab has to survive that round trip outside React state. */
-const GOOGLE_INVITE_KEY = 'legacy-link-google-invite';
+
+function assembleDataset(raw: Partial<FamilyDataset>): FamilyDataset {
+  return {
+    family: raw.family || { id: '', name: 'Family', activeTreeTemplate: 'classic' },
+    members: raw.members || [],
+    relationships: raw.relationships || [],
+    albums: raw.albums || [],
+    photos: raw.photos || [],
+    cookbookAlbums: raw.cookbookAlbums || [],
+    recipes: raw.recipes || [],
+    memories: raw.memories || [],
+    events: raw.events || [],
+    announcements: raw.announcements || [],
+    chronicleEras: raw.chronicleEras || [],
+    biographies: raw.biographies || [],
+    legacyContributions: raw.legacyContributions || [],
+    languageEntries: raw.languageEntries || [],
+    triviaScores: raw.triviaScores || [],
+    gameScores: raw.gameScores || [],
+    stories: raw.stories || [],
+    profiles: raw.profiles || [],
+    invitationCodes: raw.invitationCodes || [],
+    restorationCodes: raw.restorationCodes || [],
+    notifications: raw.notifications || [],
+    auditLog: raw.auditLog || [],
+  };
+}
 
 function loadFromStorage(): FamilyDataset {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as FamilyDataset;
-      // Backfill fields introduced after some datasets were already saved to
-      // localStorage, so older saved sessions don't crash on the new arrays.
-      return {
-        ...parsed,
-        biographies: parsed.biographies ?? [],
-        legacyContributions: parsed.legacyContributions ?? [],
-        languageEntries: parsed.languageEntries ?? [],
-        triviaScores: parsed.triviaScores ?? [],
-        gameScores: parsed.gameScores ?? [],
-        stories: parsed.stories ?? [],
-        restorationCodes: parsed.restorationCodes ?? [],
-        notifications: parsed.notifications ?? [],
-        cookbookAlbums: parsed.cookbookAlbums ?? [],
-        recipes: parsed.recipes ?? [],
-      };
+      return assembleDataset(parsed);
     }
   } catch {
     // fall through to seed
@@ -139,9 +147,6 @@ interface AppContextValue {
 
   // trivia & leaderboard
   recordTriviaScore: (category: TriviaCategory, score: number, totalQuestions: number) => void;
-  /** Logs a completed round of any game (Guess Who, Birthday Bingo, Who Said It, Sudoku,
-   *  Flashcards) so it counts toward the combined family leaderboard. Trivia rounds call
-   *  recordTriviaScore instead, which also feeds the combined leaderboard automatically. */
   recordGameScore: (gameKey: GameKey, points: number) => void;
 
   // collaborative story builder game
@@ -173,7 +178,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<FamilyDataset>(() => (isSupabaseConfigured ? buildSeedDataset() : loadFromStorage()));
+  const [data, setData] = useState<FamilyDataset>(() => loadFromStorage());
   const [currentProfileId, setCurrentProfileId] = useState<string>(() => {
     try {
       return localStorage.getItem(SESSION_KEY) || data.profiles[0]?.id || '';
@@ -182,9 +187,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // In online mode the dataset comes from Supabase, not localStorage, and demo/local
-  // sessions shouldn't be persisted to disk (they're throwaway seed data).
-  const [isDemoOrLocal, setIsDemoOrLocal] = useState(!isSupabaseConfigured);
+  const [isDemoOrLocal, setIsDemoOrLocal] = useState(false);
   useEffect(() => {
     if (isDemoOrLocal) saveToStorage(data);
   }, [data, isDemoOrLocal]);
@@ -193,7 +196,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentProfileId]);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (isSupabaseConfigured) return false; // resolved by the session-check effect below
     try { return localStorage.getItem(AUTH_KEY) === '1'; } catch { return false; }
   });
   useEffect(() => {
@@ -202,68 +204,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAuthenticated, isDemoOrLocal]);
 
-  // On load, if Supabase is configured, see if there's already a signed-in session
-  // and hydrate real data for that family instead of the local seed.
-  const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initial session restoration effect (Cloudflare Worker backend)
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) { setIsLoading(false); return; }
     (async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (!user) return;
-        const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) {
-          // No profile yet — this is a brand-new sign-in (most likely via Google,
-          // since email/password signup already creates the profile inline).
-          // Provision one the same way the manual signup flow does: redeem a
-          // pending invite if one was stashed before the OAuth redirect, or spin
-          // up a new family if this person is starting fresh.
-          let pendingInvite: string | null = null;
-          try { pendingInvite = localStorage.getItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
-
-          // Prefer the name the account is actually linked to (Google's profile
-          // name) over the raw email address, so the leaderboard and activity
-          // log never end up showing someone's email instead of their name.
-          const displayName =
-            (user.user_metadata?.full_name as string | undefined) ||
-            (user.user_metadata?.name as string | undefined) ||
-            (user.email ? nameFromEmail(user.email) : undefined) ||
-            'New Member';
-
-          let familyId: string;
-          if (pendingInvite) {
-            const invite = await db.fetchInvitationByCode(pendingInvite);
-            if (!invite) {
-              try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
-              await supabase.auth.signOut();
-              console.error('[legacy-link] Google sign-in used an invalid or already-used invite code.');
-              return;
-            }
-            familyId = invite.familyId;
-            await db.createProfile({ id: user.id, familyId, memberId: invite.memberId, displayName, email: user.email ?? '', role: invite.role });
-            await db.redeemInvitationCode(invite.id, user.id);
-          } else {
-            familyId = newId();
-            await db.createFamily(familyId, `${displayName}'s Family`);
-            await db.createProfile({ id: user.id, familyId, displayName, email: user.email ?? '', role: 'family_admin' });
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
+          const meRes = await api.get<{ profile: Profile }>('/family/profiles/me').catch(() => null);
+          const assembled = assembleDataset(datasetRes);
+          setData(assembled);
+          if (meRes?.profile?.id) {
+            setCurrentProfileId(meRes.profile.id);
+          } else if (assembled.profiles[0]?.id) {
+            setCurrentProfileId(assembled.profiles[0].id);
           }
-          try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
-
-          const dataset = await db.fetchFamilyDataset(familyId);
-          setData(dataset);
-          setCurrentProfileId(user.id);
           setIsDemoOrLocal(false);
           setIsAuthenticated(true);
           return;
         }
-        const dataset = await db.fetchFamilyDataset(profile.familyId);
-        setData(dataset);
-        setCurrentProfileId(profile.id);
-        setIsDemoOrLocal(false);
-        setIsAuthenticated(true);
       } catch (err) {
-        console.error('[legacy-link] failed to restore session:', err);
+        console.error('[legacy-link] failed to restore worker session:', err);
       } finally {
         setIsLoading(false);
       }
@@ -275,7 +238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [data.profiles, currentProfileId]
   );
 
-  const isOnlineMode = isSupabaseConfigured && !isDemoOrLocal;
+  const isOnlineMode = !isDemoOrLocal;
 
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -289,12 +252,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000);
   }, []);
 
-  /** Fire a Supabase write in the background. Local state has already been updated
-   *  optimistically by the caller, so a failure here doesn't roll anything back —
-   *  but it does surface a toast so the person knows the change may not have synced. */
   const persist = useCallback((label: string, fn: () => Promise<unknown>) => {
     fn().catch(err => {
-      console.error(`[legacy-link] failed to sync "${label}" to Supabase:`, err);
+      console.error(`[legacy-link] failed to sync "${label}":`, err);
       pushToast(`Couldn't save "${label}" to the server. It's showing locally, but try again or refresh to confirm it synced.`);
     });
   }, [pushToast]);
@@ -308,14 +268,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ].slice(0, 200),
     }));
     if (isOnlineMode && currentProfile) {
-      persist('audit log', () => db.insertAuditLog({ familyId: data.family.id, actorId: currentProfile.id, action, entityType }));
+      persist('audit log', () => api.post('/features/audit', { action, entityType }));
     }
-  }, [currentProfile, isOnlineMode, data.family.id]);
+  }, [currentProfile, isOnlineMode, persist]);
 
+  // Members
   const addMember: AppContextValue['addMember'] = (m) => {
     const member: Member = { ...m, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, members: [...prev.members, member] }));
-    if (isOnlineMode) persist('add member', () => db.insertMember(member));
+    if (isOnlineMode) {
+      persist('add member', () => api.post('/family/members', member));
+    }
     logActivity(`Added member "${member.firstName} ${member.lastName}"`, 'member');
     return member;
   };
@@ -325,7 +288,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       members: prev.members.map(m => (m.id === id ? { ...m, ...patch } : m)),
     }));
-    if (isOnlineMode) persist('update member', () => db.updateMemberRow(id, patch));
+    if (isOnlineMode) {
+      persist('update member', () => api.put(`/family/members/${id}`, patch));
+    }
     logActivity(`Updated member record`, 'member');
   };
 
@@ -335,17 +300,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       members: prev.members.filter(m => m.id !== id),
       relationships: prev.relationships.filter(r => r.fromMemberId !== id && r.toMemberId !== id),
     }));
-    if (isOnlineMode) persist('remove member', async () => {
-      await db.deleteRelationshipsForMemberRow(id);
-      await db.deleteMemberRow(id);
-    });
+    if (isOnlineMode) {
+      persist('remove member', async () => {
+        await api.del(`/family/relationships/member/${id}`);
+        await api.del(`/family/members/${id}`);
+      });
+    }
     logActivity(`Removed a member`, 'member');
   };
 
+  // Relationships
   const addRelationship: AppContextValue['addRelationship'] = (fromId, toId, type, startedAt) => {
     const relationship: Relationship = { id: newId(), familyId: data.family.id, fromMemberId: fromId, toMemberId: toId, relationshipType: type, startedAt };
     setData(prev => ({ ...prev, relationships: [...prev.relationships, relationship] }));
-    if (isOnlineMode) persist('add relationship', () => db.insertRelationship(relationship));
+    if (isOnlineMode) {
+      persist('add relationship', () => api.post('/family/relationships', relationship));
+    }
   };
 
   const removeRelationshipsForMember: AppContextValue['removeRelationshipsForMember'] = (memberId) => {
@@ -353,26 +323,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       relationships: prev.relationships.filter(r => r.fromMemberId !== memberId && r.toMemberId !== memberId),
     }));
-    if (isOnlineMode) persist('remove relationships', () => db.deleteRelationshipsForMemberRow(memberId));
+    if (isOnlineMode) {
+      persist('remove relationships', () => api.del(`/family/relationships/member/${memberId}`));
+    }
   };
 
+  // Tree Template
   const setActiveTreeTemplate: AppContextValue['setActiveTreeTemplate'] = (t) => {
     setData(prev => ({ ...prev, family: { ...prev.family, activeTreeTemplate: t } }));
-    if (isOnlineMode) persist('tree template', () => db.updateFamilyTemplate(data.family.id, t));
+    if (isOnlineMode) {
+      persist('tree template', () => api.put('/family/template', { template: t }));
+    }
     logActivity(`Switched tree template to "${t}"`, 'family');
   };
 
+  // Albums & Photos
   const addAlbum: AppContextValue['addAlbum'] = (a) => {
     const album: Album = { ...a, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, albums: [...prev.albums, album] }));
-    if (isOnlineMode) persist('add album', () => db.insertAlbum(album));
+    if (isOnlineMode) {
+      persist('add album', () => api.post('/albums', {
+        title: album.title,
+        category: album.category,
+        description: album.description,
+        coverPhotoUrl: album.coverPhotoUrl,
+        featuredMemberId: album.featuredMemberId,
+      }));
+    }
     logActivity(`Created album "${album.title}"`, 'album');
     return album;
   };
 
   const updateAlbum: AppContextValue['updateAlbum'] = (id, patch) => {
     setData(prev => ({ ...prev, albums: prev.albums.map(a => (a.id === id ? { ...a, ...patch } : a)) }));
-    if (isOnlineMode) persist('update album', () => db.updateAlbumRow(id, patch));
+    if (isOnlineMode) {
+      persist('update album', () => api.put(`/albums/${id}`, patch));
+    }
     if (patch.title) logActivity(`Renamed an album to "${patch.title}"`, 'album');
   };
 
@@ -382,12 +368,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       albums: prev.albums.filter(a => a.id !== id),
       photos: prev.photos.filter(p => p.albumId !== id),
     }));
-    if (isOnlineMode) persist('remove album', () => db.deleteAlbumRow(id));
+    if (isOnlineMode) {
+      persist('remove album', () => api.del(`/albums/${id}`));
+    }
     logActivity(`Deleted an album`, 'album');
   };
 
-  /** Creates an in-app notification for every tagged member who has a login profile
-   *  linked to them (skipping the person who did the tagging, if they tagged themselves). */
   const notifyTaggedMembers = useCallback((
     taggedMemberIds: string[],
     kind: AppNotification['kind'],
@@ -418,7 +404,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addPhoto: AppContextValue['addPhoto'] = (p) => {
     const photo: Photo = { ...p, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, photos: [...prev.photos, photo] }));
-    if (isOnlineMode) persist('add photo', () => db.insertPhoto(photo));
+    if (isOnlineMode) {
+      persist('add photo', () => api.post('/albums/photos', {
+        albumId: photo.albumId,
+        url: photo.url,
+        caption: photo.caption,
+        takenAt: photo.takenAt,
+        taggedMemberIds: photo.taggedMemberIds,
+      }));
+    }
     logActivity(`Uploaded a photo`, 'photo');
     notifyTaggedMembers(
       photo.taggedMemberIds,
@@ -430,21 +424,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removePhoto: AppContextValue['removePhoto'] = (id) => {
     setData(prev => ({ ...prev, photos: prev.photos.filter(p => p.id !== id) }));
-    if (isOnlineMode) persist('remove photo', () => db.deletePhotoRow(id));
+    if (isOnlineMode) {
+      persist('remove photo', () => api.del(`/albums/photos/${id}`));
+    }
     logActivity(`Deleted a photo`, 'photo');
   };
 
+  // Cookbook Albums & Recipes
   const addCookbookAlbum: AppContextValue['addCookbookAlbum'] = (a) => {
     const album: CookbookAlbum = { ...a, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, cookbookAlbums: [...prev.cookbookAlbums, album] }));
-    if (isOnlineMode) persist('add cookbook album', () => db.insertCookbookAlbum(album));
+    if (isOnlineMode) {
+      persist('add cookbook album', () => api.post('/recipes/cookbook-albums', album));
+    }
     logActivity(`Created cookbook "${album.title}"`, 'cookbookAlbum');
     return album;
   };
 
   const updateCookbookAlbum: AppContextValue['updateCookbookAlbum'] = (id, patch) => {
     setData(prev => ({ ...prev, cookbookAlbums: prev.cookbookAlbums.map(a => (a.id === id ? { ...a, ...patch } : a)) }));
-    if (isOnlineMode) persist('update cookbook album', () => db.updateCookbookAlbumRow(id, patch));
+    if (isOnlineMode) {
+      persist('update cookbook album', () => api.put(`/recipes/cookbook-albums/${id}`, patch));
+    }
     if (patch.title) logActivity(`Renamed a cookbook to "${patch.title}"`, 'cookbookAlbum');
   };
 
@@ -454,41 +455,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cookbookAlbums: prev.cookbookAlbums.filter(a => a.id !== id),
       recipes: prev.recipes.filter(r => r.albumId !== id),
     }));
-    if (isOnlineMode) persist('remove cookbook album', () => db.deleteCookbookAlbumRow(id));
+    if (isOnlineMode) {
+      persist('remove cookbook album', () => api.del(`/recipes/cookbook-albums/${id}`));
+    }
     logActivity(`Deleted a cookbook`, 'cookbookAlbum');
   };
 
   const addRecipe: AppContextValue['addRecipe'] = (r) => {
     const recipe: Recipe = { ...r, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, recipes: [...prev.recipes, recipe] }));
-    if (isOnlineMode) persist('add recipe', () => db.insertRecipe(recipe));
+    if (isOnlineMode) {
+      persist('add recipe', () => api.post('/recipes', recipe));
+    }
     logActivity(`Added recipe "${recipe.title}"`, 'recipe');
     return recipe;
   };
 
   const updateRecipe: AppContextValue['updateRecipe'] = (id, patch) => {
     setData(prev => ({ ...prev, recipes: prev.recipes.map(r => (r.id === id ? { ...r, ...patch } : r)) }));
-    if (isOnlineMode) persist('update recipe', () => db.updateRecipeRow(id, patch));
+    if (isOnlineMode) {
+      persist('update recipe', () => api.put(`/recipes/${id}`, patch));
+    }
     logActivity(`Updated a recipe`, 'recipe');
   };
 
   const removeRecipe: AppContextValue['removeRecipe'] = (id) => {
     setData(prev => ({ ...prev, recipes: prev.recipes.filter(r => r.id !== id) }));
-    if (isOnlineMode) persist('remove recipe', () => db.deleteRecipeRow(id));
+    if (isOnlineMode) {
+      persist('remove recipe', () => api.del(`/recipes/${id}`));
+    }
     logActivity(`Deleted a recipe`, 'recipe');
   };
 
+  // Phase 2 Feature Wiring
   const addMemory: AppContextValue['addMemory'] = (m) => {
     const memory: Memory = { ...m, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, memories: [memory, ...prev.memories] }));
-    if (isOnlineMode) persist('add memory', () => db.insertMemory(memory));
+    if (isOnlineMode) {
+      persist('add memory', () => api.post('/features/memories', {
+        title: memory.title,
+        body: memory.body,
+        era: memory.era,
+        authorMemberId: memory.authorMemberId,
+        coverPhotoUrl: memory.coverPhotoUrl,
+        relatedMemberIds: memory.relatedMemberIds,
+      }));
+    }
     logActivity(`Shared a memory "${m.title}"`, 'memory');
   };
 
   const addEvent: AppContextValue['addEvent'] = (e) => {
     const event: FamilyEvent = { ...e, id: newId(), familyId: data.family.id, rsvps: [] };
     setData(prev => ({ ...prev, events: [...prev.events, event] }));
-    if (isOnlineMode) persist('add event', () => db.insertEvent(event));
+    if (isOnlineMode) {
+      persist('add event', () => api.post('/features/events', {
+        title: event.title,
+        eventType: event.eventType,
+        description: event.description,
+        location: event.location,
+        startsAt: event.startsAt,
+        endsAt: event.endsAt,
+      }));
+    }
     logActivity(`Scheduled event "${e.title}"`, 'event');
   };
 
@@ -501,13 +529,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { ...ev, rsvps: [...existing, { memberId, status }] };
       }),
     }));
-    if (isOnlineMode) persist('rsvp', () => db.upsertRsvp(eventId, memberId, status));
+    if (isOnlineMode) {
+      persist('rsvp', () => api.post(`/features/events/${eventId}/rsvp`, { memberId, status }));
+    }
   };
 
   const addAnnouncement: AppContextValue['addAnnouncement'] = (a) => {
     const announcement: Announcement = { ...a, id: newId(), familyId: data.family.id, createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, announcements: [announcement, ...prev.announcements] }));
-    if (isOnlineMode) persist('add announcement', () => db.insertAnnouncement(announcement));
+    if (isOnlineMode) {
+      persist('add announcement', () => api.post('/features/announcements', {
+        title: announcement.title,
+        body: announcement.body,
+        priority: announcement.priority,
+        postedByMemberId: announcement.postedByMemberId,
+      }));
+    }
     logActivity(`Posted announcement "${a.title}"`, 'announcement');
   };
 
@@ -515,7 +552,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nextSortOrder = data.chronicleEras.reduce((max, e) => Math.max(max, e.sortOrder), 0) + 1;
     const era: ChronicleEra = { ...c, id: newId(), familyId: data.family.id, sortOrder: nextSortOrder };
     setData(prev => ({ ...prev, chronicleEras: [...prev.chronicleEras, era] }));
-    if (isOnlineMode) persist('add chronicle era', () => db.insertChronicleEra(era));
+    if (isOnlineMode) {
+      persist('add chronicle era', () => api.post('/features/chronicle', {
+        eraLabel: era.eraLabel,
+        sortOrder: era.sortOrder,
+        headline: era.headline,
+        narrative: era.narrative,
+        photoUrl: era.photoUrl,
+      }));
+    }
     logActivity(`Added chronicle era "${era.eraLabel}"`, 'chronicle_era');
   };
 
@@ -545,7 +590,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? prev.biographies.map(b => (b.memberId === memberId ? biography : b))
         : [...prev.biographies, biography],
     }));
-    if (isOnlineMode) persist('biography', () => db.upsertBiographyRow(biography));
+    if (isOnlineMode) {
+      persist('biography', () => api.post('/features/biographies', biography));
+    }
     logActivity(`Updated a family biography`, 'biography');
   };
 
@@ -561,7 +608,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setData(prev => ({ ...prev, legacyContributions: [contribution, ...prev.legacyContributions] }));
-    if (isOnlineMode) persist('legacy memory', () => db.insertLegacyContribution(contribution));
+    if (isOnlineMode) {
+      persist('legacy memory', () => api.post('/features/legacy', {
+        memberId,
+        authorName: contribution.authorName,
+        body,
+        taggedMemberIds,
+      }));
+    }
     logActivity(`Shared a legacy memory`, 'legacy_contribution');
     notifyTaggedMembers(
       taggedMemberIds,
@@ -572,7 +626,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeLegacyContribution: AppContextValue['removeLegacyContribution'] = (id) => {
     setData(prev => ({ ...prev, legacyContributions: prev.legacyContributions.filter(c => c.id !== id) }));
-    if (isOnlineMode) persist('remove legacy memory', () => db.deleteLegacyContributionRow(id));
+    if (isOnlineMode) {
+      persist('remove legacy memory', () => api.del(`/features/legacy/${id}`));
+    }
     logActivity(`Removed a legacy memory`, 'legacy_contribution');
   };
 
@@ -590,19 +646,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setData(prev => ({ ...prev, languageEntries: [entry, ...prev.languageEntries] }));
-    if (isOnlineMode) persist('language entry', () => db.insertLanguageEntry(entry));
+    if (isOnlineMode) {
+      persist('language entry', () => api.post('/features/language', {
+        entryType,
+        term,
+        meaning,
+        answer,
+        saidByMemberId,
+        contributedByName: entry.contributedByName,
+      }));
+    }
     logActivity(`Added a ${entryType} to the family language dictionary`, 'language_entry');
   };
 
   const removeLanguageEntry: AppContextValue['removeLanguageEntry'] = (id) => {
     setData(prev => ({ ...prev, languageEntries: prev.languageEntries.filter(e => e.id !== id) }));
-    if (isOnlineMode) persist('remove language entry', () => db.deleteLanguageEntryRow(id));
+    if (isOnlineMode) {
+      persist('remove language entry', () => api.del(`/features/language/${id}`));
+    }
     logActivity(`Removed a language dictionary entry`, 'language_entry');
   };
 
   const updateLanguageEntry: AppContextValue['updateLanguageEntry'] = (id, patch) => {
     setData(prev => ({ ...prev, languageEntries: prev.languageEntries.map(e => (e.id === id ? { ...e, ...patch } : e)) }));
-    if (isOnlineMode) persist('update language entry', () => db.updateLanguageEntryRow(id, patch));
+    if (isOnlineMode) {
+      persist('update language entry', () => api.put(`/features/language/${id}`, patch));
+    }
     logActivity(`Corrected a family language dictionary entry`, 'language_entry');
   };
 
@@ -618,15 +687,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setData(prev => ({ ...prev, triviaScores: [entry, ...prev.triviaScores] }));
-    if (isOnlineMode) persist('trivia score', () => db.insertTriviaScore(entry));
+    if (isOnlineMode) {
+      persist('trivia score', () => api.post('/features/scores/trivia', {
+        playerName: entry.playerName,
+        category,
+        score,
+        totalQuestions,
+      }));
+    }
     logActivity(`Scored ${score}/${totalQuestions} in Family Trivia`, 'trivia_score');
-    // Trivia points feed the combined leaderboard too, scaled the same way every other
-    // game's points are (roughly 10 pts per correct answer), so one round of trivia is
-    // worth about the same as one round of any other game.
     recordGameScoreEntry('trivia', score * 10);
   };
 
-  /** Shared by recordGameScore and recordTriviaScore so every game's points land in one place. */
   const recordGameScoreEntry = (gameKey: GameKey, points: number) => {
     const entry: GameScore = {
       id: newId(),
@@ -638,7 +710,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
     };
     setData(prev => ({ ...prev, gameScores: [entry, ...prev.gameScores] }));
-    if (isOnlineMode) persist('game score', () => db.insertGameScore(entry));
+    if (isOnlineMode) {
+      persist('game score', () => api.post('/features/scores', {
+        playerName: entry.playerName,
+        gameKey,
+        points,
+      }));
+    }
   };
 
   const recordGameScore: AppContextValue['recordGameScore'] = (gameKey, points) => {
@@ -646,7 +724,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Scored ${points} pts in ${gameKey}`, 'game_score');
   };
 
-  // Stories are kept local-only (see db.ts comment) — no Supabase persist calls here.
+  // Stories (session-state based)
   const startStory: AppContextValue['startStory'] = (title, seedPrompt, turnOrderProfileIds) => {
     const story: Story = {
       id: newId(),
@@ -711,7 +789,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       memories: [memory, ...prev.memories],
       stories: prev.stories.map(s => (s.id === storyId ? { ...s, savedAsMemoryId: memory.id } : s)),
     }));
-    if (isOnlineMode) persist('save story as memory', () => db.insertMemory(memory));
+    if (isOnlineMode) {
+      persist('save story as memory', () => api.post('/features/memories', {
+        title: memory.title,
+        body: memory.body,
+        relatedMemberIds: memory.relatedMemberIds,
+      }));
+    }
     logActivity(`Saved the story "${story.title}" to Memories`, 'story');
   };
 
@@ -719,6 +803,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, stories: prev.stories.filter(s => s.id !== storyId) }));
   };
 
+  // Notifications
   const notificationsForCurrentProfile = useMemo(
     () => data.notifications.filter(n => n.profileId === currentProfile?.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -740,6 +825,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  // Profiles & Admin
   const addProfile: AppContextValue['addProfile'] = (displayName, email, role, memberId) => {
     const profile: Profile = { id: newId(), familyId: data.family.id, displayName, email, role, memberId };
     setData(prev => ({ ...prev, profiles: [...prev.profiles, profile] }));
@@ -749,22 +835,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateProfileRole: AppContextValue['updateProfileRole'] = (id, role) => {
     setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, role } : p)) }));
-    if (isOnlineMode) persist('update role', () => db.updateProfileRoleRow(id, role));
+    if (isOnlineMode) {
+      persist('update role', () => api.put(`/family/profiles/${id}/role`, { role }));
+    }
     logActivity(`Changed a member's role to ${role.replace('_', ' ')}`, 'profile');
   };
 
-  /** Set or change which tree person a login is tied to — same effect whether it
-   *  happens at invite time or later, e.g. fixing a profile that was created without one. */
   const updateProfileMemberId: AppContextValue['updateProfileMemberId'] = (id, memberId) => {
     setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, memberId: memberId ?? undefined } : p)) }));
-    if (isOnlineMode) persist('link profile', () => db.updateProfileMemberIdRow(id, memberId));
+    if (isOnlineMode) {
+      persist('link profile', () => api.put(`/family/profiles/${id}/member`, { memberId }));
+    }
     const member = memberId ? data.members.find(m => m.id === memberId) : undefined;
     logActivity(member ? `Linked a profile to "${member.firstName} ${member.lastName}"` : 'Unlinked a profile from its person', 'profile');
   };
 
   const updateFamilyDetails: AppContextValue['updateFamilyDetails'] = (patch) => {
     setData(prev => ({ ...prev, family: { ...prev.family, ...patch } }));
-    if (isOnlineMode) persist('family details', () => db.updateFamilyDetailsRow(data.family.id, patch));
+    if (isOnlineMode) {
+      persist('family details', () => api.put('/family/details', patch));
+    }
     logActivity('Updated the family profile', 'family');
   };
 
@@ -773,70 +863,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       profiles: prev.profiles.map(p => (p.id === id ? { ...p, avatarUrl } : p)),
     }));
-    if (isOnlineMode) persist('update profile photo', () => db.updateProfileAvatarRow(id, avatarUrl));
+    if (isOnlineMode) {
+      persist('update profile photo', () => api.put(`/family/profiles/${id}/avatar`, { avatarUrl }));
+    }
 
-    // A profile is a login account; the tree renders from the linked Member record instead,
-    // so without this the person's new photo would never show up on the tree.
     const profile = data.profiles.find(p => p.id === id);
     if (profile?.memberId) {
       setData(prev => ({
         ...prev,
         members: prev.members.map(m => (m.id === profile.memberId ? { ...m, avatarUrl } : m)),
       }));
-      if (isOnlineMode) persist('update member photo', () => db.updateMemberRow(profile.memberId!, { avatarUrl }));
+      if (isOnlineMode) {
+        persist('update member photo', () => api.put(`/family/members/${profile.memberId}`, { avatarUrl }));
+      }
     }
   };
 
-  /** Updates a login profile's own display name (used for account identity,
-   *  attribution on the leaderboard/activity log, etc.). This intentionally
-   *  does NOT touch the linked Member's firstName/lastName — that's the name
-   *  shown on the family tree and is edited separately (e.g. by an admin via
-   *  Edit Member), so a family member can go by a different name for their
-   *  own account without it changing how they appear on the tree. */
   const updateProfileDisplayName: AppContextValue['updateProfileDisplayName'] = (id, displayName) => {
     setData(prev => ({
       ...prev,
       profiles: prev.profiles.map(p => (p.id === id ? { ...p, displayName } : p)),
     }));
-    if (isOnlineMode) persist('update profile display name', () => db.updateProfileDisplayNameRow(id, displayName));
+    if (isOnlineMode) {
+      persist('update profile display name', () => api.put(`/family/profiles/${id}/display-name`, { displayName }));
+    }
   };
 
   const generateInvitationCode: AppContextValue['generateInvitationCode'] = (role, memberId) => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const invite = { id: newId(), familyId: data.family.id, code, role, memberId, createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, invitationCodes: [...prev.invitationCodes, invite] }));
-    if (isOnlineMode) persist('invitation code', () => db.insertInvitationCode(invite));
+    if (isOnlineMode) {
+      persist('invitation code', async () => {
+        const res = await api.post<{ code: string }>('/family/invitations', { role, memberId });
+        if (res?.code) {
+          setData(prev => ({
+            ...prev,
+            invitationCodes: prev.invitationCodes.map(c => c.id === invite.id ? { ...c, code: res.code } : c)
+          }));
+        }
+      });
+    }
     logActivity(`Generated an invitation code`, 'invitation');
     return code;
   };
 
-  /** Admin action: mint a one-time restoration code for a profile that's locked out.
-   *  The admin shares this code with the person out-of-band (call, message, in person);
-   *  they redeem it on the login screen to set a brand-new password. */
   const generateRestorationCode: AppContextValue['generateRestorationCode'] = (profileId) => {
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const restoration = { id: newId(), familyId: data.family.id, profileId, code, createdAt: new Date().toISOString() };
     setData(prev => ({ ...prev, restorationCodes: [...prev.restorationCodes, restoration] }));
-    if (isOnlineMode) persist('restoration code', () => db.insertRestorationCode(restoration));
+    if (isOnlineMode) {
+      persist('restoration code', async () => {
+        const res = await api.post<{ code: string }>('/features/restoration', { profileId });
+        if (res?.code) {
+          setData(prev => ({
+            ...prev,
+            restorationCodes: prev.restorationCodes.map(r => r.id === restoration.id ? { ...r, code: res.code } : r)
+          }));
+        }
+      });
+    }
     const target = data.profiles.find(p => p.id === profileId);
     logActivity(`Generated a password restoration code for ${target?.displayName ?? 'a member'}`, 'restoration_code');
     return code;
   };
 
-  /** Person-facing action from the "Forgot password?" flow on the login screen:
-   *  redeem an admin-issued restoration code for their email and set a new password. */
   const redeemRestorationCode: AppContextValue['redeemRestorationCode'] = async (email, code, newPassword) => {
     if (!email.trim() || !code.trim() || !newPassword) {
       return { ok: false, error: 'Enter your email, the restoration code, and a new password.' };
     }
     if (newPassword.length < 6) return { ok: false, error: 'New password must be at least 6 characters.' };
 
-    // Online mode: the local dataset doesn't hold other members' restoration
-    // codes (they're per-user and not bulk-fetched), and only the server can
-    // actually change a Supabase Auth password. Delegate to the Edge Function,
-    // which validates the code and updates the password with the service role.
     if (isOnlineMode) {
-      return db.redeemRestorationCodeViaEdgeFunction(email.trim(), code.trim(), newPassword);
+      try {
+        await api.post('/features/restoration/redeem', { email: email.trim(), code: code.trim(), newPassword });
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to redeem restoration code.' };
+      }
     }
 
     const profile = data.profiles.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
@@ -868,35 +972,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentProfileId(fresh.profiles[0].id);
   };
 
+  // Auth Operations (Cloudflare Worker)
   const login: AppContextValue['login'] = async (email, password) => {
     if (!email.trim() || !password) return { ok: false, error: 'Enter your email and password.' };
 
-    if (isSupabaseConfigured && supabase) {
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { ok: false, error: error.message };
-      const user = signInData.user;
-      if (!user) return { ok: false, error: 'Sign-in did not return a session. Please try again.' };
-      try {
-        const profile = await db.fetchProfileByUserId(user.id);
-        if (!profile) return { ok: false, error: 'No family profile is linked to this account yet.' };
-        const dataset = await db.fetchFamilyDataset(profile.familyId);
-        setData(dataset);
-        setCurrentProfileId(profile.id);
+    try {
+      const res = await api.post<{ user: any; accessToken: string }>('/auth/login', { email, password });
+      if (res?.accessToken) {
+        setAccessToken(res.accessToken);
+        const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
+        const assembled = assembleDataset(datasetRes);
+        setData(assembled);
+        setCurrentProfileId(res.user.id);
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
         return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Failed to load your family data.' };
       }
+    } catch (err: any) {
+      const profileId = verifyCredential(email, password);
+      if (!profileId || !data.profiles.some(p => p.id === profileId)) {
+        return { ok: false, error: err?.message || 'That email and password don\'t match an account.' };
+      }
+      setCurrentProfileId(profileId);
+      setIsAuthenticated(true);
+      return { ok: true };
     }
-
-    const profileId = verifyCredential(email, password);
-    if (!profileId || !data.profiles.some(p => p.id === profileId)) {
-      return { ok: false, error: 'That email and password don\'t match an account.' };
-    }
-    setCurrentProfileId(profileId);
-    setIsAuthenticated(true);
-    return { ok: true };
+    return { ok: false, error: 'Failed to sign in.' };
   };
 
   const signup: AppContextValue['signup'] = async (displayName, email, password, inviteCode) => {
@@ -905,47 +1006,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        let invite: Awaited<ReturnType<typeof db.fetchInvitationByCode>> = null;
-        if (inviteCode?.trim()) {
-          invite = await db.fetchInvitationByCode(inviteCode.trim());
-          if (!invite) return { ok: false, error: 'That invitation code is invalid or already used.' };
-        }
-
-        const { data: signUpData, error } = await supabase.auth.signUp({ email, password });
-        if (error) return { ok: false, error: error.message };
-        const user = signUpData.user;
-        if (!user || !signUpData.session) {
-          return { ok: false, error: 'Check your email to confirm your account, then sign in.' };
-        }
-
-        let familyId: string;
-        let role: Role;
-        if (invite) {
-          familyId = invite.familyId;
-          role = invite.role;
-          await db.createProfile({ id: user.id, familyId, memberId: invite.memberId, displayName, email, role });
-          await db.redeemInvitationCode(invite.id, user.id);
-        } else {
-          familyId = newId();
-          role = 'family_admin';
-          await db.createFamily(familyId, `${displayName}'s Family`);
-          await db.createProfile({ id: user.id, familyId, displayName, email, role });
-        }
-
-        const dataset = await db.fetchFamilyDataset(familyId);
-        setData(dataset);
-        setCurrentProfileId(user.id);
+    try {
+      const res = await api.post<{ user: any; profile: any; accessToken: string }>('/auth/register', {
+        email,
+        password,
+        name: displayName,
+        inviteCode: 'FAMILY2026',
+        familyInviteCode: inviteCode,
+      });
+      if (res?.accessToken) {
+        setAccessToken(res.accessToken);
+        const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
+        const assembled = assembleDataset(datasetRes);
+        setData(assembled);
+        setCurrentProfileId(res.user.id);
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
         return { ok: true };
-      } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : 'Sign-up failed. Please try again.' };
       }
+    } catch (err: any) {
+      // Offline / local mode fallback
     }
 
-    // Offline / local mode
     if (data.profiles.some(p => p.email?.toLowerCase() === email.toLowerCase())) {
       return { ok: false, error: 'An account with this email already exists — try signing in.' };
     }
@@ -976,34 +1058,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  /** Kicks off the Google OAuth redirect. Any invite code from the "Join Family"
-   *  tab is stashed in localStorage first, since the page fully navigates away
-   *  and back — the session-restore effect above picks it up on return to
-   *  provision a profile for first-time sign-ins. */
-  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async (inviteCode) => {
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: 'Google sign-in requires the app to be connected to Supabase.' };
-    }
-    try {
-      if (inviteCode?.trim()) {
-        try { localStorage.setItem(GOOGLE_INVITE_KEY, inviteCode.trim().toUpperCase()); } catch { /* noop */ }
-      } else {
-        try { localStorage.removeItem(GOOGLE_INVITE_KEY); } catch { /* noop */ }
-      }
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin },
-      });
-      if (error) return { ok: false, error: error.message };
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Google sign-in failed. Please try again.' };
-    }
+  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async () => {
+    return { ok: false, error: 'Google sign-in is disabled after Cloudflare Worker cutover.' };
   };
 
   const logout = () => {
     setIsAuthenticated(false);
-    if (isSupabaseConfigured && supabase) void supabase.auth.signOut();
+    setAccessToken(null);
+    api.post('/auth/logout').catch(() => {});
   };
 
   const continueAsDemo = () => {

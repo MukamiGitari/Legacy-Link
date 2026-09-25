@@ -3,7 +3,7 @@ import { Menu, ChevronDown, Wifi, WifiOff, Plus, LogOut, Sun, Moon, Camera, Load
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Page } from '../../App';
-import * as db from '../../lib/db';
+import { uploadFileToR2 } from '../../lib/api';
 
 const PAGE_TITLES: Record<Page, string> = {
   dashboard: 'Home',
@@ -68,8 +68,8 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
     setSavingPhoto(true);
     try {
       if (isOnlineMode) {
-        const url = await db.uploadAvatarFile(data.family.id, currentProfile.id, file);
-        updateProfileAvatar(currentProfile.id, url);
+        const media = await uploadFileToR2({ category: 'photos', file });
+        updateProfileAvatar(currentProfile.id, media.url || media.key);
       } else {
         const reader = new FileReader();
         reader.onload = () => updateProfileAvatar(currentProfile.id, reader.result as string);

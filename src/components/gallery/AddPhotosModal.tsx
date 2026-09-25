@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, UploadCloud, Trash2, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { fullName } from '../../lib/lineage';
-import * as db from '../../lib/db';
+import { uploadFileToR2 } from '../../lib/api';
 
 interface PendingPhoto {
   id: string;
@@ -60,7 +60,7 @@ export const AddPhotosModal: React.FC<Props> = ({ albumId, onClose }) => {
         // Online mode: upload the real file to Supabase Storage and store its public URL.
         // Local/demo mode has no storage backend, so the data URL preview is kept as-is.
         const url = isOnlineMode
-          ? await db.uploadPhotoFile(data.family.id, albumId, p.file)
+          ? (await uploadFileToR2({ category: 'photos', file: p.file })).key
           : p.dataUrl;
 
         addPhoto({

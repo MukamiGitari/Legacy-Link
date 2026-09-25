@@ -59,6 +59,160 @@ function mapInvitationCode(r) {
   };
 }
 
+function mapAlbum(r) {
+  return {
+    id: r.id, familyId: r.family_id, title: r.title, category: r.category,
+    description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    featuredMemberId: r.featured_member_id ?? undefined,
+  };
+}
+
+function mapPhoto(r) {
+  const tagged = Array.isArray(r.tagged_member_ids)
+    ? r.tagged_member_ids
+    : (r.tagged_member_ids ? JSON.parse(r.tagged_member_ids) : []);
+  return {
+    id: r.id, albumId: r.album_id, familyId: r.family_id, url: r.url,
+    caption: r.caption ?? undefined,
+    takenAt: r.taken_at ? (typeof r.taken_at === 'string' ? r.taken_at.split('T')[0] : new Date(r.taken_at).toISOString().split('T')[0]) : undefined,
+    taggedMemberIds: tagged,
+  };
+}
+
+function mapCookbookAlbum(r) {
+  return {
+    id: r.id, familyId: r.family_id, title: r.title, style: r.style,
+    description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    featuredMemberId: r.featured_member_id ?? undefined,
+  };
+}
+
+function mapRecipe(r) {
+  const ingredients = Array.isArray(r.ingredients)
+    ? r.ingredients
+    : (r.ingredients ? JSON.parse(r.ingredients) : []);
+  const instructions = Array.isArray(r.instructions)
+    ? r.instructions
+    : (r.instructions ? JSON.parse(r.instructions) : []);
+  return {
+    id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
+    isVegetarian: r.is_vegetarian ?? false,
+    photoUrl: r.photo_url ?? undefined,
+    ingredients,
+    instructions,
+    cookTime: r.cook_time ?? undefined,
+    familyStory: r.family_story ?? undefined,
+    contributedByMemberId: r.contributed_by_member_id ?? undefined,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapMemory(r) {
+  return {
+    id: r.id, familyId: r.family_id, title: r.title, body: r.body,
+    era: r.era ?? undefined, authorMemberId: r.author_member_id ?? undefined,
+    coverPhotoUrl: r.cover_photo_url ?? undefined,
+    relatedMemberIds: Array.isArray(r.related_member_ids) ? r.related_member_ids : [],
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapEvent(r) {
+  const rsvps = Array.isArray(r.rsvps) ? r.rsvps : (typeof r.rsvps === 'string' ? JSON.parse(r.rsvps) : []);
+  return {
+    id: r.id, familyId: r.family_id, title: r.title, eventType: r.event_type,
+    description: r.description ?? undefined, location: r.location ?? undefined,
+    startsAt: typeof r.starts_at === 'string' ? r.starts_at : new Date(r.starts_at).toISOString(),
+    endsAt: r.ends_at ? (typeof r.ends_at === 'string' ? r.ends_at : new Date(r.ends_at).toISOString()) : undefined,
+    rsvps,
+  };
+}
+
+function mapAnnouncement(r) {
+  return {
+    id: r.id, familyId: r.family_id, title: r.title, body: r.body, priority: r.priority,
+    postedByMemberId: r.posted_by_member_id ?? undefined,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapChronicleEra(r) {
+  return {
+    id: r.id, familyId: r.family_id, eraLabel: r.era_label, sortOrder: r.sort_order,
+    headline: r.headline, narrative: r.narrative ?? undefined, photoUrl: r.photo_url ?? undefined,
+  };
+}
+
+function mapBiography(r) {
+  return {
+    id: r.id, familyId: r.family_id, memberId: r.member_id,
+    professionalSummary: r.professional_summary ?? undefined,
+    earlyLifeBackground: r.early_life_background ?? undefined,
+    education: r.education ?? undefined,
+    careerJourney: r.career_journey ?? undefined,
+    professionalAchievements: r.professional_achievements ?? undefined,
+    areasOfExpertise: Array.isArray(r.areas_of_expertise) ? r.areas_of_expertise : [],
+    communityContributions: r.community_contributions ?? undefined,
+    personalPhilosophy: r.personal_philosophy ?? undefined,
+    legacy: r.legacy ?? undefined,
+    personalLife: r.personal_life ?? undefined,
+    updatedAt: typeof r.updated_at === 'string' ? r.updated_at : new Date(r.updated_at).toISOString(),
+    updatedByProfileId: r.updated_by_profile_id ?? undefined,
+  };
+}
+
+function mapLegacyContribution(r) {
+  const tagged = Array.isArray(r.tagged_member_ids) ? r.tagged_member_ids : (typeof r.tagged_member_ids === 'string' ? JSON.parse(r.tagged_member_ids) : []);
+  return {
+    id: r.id, familyId: r.family_id, memberId: r.member_id,
+    authorProfileId: r.author_profile_id ?? undefined, authorName: r.author_name,
+    body: r.body, taggedMemberIds: tagged,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapLanguageEntry(r) {
+  return {
+    id: r.id, familyId: r.family_id, entryType: r.entry_type, term: r.term, meaning: r.meaning,
+    answer: r.answer ?? undefined, saidByMemberId: r.said_by_member_id ?? undefined,
+    contributedByProfileId: r.contributed_by_profile_id ?? undefined,
+    contributedByName: r.contributed_by_name,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapTriviaScore(r) {
+  return {
+    id: r.id, familyId: r.family_id, profileId: r.profile_id, playerName: r.player_name,
+    category: r.category, score: r.score, totalQuestions: r.total_questions,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapGameScore(r) {
+  return {
+    id: r.id, familyId: r.family_id, profileId: r.profile_id, playerName: r.player_name,
+    gameKey: r.game_key, points: r.points,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
+function mapRestorationCode(r) {
+  return {
+    id: r.id, familyId: r.family_id, profileId: r.profile_id, code: r.code,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+    redeemedAt: r.redeemed_at ? (typeof r.redeemed_at === 'string' ? r.redeemed_at : new Date(r.redeemed_at).toISOString()) : undefined,
+  };
+}
+
+function mapAuditLog(r) {
+  return {
+    id: r.id, familyId: r.family_id, actorName: r.actor_name || 'Unknown',
+    action: r.action, entityType: r.entity_type,
+    createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+  };
+}
+
 family.get('/dataset', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await loadProfile(client, c.get('userId'));
@@ -69,6 +223,61 @@ family.get('/dataset', async (c) => {
     const relRes = await client.query(`SELECT * FROM relationships WHERE family_id = $1`, [profile.family_id]);
     const profilesRes = await client.query(`SELECT * FROM profiles WHERE family_id = $1`, [profile.family_id]);
     const invitesRes = await client.query(`SELECT * FROM invitation_codes WHERE family_id = $1`, [profile.family_id]);
+    const albumsRes = await client.query(`SELECT * FROM albums WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const photosRes = await client.query(
+      `SELECT p.*, COALESCE(
+         json_agg(pt.member_id ORDER BY pt.id) FILTER (WHERE pt.id IS NOT NULL),
+         '[]'
+       ) AS tagged_member_ids
+         FROM photos p
+         LEFT JOIN photo_tags pt ON pt.photo_id = p.id
+        WHERE p.family_id = $1
+        GROUP BY p.id
+        ORDER BY p.taken_at ASC NULLS LAST, p.created_at ASC`,
+      [profile.family_id]
+    );
+    const cookbookAlbumsRes = await client.query(`SELECT * FROM cookbook_albums WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const recipesRes = await client.query(`SELECT * FROM recipes WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const memoriesRes = await client.query(`SELECT * FROM memories WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const eventsRes = await client.query(
+      `SELECT e.*, COALESCE(
+         json_agg(json_build_object('memberId', r.member_id, 'status', r.status)) FILTER (WHERE r.id IS NOT NULL),
+         '[]'
+       ) AS rsvps
+         FROM events e
+         LEFT JOIN event_rsvps r ON r.event_id = e.id
+        WHERE e.family_id = $1
+        GROUP BY e.id
+        ORDER BY e.starts_at ASC`,
+      [profile.family_id]
+    );
+    const announcementsRes = await client.query(`SELECT * FROM announcements WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const chronicleRes = await client.query(`SELECT * FROM chronicle_eras WHERE family_id = $1 ORDER BY sort_order ASC, created_at ASC`, [profile.family_id]);
+    const biosRes = await client.query(`SELECT * FROM biographies WHERE family_id = $1`, [profile.family_id]);
+    const legacyRes = await client.query(
+      `SELECT lc.*, COALESCE(
+         json_agg(lct.member_id ORDER BY lct.id) FILTER (WHERE lct.id IS NOT NULL),
+         '[]'
+       ) AS tagged_member_ids
+         FROM legacy_contributions lc
+         LEFT JOIN legacy_contribution_tags lct ON lct.contribution_id = lc.id
+        WHERE lc.family_id = $1
+        GROUP BY lc.id
+        ORDER BY lc.created_at DESC`,
+      [profile.family_id]
+    );
+    const languageRes = await client.query(`SELECT * FROM language_entries WHERE family_id = $1 ORDER BY created_at DESC`, [profile.family_id]);
+    const triviaRes = await client.query(`SELECT * FROM trivia_scores WHERE family_id = $1 ORDER BY created_at DESC LIMIT 200`, [profile.family_id]);
+    const gameScoresRes = await client.query(`SELECT * FROM game_scores WHERE family_id = $1 ORDER BY points DESC, created_at DESC LIMIT 500`, [profile.family_id]);
+    const restorationRes = await client.query(`SELECT * FROM restoration_codes WHERE family_id = $1`, [profile.family_id]);
+    const auditRes = await client.query(
+      `SELECT a.*, p.display_name AS actor_name
+         FROM audit_log a
+         LEFT JOIN profiles p ON p.id = a.actor_id
+        WHERE a.family_id = $1
+        ORDER BY a.created_at DESC LIMIT 200`,
+      [profile.family_id]
+    );
 
     return c.json({
       family: mapFamily(familyRes.rows[0]),
@@ -76,6 +285,21 @@ family.get('/dataset', async (c) => {
       relationships: relRes.rows.map(mapRelationship),
       profiles: profilesRes.rows.map(mapProfile),
       invitationCodes: invitesRes.rows.map(mapInvitationCode),
+      albums: albumsRes.rows.map(mapAlbum),
+      photos: photosRes.rows.map(mapPhoto),
+      cookbookAlbums: cookbookAlbumsRes.rows.map(mapCookbookAlbum),
+      recipes: recipesRes.rows.map(mapRecipe),
+      memories: memoriesRes.rows.map(mapMemory),
+      events: eventsRes.rows.map(mapEvent),
+      announcements: announcementsRes.rows.map(mapAnnouncement),
+      chronicleEras: chronicleRes.rows.map(mapChronicleEra),
+      biographies: biosRes.rows.map(mapBiography),
+      legacyContributions: legacyRes.rows.map(mapLegacyContribution),
+      languageEntries: languageRes.rows.map(mapLanguageEntry),
+      triviaScores: triviaRes.rows.map(mapTriviaScore),
+      gameScores: gameScoresRes.rows.map(mapGameScore),
+      restorationCodes: restorationRes.rows.map(mapRestorationCode),
+      auditLog: auditRes.rows.map(mapAuditLog),
     });
   });
 });
