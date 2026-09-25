@@ -37,7 +37,7 @@ export const Admin: React.FC = () => {
   const [copiedRestoration, setCopiedRestoration] = useState(false);
 
   // Family profile form — seeded from the current dataset, saved explicitly so a
-  // stray keystroke doesn't write to Supabase on every character.
+  // stray keystroke doesn't write to the server on every character.
   const [familyName, setFamilyName] = useState(data.family.name);
   const [familyMotto, setFamilyMotto] = useState(data.family.motto ?? '');
   const [familyOrigin, setFamilyOrigin] = useState(data.family.originStory ?? '');

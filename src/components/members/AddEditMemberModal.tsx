@@ -109,7 +109,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
     }
 
     // If a real photo was uploaded (rather than a preset), push the actual
-    // file to Supabase Storage and swap the temporary data URL for its
+    // file to Cloudflare R2 Storage and swap the temporary data URL for its
     // permanent hosted URL. Local/demo mode has no storage backend, so the
     // data URL preview from handlePhotoSelect is kept as the final photo.
     if (avatarFile && isOnlineMode) {

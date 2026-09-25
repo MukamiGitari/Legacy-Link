@@ -1,7 +1,6 @@
 // A deliberately simple local-mode credential store. This is NOT secure
 // (password is just base64-encoded) and is only meant to let the standalone
-// / localStorage build demonstrate a real sign-in flow without a backend.
-// Once Supabase is configured, real Supabase Auth is used instead (see AppContext).
+// In online mode, real authentication with Cloudflare Worker and Neon DB is used instead.
 
 const CRED_KEY = 'legacy-link-credentials-v1';
 

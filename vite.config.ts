@@ -10,7 +10,7 @@ export default defineConfig({
     // built app shell (JS/CSS/HTML) plus every photo/icon in public/, and
     // registers a service worker that serves them from cache when there's no
     // connection. Family data itself already works offline via the local
-    // (non-Supabase) storage mode in src/lib/localAuth.ts — this is what makes
+    // storage mode in src/lib/localAuth.ts — this is what makes
     // the *app itself* load with no network too.
     VitePWA({
       registerType: 'autoUpdate',
