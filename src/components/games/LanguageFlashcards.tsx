@@ -13,6 +13,7 @@ const TYPE_LABEL: Record<LanguageFlashcard['entryType'], string> = {
   proverb: 'Proverb',
   riddle: 'Riddle',
   saying: 'Family Saying',
+  recording: 'Voice Recording',
 };
 
 export const LanguageFlashcards: React.FC<{ onBack: () => void }> = ({ onBack }) => {
