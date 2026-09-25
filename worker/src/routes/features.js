@@ -144,7 +144,7 @@ features.post('/events/:id/rsvp', async (c) => {
     const result = await client.query(
       `INSERT INTO event_rsvps (event_id, member_id, profile_id, status, responded_at)
        VALUES ($1, $2, $3, $4, now())
-       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, responded_at = now()
+       ON CONFLICT (event_id, member_id) DO UPDATE SET status = EXCLUDED.status, responded_at = now()
        RETURNING *`,
       [eventId, parsed.data.memberId ?? profile.member_id ?? null, user.id, parsed.data.status]
     );
