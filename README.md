@@ -1,7 +1,7 @@
 # Legacy Link (🌿)
 > *"Our Roots, Our Story, Our Legacy."*
 
-A production-ready, interactive digital family heritage archive, genealogy platform, and multi-template family tree system.
+A production-ready digital family heritage archive, genealogy platform, and multi-template family tree system built with React, Vite, Tailwind CSS, Cloudflare Workers, Neon PostgreSQL, and Cloudflare R2 object storage.
 
 ---
 
@@ -23,9 +23,10 @@ All six templates run against the exact same underlying family relational databa
 - **Member Profile**: 6-tab comprehensive dossier (*About, Family, Tagged Photos, Memories, Events, Timeline*).
 - **Add / Edit Member Modal**: Rich biographical form with avatar preset picker, date of birth/passing, resting place, occupation, and relationship linker.
 
-### 3. 📸 Family Media & Storytelling Archive
-- **Family Photo Gallery**: Album categorization (*Weddings, Reunions, Childhood, Historical, Memorials, Holidays*) with full-screen lightbox viewer and member face-tag navigation.
-- **Family Memories**: Storytelling format with photos and author attribution (e.g., *"Grandmother's Wedding Day & The Silk Shawl (1960)"*).
+### 3. 📸 Family Media, Storytelling & Voice Notes
+- **Family Photo Gallery**: Album categorization (*Weddings, Reunions, Childhood, Historical, Memorials, Graduations, Birthdays*) with full-screen lightbox viewer and member face-tag navigation.
+- **Heritage Vault with Voice Notes**: Dialect dictionary, family sayings, proverbs, riddles, and in-browser audio recording/playback.
+- **Family Memories**: Storytelling format with photos and author attribution.
 - **Events Calendar**: Milestone scheduler with RSVP attendance tracking (*Reunions, Birthdays, Memorials, Meetings*).
 - **Announcements**: Broadcast noticeboard with priority badges (*Urgent, Important, Normal*).
 - **Family History Chronicle**: Multi-era chronological timeline tracing ancestry from 1890s origins to modern global horizons.
@@ -45,7 +46,6 @@ All six templates run against the exact same underlying family relational databa
 
 ### Installation
 ```bash
-cd legacy-link-heritage-hub
 npm install
 npm run dev
 ```
@@ -57,29 +57,9 @@ npm run build
 
 ---
 
-## 🗃️ Supabase Database Schema
-To connect live Supabase PostgreSQL backend:
-1. Run `supabase/schema.sql` in your Supabase SQL Editor — it's the complete schema (tables, RLS policies, and the `family-photos` storage bucket) for a **brand-new** project, nothing else to run.
-   - Already have an older project running? Apply `002_restrict_guest_writes.sql` → `003_photo_storage.sql` → `004_biography_legacy.sql` → `005_language_and_restoration.sql` in that order instead — each is idempotent (safe to re-run).
-2. Copy `.env.example` to `.env` and set:
-   ```env
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key
-   ```
-3. When offline or without Supabase credentials, the application seamlessly runs in standalone local storage mode pre-seeded with the Kobia & Kiogora family dataset!
+## 🗃️ Backend & Database Architecture
 
----
-
-## ✅ Before you deploy
-
-- [ ] **Run the full `schema.sql`** (see above) against your Supabase project — don't rely on partial/older migrations. It now includes the language dictionary, restoration codes, and the `family-photos` storage bucket.
-- [ ] **Set real environment variables** on your hosting provider (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) — these are baked in at build time by Vite, so set them *before* running `npm run build`, not just at runtime.
-- [ ] **Decide: local mode or Supabase for real family data.** Local/standalone mode (no env vars set) stores everything — including passwords — in the browser's `localStorage` with only base64 obfuscation, not real encryption. That's fine for a demo, but for a real family's data (names, dates, photos, addresses) use the Supabase-backed mode so data lives in a real, access-controlled database instead of one device's browser storage.
-- [ ] **Known limitation — restoration codes in Supabase mode:** admins can generate a one-time restoration code (Admin Suite → User Management), and the "Have a restoration code?" flow on the login screen is built to redeem it. In **local mode** this works end-to-end. In **Supabase mode**, redeeming a code from a logged-out browser hits Supabase's Row Level Security as an anonymous request, which the current admin-only policy on `restoration_codes` will reject — so as shipped, restoring a password against a live Supabase backend needs a small Edge Function (or equivalent trusted server-side step) to perform the verified update instead of a direct client call. Flag this if you plan to run restoration codes against Supabase — happy to build that Edge Function if you want it before launch.
-- [ ] **Replace the seed/demo data.** `src/data/seed.ts` ships with a fictional Kobia & Kiogora family for local mode and the "Explore Live Demo as Guest" button. Real deployments backed by Supabase start empty from the first sign-up (which becomes the family's `family_admin`) — no seed data is pushed to a live database.
-- [ ] **Run `npm install && npm run build`** locally at least once before deploying, to confirm `tsc` type-checks cleanly and Vite produces a `dist/` you're happy with.
-- [ ] **Point your host at `dist/`** (Vercel, Netlify, Cloudflare Pages, etc. all auto-detect a Vite app — build command `npm run build`, output directory `dist`).
-- [ ] **Custom domain / HTTPS** if this is going in front of real users — most static hosts handle this for you once you add the domain.
-- [ ] **Swap placeholder photos** — the seeded albums, avatars, and cover photos use Unsplash stock images and DiceBear generated avatars; a real family will want to replace these once they start adding their own members and photos (this happens naturally through the app's own upload flows, no code changes needed).
-- [ ] **Sanity-check the six tree templates** with your actual family's data once it's in — tree shape (very wide vs. very tall families) can look different from the seeded example.
-
+- **Backend API**: Cloudflare Worker (`worker/`) running Hono at `https://legacy-link-api.heritagehub.workers.dev`.
+- **Database**: PostgreSQL on **Neon** (`neon/schema.sql`).
+- **Media & Audio Storage**: **Cloudflare R2** with direct client presigned uploads.
+- **Environment Config**: Set `VITE_API_URL` to point to your live Cloudflare Worker API.
