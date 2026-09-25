@@ -50,8 +50,11 @@ const photoCreateSchema = z.object({
 const presignSchema = z.object({
   albumId: z.string().uuid().optional(),
   filename: z.string().min(1).max(255),
-  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
-  sizeBytes: z.number().positive().max(25 * 1024 * 1024),
+  contentType: z.enum([
+    'image/jpeg', 'image/png', 'image/webp', 'image/heic',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/m4a', 'audio/aac', 'audio/mp4'
+  ]),
+  sizeBytes: z.number().positive().max(50 * 1024 * 1024),
 });
 
 // ---------------------------------------------------------------------------

@@ -175,6 +175,7 @@ function mapLanguageEntry(r) {
   return {
     id: r.id, familyId: r.family_id, entryType: r.entry_type, term: r.term, meaning: r.meaning,
     answer: r.answer ?? undefined, saidByMemberId: r.said_by_member_id ?? undefined,
+    audioUrl: r.audio_url ?? undefined,
     contributedByProfileId: r.contributed_by_profile_id ?? undefined,
     contributedByName: r.contributed_by_name,
     createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),

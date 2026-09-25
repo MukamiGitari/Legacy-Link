@@ -289,11 +289,11 @@ export interface FamilyDataset {
   auditLog: AuditLogEntry[];
 }
 
-export type LanguageEntryType = 'word' | 'phrase' | 'proverb' | 'riddle' | 'saying';
+export type LanguageEntryType = 'word' | 'phrase' | 'proverb' | 'riddle' | 'saying' | 'recording';
 
 /**
  * One crowd-sourced entry in the family's language dictionary — a tribal-language word,
- * sentence, proverb, or riddle, contributed by any family member along with
+ * sentence, proverb, riddle, or voice recording, contributed by any family member along with
  * its meaning (and, for riddles, the traditional answer). A 'saying' entry is
  * a personal catchphrase attributed to a specific family member (living or
  * passed on) rather than a piece of the wider tribal language — e.g. something
@@ -307,6 +307,8 @@ export interface LanguageEntry {
   meaning: string;
   /** Only used for entryType 'riddle' — the traditional answer/reveal. */
   answer?: string;
+  /** Optional audio recording URL (R2 uploaded file or voice recording). */
+  audioUrl?: string;
   /** Only used for entryType 'saying' — which family member is known for saying this. */
   saidByMemberId?: string;
   contributedByProfileId?: string;

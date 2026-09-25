@@ -141,8 +141,8 @@ interface AppContextValue {
   removeLegacyContribution: (id: string) => void;
 
   // language dictionary
-  addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
-  updateLanguageEntry: (id: string, patch: { term: string; meaning: string; answer?: string; saidByMemberId?: string }) => void;
+  addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; audioUrl?: string; saidByMemberId?: string }) => void;
+  updateLanguageEntry: (id: string, patch: { term: string; meaning: string; answer?: string; audioUrl?: string; saidByMemberId?: string }) => void;
   removeLanguageEntry: (id: string) => void;
 
   // trivia & leaderboard
@@ -632,7 +632,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Removed a legacy memory`, 'legacy_contribution');
   };
 
-  const addLanguageEntry: AppContextValue['addLanguageEntry'] = ({ entryType, term, meaning, answer, saidByMemberId }) => {
+  const addLanguageEntry: AppContextValue['addLanguageEntry'] = ({ entryType, term, meaning, answer, audioUrl, saidByMemberId }) => {
     const entry: LanguageEntry = {
       id: newId(),
       familyId: data.family.id,
@@ -640,6 +640,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       term,
       meaning,
       answer,
+      audioUrl,
       saidByMemberId,
       contributedByProfileId: currentProfile?.id,
       contributedByName: currentProfile?.displayName ?? 'A family member',
@@ -652,6 +653,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         term,
         meaning,
         answer,
+        audioUrl,
         saidByMemberId,
         contributedByName: entry.contributedByName,
       }));

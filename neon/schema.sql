@@ -181,11 +181,12 @@ CREATE TABLE public.language_entries (
     term text NOT NULL,
     meaning text NOT NULL,
     answer text,
+    audio_url text,
     said_by_member_id uuid,
     contributed_by_profile_id uuid,
     contributed_by_name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT language_entries_entry_type_check CHECK ((entry_type = ANY (ARRAY['word'::text, 'phrase'::text, 'proverb'::text, 'riddle'::text, 'saying'::text])))
+    CONSTRAINT language_entries_entry_type_check CHECK ((entry_type = ANY (ARRAY['word'::text, 'phrase'::text, 'proverb'::text, 'riddle'::text, 'saying'::text, 'recording'::text])))
 );
 
 CREATE TABLE public.legacy_contribution_tags (

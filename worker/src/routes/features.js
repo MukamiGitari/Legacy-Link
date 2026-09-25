@@ -421,10 +421,11 @@ features.delete('/legacy/:id', async (c) => {
 // 7. Language Entries (Dictionary / Sayings / Riddles)
 // ===========================================================================
 const languageSchema = z.object({
-  entryType: z.enum(['word', 'phrase', 'proverb', 'riddle', 'saying']),
+  entryType: z.enum(['word', 'phrase', 'proverb', 'riddle', 'saying', 'recording']),
   term: z.string().min(1).max(200),
   meaning: z.string().min(1).max(2000),
   answer: z.string().max(1000).optional(),
+  audioUrl: z.string().max(2000).optional(),
   saidByMemberId: z.string().uuid().optional(),
   contributedByName: z.string().min(1).max(100).optional(),
 });
@@ -452,12 +453,12 @@ features.post('/language', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { entryType, term, meaning, answer, saidByMemberId, contributedByName } = parsed.data;
+    const { entryType, term, meaning, answer, audioUrl, saidByMemberId, contributedByName } = parsed.data;
     const contributor = contributedByName || profile.display_name || 'A family member';
     const result = await client.query(
-      `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, said_by_member_id, contributed_by_profile_id, contributed_by_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [profile.family_id, entryType, term, meaning, answer ?? null, saidByMemberId ?? null, user.id, contributor]
+      `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [profile.family_id, entryType, term, meaning, answer ?? null, audioUrl ?? null, saidByMemberId ?? null, user.id, contributor]
     );
     return c.json({ entry: result.rows[0] }, 201);
   });
@@ -480,9 +481,10 @@ features.put('/language/:id', async (c) => {
          term = COALESCE($1, term),
          meaning = COALESCE($2, meaning),
          answer = COALESCE($3, answer),
-         said_by_member_id = COALESCE($4, said_by_member_id)
-       WHERE id = $5 AND family_id = $6 RETURNING *`,
-      [d.term ?? null, d.meaning ?? null, d.answer ?? null, d.saidByMemberId ?? null, id, profile.family_id]
+         audio_url = COALESCE($4, audio_url),
+         said_by_member_id = COALESCE($5, said_by_member_id)
+       WHERE id = $6 AND family_id = $7 RETURNING *`,
+      [d.term ?? null, d.meaning ?? null, d.answer ?? null, d.audioUrl ?? null, d.saidByMemberId ?? null, id, profile.family_id]
     );
     if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
     return c.json({ entry: result.rows[0] });
