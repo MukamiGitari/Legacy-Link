@@ -31,8 +31,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// This endpoint is only ever called manually via curl (see header comment),
+// never from the browser, so we don't need a permissive/browser-facing CORS
+// policy. Locking the origin down removes one avenue of drive-by abuse.
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://legacy-link.pages.dev',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
@@ -42,6 +45,27 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   });
+}
+
+// Constant-time secret comparison. Ordinary `===`/`!==` string comparison
+// short-circuits on the first mismatched byte, so its timing leaks how many
+// leading characters of a guess were correct. Hashing both sides first
+// yields fixed-length (32-byte) digests, and XOR-ing every byte without an
+// early exit means the comparison time doesn't depend on where -- or
+// whether -- the inputs diverge.
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [aDigest, bDigest] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const aBytes = new Uint8Array(aDigest);
+  const bBytes = new Uint8Array(bDigest);
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
 }
 
 Deno.serve(async (req: Request) => {
@@ -66,7 +90,7 @@ Deno.serve(async (req: Request) => {
 
   const authHeader    = req.headers.get('authorization') ?? '';
   const providedToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!providedToken || providedToken !== bootstrapSecret) {
+  if (!providedToken || !(await timingSafeEqual(providedToken, bootstrapSecret))) {
     return jsonResponse({ ok: false, error: 'Unauthorized.' }, 401);
   }
 
