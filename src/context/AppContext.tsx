@@ -1011,8 +1011,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         email,
         password,
         name: displayName,
-        inviteCode: 'FAMILY2026',
-        familyInviteCode: inviteCode,
+        inviteCode,
       });
       if (res?.accessToken) {
         setAccessToken(res.accessToken);

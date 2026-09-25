@@ -11,9 +11,9 @@ auth.use('*', rateLimit('AUTH_RATE_LIMITER'));
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(10, 'Password must be at least 10 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1).max(100),
-  inviteCode: z.string().min(1),
+  inviteCode: z.string().optional(),
   familyInviteCode: z.string().optional(),
 });
 
@@ -28,21 +28,18 @@ auth.post('/register', async (c) => {
   if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
   const { email, password, name, inviteCode, familyInviteCode } = parsed.data;
 
-  if (inviteCode !== c.env.FAMILY_INVITE_CODE) {
-    return c.json({ error: 'Invalid invite code' }, 403);
-  }
-
   const passwordHash = await bcrypt.hash(password, 12);
+  const codeToUse = (familyInviteCode || inviteCode || '').trim();
 
   try {
     return await withClient(c.env, async (client) => {
       let familyInvite = null;
-      if (familyInviteCode?.trim()) {
+      if (codeToUse) {
         const inviteResult = await client.query(
           `SELECT id, family_id, role, member_id FROM invitation_codes
            WHERE code = $1 AND redeemed_by IS NULL
              AND (expires_at IS NULL OR expires_at > now())`,
-          [familyInviteCode.trim().toUpperCase()]
+          [codeToUse.toUpperCase()]
         );
         familyInvite = inviteResult.rows[0];
         if (!familyInvite) {
