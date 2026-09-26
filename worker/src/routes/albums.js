@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { query, withClient } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { buildKey, getUploadUrl, getPublicUrl, deleteObject } from '../services/r2.js';
+import { buildKey, getUploadUrl, getPublicUrl, deleteObject, toPublicUrl } from '../services/r2.js';
 
 const albums = new Hono();
 albums.use('*', requireAuth);
@@ -80,7 +80,7 @@ albums.get('/', async (c) => {
         ORDER BY a.created_at DESC`,
       [profile.family_id],
     );
-    return c.json({ albums: result.rows });
+    return c.json({ albums: result.rows.map(a => ({ ...a, cover_photo_url: toPublicUrl(c.env, a.cover_photo_url) })) });
   });
 });
 
@@ -112,7 +112,9 @@ albums.get('/:id', async (c) => {
       [albumId],
     );
 
-    return c.json({ album: albumRes.rows[0], photos: photosRes.rows });
+    const album = { ...albumRes.rows[0], cover_photo_url: toPublicUrl(c.env, albumRes.rows[0].cover_photo_url) };
+    const photos = photosRes.rows.map(p => ({ ...p, url: toPublicUrl(c.env, p.url) }));
+    return c.json({ album, photos });
   });
 });
 
@@ -137,7 +139,7 @@ albums.post('/', async (c) => {
        RETURNING *`,
       [profile.family_id, title, category, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
     );
-    return c.json({ album: result.rows[0] }, 201);
+    return c.json({ album: { ...result.rows[0], cover_photo_url: toPublicUrl(c.env, result.rows[0].cover_photo_url) } }, 201);
   });
 });
 
@@ -174,7 +176,7 @@ albums.put('/:id', async (c) => {
        RETURNING *`,
       [title ?? null, category ?? null, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null, albumId],
     );
-    return c.json({ album: result.rows[0] });
+    return c.json({ album: { ...result.rows[0], cover_photo_url: toPublicUrl(c.env, result.rows[0].cover_photo_url) } });
   });
 });
 
@@ -283,7 +285,7 @@ albums.post('/photos', async (c) => {
       );
     }
 
-    return c.json({ photo: { ...photo, tagged_member_ids: taggedMemberIds } }, 201);
+    return c.json({ photo: { ...photo, url: toPublicUrl(c.env, photo.url), tagged_member_ids: taggedMemberIds } }, 201);
   });
 });
 

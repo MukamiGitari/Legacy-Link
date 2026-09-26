@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { withClient } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { toPublicUrl } from '../services/r2.js';
 
 const recipes = new Hono();
 recipes.use('*', requireAuth);
@@ -14,15 +15,16 @@ async function getProfile(client, userId) {
   return r.rows[0] ?? null;
 }
 
-function mapCookbookAlbum(r) {
+function mapCookbookAlbum(r, env) {
   return {
     id: r.id, familyId: r.family_id, title: r.title, style: r.style,
-    description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    description: r.description ?? undefined,
+    coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     featuredMemberId: r.featured_member_id ?? undefined,
   };
 }
 
-function mapRecipe(r) {
+function mapRecipe(r, env) {
   const ingredients = Array.isArray(r.ingredients)
     ? r.ingredients
     : (r.ingredients ? JSON.parse(r.ingredients) : []);
@@ -32,7 +34,7 @@ function mapRecipe(r) {
   return {
     id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
     isVegetarian: r.is_vegetarian ?? false,
-    photoUrl: r.photo_url ?? undefined,
+    photoUrl: toPublicUrl(env, r.photo_url ?? undefined),
     ingredients,
     instructions,
     cookTime: r.cook_time ?? undefined,
@@ -73,7 +75,7 @@ recipes.get('/', async (c) => {
       `SELECT * FROM recipes WHERE family_id = $1 ORDER BY created_at DESC`,
       [profile.family_id],
     );
-    return c.json({ recipes: result.rows.map(mapRecipe) });
+    return c.json({ recipes: result.rows.map(r => mapRecipe(r, c.env)) });
   });
 });
 
@@ -87,7 +89,7 @@ recipes.get('/cookbook-albums', async (c) => {
       `SELECT * FROM cookbook_albums WHERE family_id = $1 ORDER BY created_at DESC`,
       [profile.family_id],
     );
-    return c.json({ cookbookAlbums: result.rows.map(mapCookbookAlbum) });
+    return c.json({ cookbookAlbums: result.rows.map(r => mapCookbookAlbum(r, c.env)) });
   });
 });
 
@@ -108,7 +110,7 @@ recipes.post('/cookbook-albums', async (c) => {
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [profile.family_id, title, style, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
     );
-    return c.json({ cookbookAlbum: mapCookbookAlbum(result.rows[0]) }, 201);
+    return c.json({ cookbookAlbum: mapCookbookAlbum(result.rows[0], c.env) }, 201);
   });
 });
 
@@ -136,7 +138,7 @@ recipes.put('/cookbook-albums/:id', async (c) => {
       [title ?? null, style ?? null, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null, id, profile.family_id],
     );
     if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
-    return c.json({ cookbookAlbum: mapCookbookAlbum(result.rows[0]) });
+    return c.json({ cookbookAlbum: mapCookbookAlbum(result.rows[0], c.env) });
   });
 });
 
@@ -180,7 +182,7 @@ recipes.post('/', async (c) => {
         ingredients, instructions, cookTime ?? null, familyStory ?? null, contributedByMemberId ?? null,
       ],
     );
-    return c.json({ recipe: mapRecipe(result.rows[0]) }, 201);
+    return c.json({ recipe: mapRecipe(result.rows[0], c.env) }, 201);
   });
 });
 
@@ -216,7 +218,7 @@ recipes.put('/:id', async (c) => {
       ],
     );
     if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
-    return c.json({ recipe: mapRecipe(result.rows[0]) });
+    return c.json({ recipe: mapRecipe(result.rows[0], c.env) });
   });
 });
 

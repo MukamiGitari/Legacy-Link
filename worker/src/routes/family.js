@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { withClient } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { toPublicUrl } from '../services/r2.js';
 
 const family = new Hono();
 family.use('*', requireAuth);
@@ -14,11 +15,11 @@ async function loadProfile(client, userId) {
   return result.rows[0] || null;
 }
 
-function mapMember(r) {
+function mapMember(r, env) {
   return {
     id: r.id, familyId: r.family_id, firstName: r.first_name, lastName: r.last_name,
     maidenName: r.maiden_name ?? undefined, gender: r.gender, generation: r.generation,
-    avatarUrl: r.avatar_url ?? undefined, isLiving: r.is_living,
+    avatarUrl: toPublicUrl(env, r.avatar_url ?? undefined), isLiving: r.is_living,
     dateOfBirth: r.date_of_birth ?? undefined, dateOfPassing: r.date_of_passing ?? undefined,
     birthPlace: r.birth_place ?? undefined, restingPlace: r.resting_place ?? undefined,
     occupation: r.occupation ?? undefined, bio: r.bio ?? undefined,
@@ -35,18 +36,20 @@ function mapRelationship(r) {
   };
 }
 
-function mapProfile(r) {
+function mapProfile(r, env) {
   return {
     id: r.id, familyId: r.family_id, memberId: r.member_id ?? undefined,
-    displayName: r.display_name, email: r.email ?? undefined, avatarUrl: r.avatar_url ?? undefined,
+    displayName: r.display_name, email: r.email ?? undefined,
+    avatarUrl: toPublicUrl(env, r.avatar_url ?? undefined),
     role: r.role,
   };
 }
 
-function mapFamily(r) {
+function mapFamily(r, env) {
   return {
     id: r.id, name: r.name, motto: r.motto ?? undefined,
-    originStory: r.origin_story ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    originStory: r.origin_story ?? undefined,
+    coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     activeTreeTemplate: r.active_tree_template,
   };
 }
@@ -59,35 +62,38 @@ function mapInvitationCode(r) {
   };
 }
 
-function mapAlbum(r) {
+function mapAlbum(r, env) {
   return {
     id: r.id, familyId: r.family_id, title: r.title, category: r.category,
-    description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    description: r.description ?? undefined,
+    coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     featuredMemberId: r.featured_member_id ?? undefined,
   };
 }
 
-function mapPhoto(r) {
+function mapPhoto(r, env) {
   const tagged = Array.isArray(r.tagged_member_ids)
     ? r.tagged_member_ids
     : (r.tagged_member_ids ? JSON.parse(r.tagged_member_ids) : []);
   return {
-    id: r.id, albumId: r.album_id, familyId: r.family_id, url: r.url,
+    id: r.id, albumId: r.album_id, familyId: r.family_id,
+    url: toPublicUrl(env, r.url),
     caption: r.caption ?? undefined,
     takenAt: r.taken_at ? (typeof r.taken_at === 'string' ? r.taken_at.split('T')[0] : new Date(r.taken_at).toISOString().split('T')[0]) : undefined,
     taggedMemberIds: tagged,
   };
 }
 
-function mapCookbookAlbum(r) {
+function mapCookbookAlbum(r, env) {
   return {
     id: r.id, familyId: r.family_id, title: r.title, style: r.style,
-    description: r.description ?? undefined, coverPhotoUrl: r.cover_photo_url ?? undefined,
+    description: r.description ?? undefined,
+    coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     featuredMemberId: r.featured_member_id ?? undefined,
   };
 }
 
-function mapRecipe(r) {
+function mapRecipe(r, env) {
   const ingredients = Array.isArray(r.ingredients)
     ? r.ingredients
     : (r.ingredients ? JSON.parse(r.ingredients) : []);
@@ -97,7 +103,7 @@ function mapRecipe(r) {
   return {
     id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
     isVegetarian: r.is_vegetarian ?? false,
-    photoUrl: r.photo_url ?? undefined,
+    photoUrl: toPublicUrl(env, r.photo_url ?? undefined),
     ingredients,
     instructions,
     cookTime: r.cook_time ?? undefined,
@@ -107,11 +113,11 @@ function mapRecipe(r) {
   };
 }
 
-function mapMemory(r) {
+function mapMemory(r, env) {
   return {
     id: r.id, familyId: r.family_id, title: r.title, body: r.body,
     era: r.era ?? undefined, authorMemberId: r.author_member_id ?? undefined,
-    coverPhotoUrl: r.cover_photo_url ?? undefined,
+    coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     relatedMemberIds: Array.isArray(r.related_member_ids) ? r.related_member_ids : [],
     createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
   };
@@ -281,16 +287,16 @@ family.get('/dataset', async (c) => {
     );
 
     return c.json({
-      family: mapFamily(familyRes.rows[0]),
-      members: membersRes.rows.map(mapMember),
+      family: mapFamily(familyRes.rows[0], c.env),
+      members: membersRes.rows.map(r => mapMember(r, c.env)),
       relationships: relRes.rows.map(mapRelationship),
-      profiles: profilesRes.rows.map(mapProfile),
+      profiles: profilesRes.rows.map(r => mapProfile(r, c.env)),
       invitationCodes: invitesRes.rows.map(mapInvitationCode),
-      albums: albumsRes.rows.map(mapAlbum),
-      photos: photosRes.rows.map(mapPhoto),
-      cookbookAlbums: cookbookAlbumsRes.rows.map(mapCookbookAlbum),
-      recipes: recipesRes.rows.map(mapRecipe),
-      memories: memoriesRes.rows.map(mapMemory),
+      albums: albumsRes.rows.map(r => mapAlbum(r, c.env)),
+      photos: photosRes.rows.map(r => mapPhoto(r, c.env)),
+      cookbookAlbums: cookbookAlbumsRes.rows.map(r => mapCookbookAlbum(r, c.env)),
+      recipes: recipesRes.rows.map(r => mapRecipe(r, c.env)),
+      memories: memoriesRes.rows.map(r => mapMemory(r, c.env)),
       events: eventsRes.rows.map(mapEvent),
       announcements: announcementsRes.rows.map(mapAnnouncement),
       chronicleEras: chronicleRes.rows.map(mapChronicleEra),
@@ -456,7 +462,7 @@ family.get('/profiles/me', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await loadProfile(client, c.get('userId'));
     if (!profile) return c.json({ error: 'No family profile linked to this account' }, 403);
-    return c.json({ profile: mapProfile(profile) });
+    return c.json({ profile: mapProfile(profile, c.env) });
   });
 });
 
