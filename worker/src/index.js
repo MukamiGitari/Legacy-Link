@@ -15,6 +15,7 @@ app.use('*', secureHeaders());
 app.use('*', async (c, next) => {
   const allowed = [
     c.env.FRONTEND_ORIGIN,
+    'https://legacy-link-web.heritagehub.workers.dev',
     'https://legacy-link-web.pages.dev',
     'https://legacy-link.pages.dev',
     'http://localhost:5173',
@@ -23,7 +24,12 @@ app.use('*', async (c, next) => {
 
   const corsMiddleware = cors({
     origin: (origin) => {
-      if (!origin || allowed.includes(origin) || origin.endsWith('.pages.dev')) {
+      if (
+        !origin ||
+        allowed.includes(origin) ||
+        origin.endsWith('.pages.dev') ||
+        origin.endsWith('.workers.dev')
+      ) {
         return origin;
       }
       return c.env.FRONTEND_ORIGIN || origin;
