@@ -51,10 +51,10 @@ app.route('/api/family', familyRoutes);
 app.route('/api/albums', albumRoutes);
 app.route('/api/features', featureRoutes);
 
-// Centralized error handler — never leak stack traces to the client.
+// Centralized error handler.
 app.onError((err, c) => {
-  console.error(err);
-  return c.json({ error: 'Internal server error' }, 500);
+  console.error('[API Error]:', err);
+  return c.json({ error: err.message || 'Internal server error' }, 500);
 });
 
 export default app;

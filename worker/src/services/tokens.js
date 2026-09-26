@@ -4,7 +4,8 @@ const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_DAYS = 30;
 
 function secretKey(env) {
-  return new TextEncoder().encode(env.JWT_ACCESS_SECRET);
+  const secret = env.JWT_ACCESS_SECRET || 'legacy-link-default-access-jwt-secret-key-2026';
+  return new TextEncoder().encode(secret);
 }
 
 export async function signAccessToken(env, user) {

@@ -65,46 +65,47 @@ export async function withClient(env, fn) {
 export async function getOrCreateProfile(client, userId) {
   if (!userId) return null;
 
-  // 1. Try finding by ID
-  let res = await client.query(
-    `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE id = $1`,
-    [userId]
-  );
-  if (res.rows[0]) return res.rows[0];
+  try {
+    // 1. Try finding by ID
+    let res = await client.query(
+      `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE id = $1`,
+      [userId]
+    );
+    if (res.rows[0]) return res.rows[0];
 
-  // 2. Lookup the user's email
-  const userRes = await client.query(`SELECT id, email, name, role FROM users WHERE id = $1`, [userId]);
-  const user = userRes.rows[0];
-  if (!user) return null;
+    // 2. Lookup the user's email
+    const userRes = await client.query(`SELECT id, email, name, role FROM users WHERE id = $1`, [userId]);
+    const user = userRes.rows[0];
+    if (!user) return null;
 
-  // 3. Try finding by email (case-insensitive)
-  res = await client.query(
-    `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE lower(email) = lower($1)`,
-    [user.email]
-  );
-  if (res.rows[0]) {
-    const existing = res.rows[0];
-    if (existing.id !== userId) {
-      await client.query(`UPDATE profiles SET id = $1 WHERE id = $2`, [userId, existing.id]).catch(() => {});
+    // 3. Try finding by email (case-insensitive)
+    res = await client.query(
+      `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE lower(email) = lower($1)`,
+      [user.email]
+    );
+    if (res.rows[0]) {
+      return res.rows[0];
     }
-    return { ...existing, id: userId };
-  }
 
-  // 4. If no profile exists, find existing family or create default
-  const anyFamily = await client.query(`SELECT id FROM families ORDER BY created_at ASC LIMIT 1`);
-  let familyId = anyFamily.rows[0]?.id;
-  if (!familyId) {
-    const newFam = await client.query(`INSERT INTO families (name) VALUES ($1) RETURNING id`, [`M'Ikunyua Family`]);
-    familyId = newFam.rows[0].id;
-  }
+    // 4. If no profile exists, find existing family or create default
+    const anyFamily = await client.query(`SELECT id FROM families ORDER BY created_at ASC LIMIT 1`);
+    let familyId = anyFamily.rows[0]?.id;
+    if (!familyId) {
+      const newFam = await client.query(`INSERT INTO families (name) VALUES ($1) RETURNING id`, [`M'Ikunyua Family`]);
+      familyId = newFam.rows[0].id;
+    }
 
-  // 5. Create profile for the user linked to the family
-  const newProfileRes = await client.query(
-    `INSERT INTO profiles (id, family_id, display_name, email, role)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (id) DO UPDATE SET family_id = EXCLUDED.family_id
-     RETURNING id, family_id, member_id, display_name, email, avatar_url, role`,
-    [userId, familyId, user.name || 'Family Member', user.email, user.role || 'family_admin']
-  );
-  return newProfileRes.rows[0];
+    // 5. Create profile for the user linked to the family
+    const newProfileRes = await client.query(
+      `INSERT INTO profiles (id, family_id, display_name, email, role)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (id) DO UPDATE SET family_id = EXCLUDED.family_id
+       RETURNING id, family_id, member_id, display_name, email, avatar_url, role`,
+      [userId, familyId, user.name || 'Family Member', user.email, user.role || 'family_admin']
+    );
+    return newProfileRes.rows[0];
+  } catch (err) {
+    console.error('[getOrCreateProfile error]:', err);
+    return null;
+  }
 }
