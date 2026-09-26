@@ -13,7 +13,23 @@ const app = new Hono();
 
 app.use('*', secureHeaders());
 app.use('*', async (c, next) => {
-  const corsMiddleware = cors({ origin: c.env.FRONTEND_ORIGIN, credentials: true });
+  const allowed = [
+    c.env.FRONTEND_ORIGIN,
+    'https://legacy-link-web.pages.dev',
+    'https://legacy-link.pages.dev',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ].filter(Boolean);
+
+  const corsMiddleware = cors({
+    origin: (origin) => {
+      if (!origin || allowed.includes(origin) || origin.endsWith('.pages.dev')) {
+        return origin;
+      }
+      return c.env.FRONTEND_ORIGIN || origin;
+    },
+    credentials: true,
+  });
   return corsMiddleware(c, next);
 });
 app.use('/api/recipes/*', rateLimit('API_RATE_LIMITER'));
