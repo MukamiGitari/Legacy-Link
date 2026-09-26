@@ -89,12 +89,15 @@ export async function uploadFileToR2({
   recipeId?: string;
   albumId?: string;
 }) {
-  const { uploadUrl, key } = await api.post<{ uploadUrl: string; key: string }>('/albums/photos/presign-upload', {
-    albumId,
-    filename: file.name,
-    contentType: file.type,
-    sizeBytes: file.size,
-  });
+  const { uploadUrl, key, publicUrl } = await api.post<{ uploadUrl: string; key: string; publicUrl: string }>(
+    '/albums/photos/presign-upload',
+    {
+      albumId,
+      filename: file.name,
+      contentType: file.type,
+      sizeBytes: file.size,
+    }
+  );
 
   const putRes = await fetch(uploadUrl, {
     method: 'PUT',
@@ -106,5 +109,8 @@ export async function uploadFileToR2({
     throw new Error('Upload to storage failed');
   }
 
-  return { key, url: key };
+  // `key` is the bare R2 object key (e.g. "photos/abc123-file.jpg") — not a
+  // browser-loadable URL. `publicUrl` (built by the Worker from R2_PUBLIC_URL)
+  // is what should actually be stored/rendered as the photo/avatar's url.
+  return { key, url: publicUrl };
 }

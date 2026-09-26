@@ -33,6 +33,17 @@ export async function getUploadUrl(env, key, contentType) {
   return signed.url.toString();
 }
 
+// The public, browser-viewable URL for an object — separate from R2_ENDPOINT,
+// which is the private S3-compatible endpoint used only for signing requests.
+// Requires either the bucket's r2.dev public URL to be enabled, or a custom
+// domain bound to it, with R2_PUBLIC_URL set to that base (no trailing slash).
+export function getPublicUrl(env, key) {
+  if (!env.R2_PUBLIC_URL) {
+    throw new Error('R2_PUBLIC_URL is not configured on the Worker — set it to the bucket\'s public base URL.');
+  }
+  return `${env.R2_PUBLIC_URL}/${key}`;
+}
+
 export async function getDownloadUrl(env, key) {
   const url = `${env.R2_ENDPOINT}/${env.R2_BUCKET_NAME}/${key}?X-Amz-Expires=${DOWNLOAD_EXPIRES_SECONDS}`;
   const signed = await client(env).sign(new Request(url), { aws: { signQuery: true } });

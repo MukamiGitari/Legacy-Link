@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { query, withClient } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { buildKey, getUploadUrl, deleteObject } from '../services/r2.js';
+import { buildKey, getUploadUrl, getPublicUrl, deleteObject } from '../services/r2.js';
 
 const albums = new Hono();
 albums.use('*', requireAuth);
@@ -236,7 +236,8 @@ albums.post('/photos/presign-upload', async (c) => {
 
     const key = buildKey('photos', filename);
     const uploadUrl = await getUploadUrl(c.env, key, contentType);
-    return c.json({ uploadUrl, key });
+    const publicUrl = getPublicUrl(c.env, key);
+    return c.json({ uploadUrl, key, publicUrl });
   });
 });
 

@@ -35,6 +35,16 @@ simple = { limit = 120, period = 60 }
 FRONTEND_ORIGIN = "https://legacy-link.pages.dev"
 R2_BUCKET_NAME = "legacy-link-media"
 R2_ENDPOINT = "https://6db9d44c4bc1b0f7fd80969dd52fb4af.r2.cloudflarestorage.com"
+# The bucket's PUBLIC, browser-viewable base URL — different from R2_ENDPOINT above,
+# which is the private S3-compatible endpoint used only for signing requests.
+# Set this up in the Cloudflare dashboard first (R2 → legacy-link-media → Settings):
+#   - either enable "Public access" via the bucket's r2.dev URL, or
+#   - bind a custom domain to the bucket
+# then set this to that base URL (no trailing slash), e.g.:
+#   https://pub-xxxxxxxxxxxxxxxx.r2.dev
+# or:
+#   https://media.your-domain.com
+R2_PUBLIC_URL = ""
 
 # Set these with `wrangler secret put <NAME>` — never commit real values:
 #   JWT_ACCESS_SECRET

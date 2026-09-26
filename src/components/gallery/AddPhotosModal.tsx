@@ -60,7 +60,7 @@ export const AddPhotosModal: React.FC<Props> = ({ albumId, onClose }) => {
         // Online mode: upload the real file to Supabase Storage and store its public URL.
         // Local/demo mode has no storage backend, so the data URL preview is kept as-is.
         const url = isOnlineMode
-          ? (await uploadFileToR2({ category: 'photos', file: p.file })).key
+          ? (await uploadFileToR2({ category: 'photos', file: p.file })).url
           : p.dataUrl;
 
         addPhoto({
