@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Plus, Clock, Star, Tag, ChefHat, Trash2, Users } from 'lucide-react';
+import { X, Plus, Clock, Star, Tag, ChefHat, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { AddRecipeModal } from '../components/cookbook/AddRecipeModal';
-import type { Recipe, RecipeCategory, Member } from '../types';
+import type { Recipe, RecipeCategory } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
 
 const SECTIONS: { key: RecipeCategory; label: string }[] = [
@@ -68,42 +68,18 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   const canAdd = canAddContent(currentProfile?.role);
   const canRemove = canDelete(currentProfile?.role);
 
-  // Single Family Cookbook
+  // Single Universal Family Cookbook
   const familyCookbook = data.cookbookAlbums[0] || {
     id: 'c0000000-0000-0000-0000-000000000001',
     familyId: data.family?.id || 'a0000000-0000-0000-0000-000000000001',
-    title: `${data.family?.name || "M'Ikunyua"} Family Cookbook`,
+    title: 'Family Cookbook',
     style: 'traditional',
-    description: 'Authentic heirloom recipes, food memories, and traditional culinary traditions across all branches.',
+    description: 'Heirloom recipes, traditional favorites, and the family stories behind them.',
   };
 
-  const [selectedBranchMemberId, setSelectedBranchMemberId] = useState<string | 'all'>('all');
   const [openCategory, setOpenCategory] = useState<RecipeCategory | null>(null);
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
-
-  // Get Generation 2 members to represent family branches (e.g. Thomas, Timothy, Jane, Martin, Betty, Edwin)
-  const branchMembers = data.members.filter(m => m.generation === 2);
-
-  // Helper to check if a recipe belongs to a selected branch
-  const filteredRecipes = data.recipes.filter(r => {
-    if (selectedBranchMemberId === 'all') return true;
-    if (!r.contributedByMemberId) return false;
-    
-    // Check if contributor is the branch head or related
-    if (r.contributedByMemberId === selectedBranchMemberId) return true;
-
-    // Check if contributor is child or spouse in that branch
-    const branchHead = data.members.find(m => m.id === selectedBranchMemberId);
-    if (!branchHead) return false;
-    
-    // Check relationships
-    const isRelated = data.relationships.some(rel =>
-      (rel.fromMemberId === branchHead.id && rel.toMemberId === r.contributedByMemberId) ||
-      (rel.toMemberId === branchHead.id && rel.fromMemberId === r.contributedByMemberId)
-    );
-    return isRelated;
-  });
 
   const openRecipe = openRecipeId ? data.recipes.find(r => r.id === openRecipeId) : undefined;
 
@@ -121,7 +97,7 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-heritage-green-100 dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-gold-400">
-              <ChefHat size={22} />
+              <ChefHat size={24} />
             </span>
             <div>
               <h2 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text font-bold">
@@ -147,56 +123,10 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
         )}
       </div>
 
-      {/* Branch Filter Tabs */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-heritage-green-700 dark:text-heritage-dark-muted">
-          <Users size={14} />
-          <span>Filter by Branch / House:</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedBranchMemberId('all')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-              selectedBranchMemberId === 'all'
-                ? 'bg-heritage-green-800 text-white shadow-sm'
-                : 'bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-100'
-            }`}
-          >
-            🌿 All Family Branches ({data.recipes.length})
-          </button>
-          {branchMembers.map(m => {
-            const count = data.recipes.filter(r => {
-              if (r.contributedByMemberId === m.id) return true;
-              return data.relationships.some(rel =>
-                (rel.fromMemberId === m.id && rel.toMemberId === r.contributedByMemberId) ||
-                (rel.toMemberId === m.id && rel.fromMemberId === r.contributedByMemberId)
-              );
-            }).length;
-            const isSelected = selectedBranchMemberId === m.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => setSelectedBranchMemberId(m.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  isSelected
-                    ? 'bg-heritage-gold-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-100'
-                }`}
-              >
-                <span>🏠 {m.firstName}'s House</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-heritage-cream-200 dark:bg-heritage-dark-hover text-heritage-green-700 dark:text-heritage-dark-muted'}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Recipe Categories / Sections */}
-      <div className="space-y-10 mt-6">
+      {/* Recipe Categories / Sections: Breakfast, Main meals, Snacks, Desserts */}
+      <div className="space-y-10 mt-4">
         {SECTIONS.map((section) => {
-          const sectionRecipes = filteredRecipes.filter(r => r.category === section.key);
+          const sectionRecipes = data.recipes.filter(r => r.category === section.key);
           const Icon = SECTION_ICON[section.key];
           return (
             <div key={section.key} className="space-y-4">
@@ -238,7 +168,7 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                     <span>Add the first recipe to {section.label.toLowerCase()}</span>
                   </button>
                 ) : (
-                  <p className="text-xs text-heritage-green-400 dark:text-heritage-dark-muted italic py-3">No {section.label.toLowerCase()} recipes yet in this branch.</p>
+                  <p className="text-xs text-heritage-green-400 dark:text-heritage-dark-muted italic py-3">No {section.label.toLowerCase()} recipes yet.</p>
                 )
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
