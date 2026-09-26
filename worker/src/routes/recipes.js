@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { withClient } from '../db.js';
+import { withClient, getOrCreateProfile } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { toPublicUrl } from '../services/r2.js';
 
@@ -8,11 +8,7 @@ const recipes = new Hono();
 recipes.use('*', requireAuth);
 
 async function getProfile(client, userId) {
-  const r = await client.query(
-    `SELECT family_id, role FROM profiles WHERE id = $1`,
-    [userId],
-  );
-  return r.rows[0] ?? null;
+  return await getOrCreateProfile(client, userId);
 }
 
 function mapCookbookAlbum(r, env) {

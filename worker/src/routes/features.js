@@ -1,18 +1,14 @@
 import { Hono } from 'hono';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { withClient } from '../db.js';
+import { withClient, getOrCreateProfile } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const features = new Hono();
 features.use('*', requireAuth);
 
 async function getProfile(client, userId) {
-  const r = await client.query(
-    `SELECT id, family_id, role, member_id, display_name FROM profiles WHERE id = $1`,
-    [userId]
-  );
-  return r.rows[0] ?? null;
+  return await getOrCreateProfile(client, userId);
 }
 
 // ===========================================================================

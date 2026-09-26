@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { withClient } from '../db.js';
+import { withClient, getOrCreateProfile } from '../db.js';
 import { signAccessToken, generateRefreshToken, hashToken, verifyAccessToken } from '../services/tokens.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 
@@ -113,8 +113,9 @@ auth.post('/login', async (c) => {
 
     if (!user || !valid) return c.json({ error: 'Invalid email or password' }, 401);
 
+    const profile = await getOrCreateProfile(client, user.id);
     const accessToken = await issueSessionWithClient(c, client, user);
-    return c.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, accessToken });
+    return c.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, profile, accessToken });
   });
 });
 
@@ -171,11 +172,7 @@ auth.get('/me', async (c) => {
       const userResult = await client.query(`SELECT id, email, name, role FROM users WHERE id = $1`, [payload.sub]);
       if (userResult.rowCount === 0) return c.json({ error: 'User not found' }, 401);
 
-      const profileResult = await client.query(
-        `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE id = $1`,
-        [payload.sub]
-      );
-      const profile = profileResult.rows[0] || null;
+      const profile = await getOrCreateProfile(client, payload.sub);
 
       return c.json({ user: userResult.rows[0], profile });
     });

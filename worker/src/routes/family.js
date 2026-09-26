@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { withClient } from '../db.js';
+import { withClient, getOrCreateProfile } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { toPublicUrl } from '../services/r2.js';
 
@@ -8,11 +8,7 @@ const family = new Hono();
 family.use('*', requireAuth);
 
 async function loadProfile(client, userId) {
-  const result = await client.query(
-    `SELECT id, family_id, member_id, display_name, email, avatar_url, role FROM profiles WHERE id = $1`,
-    [userId]
-  );
-  return result.rows[0] || null;
+  return await getOrCreateProfile(client, userId);
 }
 
 function mapMember(r, env) {

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { query, withClient } from '../db.js';
+import { query, withClient, getOrCreateProfile } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { buildKey, getUploadUrl, getPublicUrl, deleteObject, toPublicUrl } from '../services/r2.js';
 
@@ -13,11 +13,7 @@ albums.use('*', requireAuth);
 
 /** Load the caller's profile (must have family_id to proceed). */
 async function getProfile(client, userId) {
-  const r = await client.query(
-    `SELECT family_id, role FROM profiles WHERE id = $1`,
-    [userId],
-  );
-  return r.rows[0] ?? null;
+  return await getOrCreateProfile(client, userId);
 }
 
 const VALID_CATEGORIES = [
