@@ -1,2 +1,1 @@
-/api/*  https://legacy-link-api.heritagehub.workers.dev/api/:splat  200
-/*      /index.html                                                  200
+/*  /index.html  200
