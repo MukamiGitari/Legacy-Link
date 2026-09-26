@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Plus, UtensilsCrossed, Pencil, Check, Trash2, Tag, ChefHat, Star, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Plus, Clock, Star, Tag, ChefHat, Trash2, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
-import { AddCookbookAlbumModal } from '../components/cookbook/AddCookbookAlbumModal';
 import { AddRecipeModal } from '../components/cookbook/AddRecipeModal';
-import type { Recipe, RecipeCategory } from '../types';
+import type { Recipe, RecipeCategory, Member } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
 
-// Masonry slide order, as specified: Breakfast, Main meals, Snacks, Desserts.
-// Vegetarian isn't a section — it's a star badge any recipe can carry.
 const SECTIONS: { key: RecipeCategory; label: string }[] = [
   { key: 'breakfast', label: 'Breakfast' },
   { key: 'main', label: 'Main meals' },
@@ -19,10 +16,6 @@ const SECTIONS: { key: RecipeCategory; label: string }[] = [
 interface Props {
   onSelectMember: (id: string) => void;
 }
-
-// Small cartoon food icons for each recipe section header, drawn in the same
-// warm heritage gold/green/cream palette as the album cover illustrations
-// (public/covers/*.svg) so they feel like part of the same visual family.
 
 const BreakfastIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
@@ -71,32 +64,48 @@ const SECTION_ICON: Record<RecipeCategory, React.FC<{ size?: number }>> = {
 };
 
 export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
-  const { data, currentProfile, updateCookbookAlbum, removeCookbookAlbum, removeRecipe } = useApp();
+  const { data, currentProfile, removeRecipe } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
   const canRemove = canDelete(currentProfile?.role);
 
-  const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
+  // Single Family Cookbook
+  const familyCookbook = data.cookbookAlbums[0] || {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    familyId: data.family?.id || 'a0000000-0000-0000-0000-000000000001',
+    title: `${data.family?.name || "M'Ikunyua"} Family Cookbook`,
+    style: 'traditional',
+    description: 'Authentic heirloom recipes, food memories, and traditional culinary traditions across all branches.',
+  };
+
+  const [selectedBranchMemberId, setSelectedBranchMemberId] = useState<string | 'all'>('all');
   const [openCategory, setOpenCategory] = useState<RecipeCategory | null>(null);
-  const [showAddAlbum, setShowAddAlbum] = useState(false);
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState('');
-  const [editingFeatured, setEditingFeatured] = useState(false);
 
-  const openAlbum = data.cookbookAlbums.find(a => a.id === openAlbumId);
-  const albumRecipes = openAlbum ? data.recipes.filter(r => r.albumId === openAlbum.id) : [];
+  // Get Generation 2 members to represent family branches (e.g. Thomas, Timothy, Jane, Martin, Betty, Edwin)
+  const branchMembers = data.members.filter(m => m.generation === 2);
+
+  // Helper to check if a recipe belongs to a selected branch
+  const filteredRecipes = data.recipes.filter(r => {
+    if (selectedBranchMemberId === 'all') return true;
+    if (!r.contributedByMemberId) return false;
+    
+    // Check if contributor is the branch head or related
+    if (r.contributedByMemberId === selectedBranchMemberId) return true;
+
+    // Check if contributor is child or spouse in that branch
+    const branchHead = data.members.find(m => m.id === selectedBranchMemberId);
+    if (!branchHead) return false;
+    
+    // Check relationships
+    const isRelated = data.relationships.some(rel =>
+      (rel.fromMemberId === branchHead.id && rel.toMemberId === r.contributedByMemberId) ||
+      (rel.toMemberId === branchHead.id && rel.fromMemberId === r.contributedByMemberId)
+    );
+    return isRelated;
+  });
+
   const openRecipe = openRecipeId ? data.recipes.find(r => r.id === openRecipeId) : undefined;
-  const featuredMember = openAlbum?.featuredMemberId ? data.members.find(m => m.id === openAlbum.featuredMemberId) : undefined;
-
-  useEffect(() => { setEditingTitle(false); setEditingFeatured(false); setOpenCategory(null); }, [openAlbumId]);
-
-  const handleDeleteAlbum = (albumId: string, title: string) => {
-    if (window.confirm(`Delete the cookbook "${title}" and all of its recipes? This can't be undone.`)) {
-      removeCookbookAlbum(albumId);
-      if (openAlbumId === albumId) setOpenAlbumId(null);
-    }
-  };
 
   const handleDeleteRecipe = (recipeId: string) => {
     if (window.confirm("Delete this recipe? This can't be undone.")) {
@@ -106,278 +115,213 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   };
 
   return (
-    <div className="space-y-5">
-      {!openAlbum ? (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text">Family Cookbook</h2>
-              <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">Heirloom recipes, food photos, and the stories behind them.</p>
-            </div>
-            {canAdd && (
-              <button
-                onClick={() => setShowAddAlbum(true)}
-                className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-3.5 py-2 rounded-lg shrink-0"
-              >
-                <Plus size={16} /> New Cookbook
-              </button>
-            )}
-          </div>
-
-          {data.cookbookAlbums.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border py-10 text-center">
-              <ChefHat size={24} className="mx-auto text-heritage-green-400 mb-2" />
-              <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">No cookbooks yet — start one to preserve the family's recipes.</p>
-            </div>
-          ) : (
-            <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-              {data.cookbookAlbums.map((album, i) => {
-                const count = data.recipes.filter(r => r.albumId === album.id).length;
-                const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
-                const coverHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
-                return (
-                  <div key={album.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
-                    {canRemove && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id, album.title); }}
-                        className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
-                        aria-label="Delete cookbook"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                    <button onClick={() => setOpenAlbumId(album.id)} className="block w-full text-left">
-                      <div className={`${coverHeightCls} overflow-hidden bg-heritage-cream-200`}>
-                        <img src={album.coverPhotoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
-                      </div>
-                      <div className="p-3">
-                        <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{album.title}</p>
-                        {featured && (
-                          <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-0.5 truncate">
-                            <Tag size={11} className="shrink-0" /> Dedicated to {fullName(featured)}
-                          </p>
-                        )}
-                        <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">{count} recipe{count !== 1 && 's'}</p>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      ) : (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border pb-4">
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <button
-              onClick={() => setOpenAlbumId(null)}
-              className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 flex items-center gap-1"
-            >
-              <ChevronLeft size={16} /> All cookbooks
-            </button>
-            <div className="flex items-center gap-2">
-              {canRemove && (
-                <button
-                  onClick={() => handleDeleteAlbum(openAlbum.id, openAlbum.title)}
-                  className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-sm font-medium px-3 py-2 rounded-lg border border-red-200 dark:border-red-900"
-                >
-                  <Trash2 size={15} /> Delete Cookbook
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-heritage-green-100 dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-gold-400">
+              <ChefHat size={22} />
+            </span>
             <div>
-              <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text mt-3 flex items-center gap-2">
-            {editingTitle ? (
-              <>
-                <input
-                  autoFocus
-                  className="font-serif text-xl bg-transparent border-b border-heritage-gold-400 focus:outline-none text-heritage-green-900 dark:text-heritage-dark-text"
-                  value={titleDraft}
-                  onChange={e => setTitleDraft(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && titleDraft.trim()) {
-                      updateCookbookAlbum(openAlbum.id, { title: titleDraft.trim() });
-                      setEditingTitle(false);
-                    } else if (e.key === 'Escape') {
-                      setEditingTitle(false);
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => { if (titleDraft.trim()) { updateCookbookAlbum(openAlbum.id, { title: titleDraft.trim() }); setEditingTitle(false); } }}
-                  className="text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900"
-                  aria-label="Save cookbook name"
-                >
-                  <Check size={16} />
-                </button>
-              </>
-            ) : (
-              <>
-                {openAlbum.title}
-                {canAdd && (
-                  <button
-                    onClick={() => { setTitleDraft(openAlbum.title); setEditingTitle(true); }}
-                    className="text-heritage-green-400 hover:text-heritage-green-800 dark:text-heritage-dark-muted"
-                    aria-label="Rename cookbook"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                )}
-              </>
-            )}
-          </h3>
-          <div className="mt-1.5">
-            {editingFeatured ? (
-              <select
-                autoFocus
-                className="text-xs rounded-md border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
-                value={openAlbum.featuredMemberId ?? ''}
-                onChange={e => { updateCookbookAlbum(openAlbum.id, { featuredMemberId: e.target.value || undefined }); setEditingFeatured(false); }}
-                onBlur={() => setEditingFeatured(false)}
-              >
-                <option value="">No one in particular</option>
-                {data.members.map(m => (
-                  <option key={m.id} value={m.id}>{fullName(m)}</option>
-                ))}
-              </select>
-            ) : (
-              <button
-                onClick={() => canAdd && setEditingFeatured(true)}
-                className={`text-xs flex items-center gap-1 ${featuredMember ? 'text-heritage-gold-600 dark:text-heritage-gold-400' : 'text-heritage-green-400 dark:text-heritage-dark-muted'} ${canAdd ? 'hover:underline' : ''}`}
-                disabled={!canAdd}
-              >
-                <Tag size={11} />
-                {featuredMember ? `Dedicated to ${fullName(featuredMember)}` : (canAdd ? 'Tag who this cookbook is dedicated to' : '')}
-              </button>
-            )}
-          </div>
-          <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted mb-5 mt-1">{openAlbum.description}</p>
-
-          <div className="space-y-8 mt-6">
-            {SECTIONS.map((section) => {
-              const sectionRecipes = albumRecipes.filter(r => r.category === section.key);
-              const Icon = SECTION_ICON[section.key];
-              return (
-                <div key={section.key} className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-heritage-cream-300 dark:border-heritage-dark-border pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-heritage-green-100 dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-gold-400 p-1.5 rounded-lg flex items-center justify-center">
-                        <Icon size={16} />
-                      </span>
-                      <h4 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text font-medium">
-                        {section.label}
-                      </h4>
-                      <span className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted font-sans">
-                        ({sectionRecipes.length})
-                      </span>
-                    </div>
-                    {canAdd && (
-                      <button
-                        onClick={() => {
-                          setOpenCategory(section.key);
-                          setShowAddRecipe(true);
-                        }}
-                        className="text-xs font-medium text-heritage-green-700 hover:text-heritage-green-900 dark:text-heritage-dark-muted dark:hover:text-heritage-dark-text flex items-center gap-1 bg-heritage-cream-100 dark:bg-heritage-dark-hover px-2.5 py-1.5 rounded-md transition-colors"
-                      >
-                        <Plus size={14} /> Add {section.label}
-                      </button>
-                    )}
-                  </div>
-
-                  {sectionRecipes.length === 0 ? (
-                    canAdd ? (
-                      <button
-                        onClick={() => {
-                          setOpenCategory(section.key);
-                          setShowAddRecipe(true);
-                        }}
-                        className="w-full py-6 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-500 dark:text-heritage-dark-muted hover:border-heritage-green-500 hover:text-heritage-green-700 transition-colors text-xs"
-                      >
-                        <Plus size={18} />
-                        <span>Add first {section.label.toLowerCase()} recipe</span>
-                      </button>
-                    ) : (
-                      <p className="text-xs text-heritage-green-400 dark:text-heritage-dark-muted italic py-2">No {section.label.toLowerCase()} recipes yet.</p>
-                    )
-                  ) : (
-                    <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
-                      {sectionRecipes.map((recipe, i) => {
-                        const contributor = recipe.contributedByMemberId ? data.members.find(m => m.id === recipe.contributedByMemberId) : undefined;
-                        const cardHeightCls = ['h-40', 'h-52', 'h-44', 'h-60'][i % 4];
-                        return (
-                          <div key={recipe.id} className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-shadow">
-                            {recipe.isVegetarian && (
-                              <span
-                                className="absolute top-1.5 left-1.5 z-10 bg-heritage-gold-500 text-white rounded-full p-1 shadow-sm"
-                                title="Vegetarian"
-                                aria-label="Vegetarian"
-                              >
-                                <Star size={12} fill="currentColor" />
-                              </span>
-                            )}
-                            {canRemove && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id); }}
-                                className="absolute top-1.5 right-1.5 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
-                                aria-label="Delete recipe"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
-                            <button onClick={() => setOpenRecipeId(recipe.id)} className="block w-full text-left">
-                              {recipe.photoUrl ? (
-                                <div className={`${cardHeightCls} overflow-hidden bg-heritage-cream-200`}>
-                                  <img src={recipe.photoUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="" />
-                                </div>
-                              ) : (
-                                <div className={`${cardHeightCls} flex items-center justify-center bg-heritage-cream-200 text-3xl`}>🍽️</div>
-                              )}
-                              <div className="p-3">
-                                <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{recipe.title}</p>
-                                {recipe.cookTime && (
-                                  <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted flex items-center gap-1 mt-0.5">
-                                    <Clock size={10} className="shrink-0" /> {recipe.cookTime}
-                                  </p>
-                                )}
-                                {recipe.familyStory && (
-                                  <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted mt-0.5 line-clamp-2">{recipe.familyStory}</p>
-                                )}
-                                {contributor && (
-                                  <p className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 mt-1 truncate">
-                                    <Tag size={10} className="shrink-0" /> {fullName(contributor)}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          </div>
+              <h2 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text font-bold">
+                {familyCookbook.title}
+              </h2>
+              <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
+                {familyCookbook.description}
+              </p>
+            </div>
           </div>
         </div>
-      )}
 
-      {showAddAlbum && (
-        <AddCookbookAlbumModal
-          onClose={() => setShowAddAlbum(false)}
-          onCreated={(albumId) => {
-            setShowAddAlbum(false);
-            setOpenAlbumId(albumId);
-          }}
+        {canAdd && (
+          <button
+            onClick={() => {
+              setOpenCategory(null);
+              setShowAddRecipe(true);
+            }}
+            className="flex items-center gap-2 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-soft transition-colors shrink-0"
+          >
+            <Plus size={16} /> Add Recipe
+          </button>
+        )}
+      </div>
+
+      {/* Branch Filter Tabs */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-heritage-green-700 dark:text-heritage-dark-muted">
+          <Users size={14} />
+          <span>Filter by Branch / House:</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedBranchMemberId('all')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+              selectedBranchMemberId === 'all'
+                ? 'bg-heritage-green-800 text-white shadow-sm'
+                : 'bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-100'
+            }`}
+          >
+            🌿 All Family Branches ({data.recipes.length})
+          </button>
+          {branchMembers.map(m => {
+            const count = data.recipes.filter(r => {
+              if (r.contributedByMemberId === m.id) return true;
+              return data.relationships.some(rel =>
+                (rel.fromMemberId === m.id && rel.toMemberId === r.contributedByMemberId) ||
+                (rel.toMemberId === m.id && rel.fromMemberId === r.contributedByMemberId)
+              );
+            }).length;
+            const isSelected = selectedBranchMemberId === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelectedBranchMemberId(m.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  isSelected
+                    ? 'bg-heritage-gold-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-100'
+                }`}
+              >
+                <span>🏠 {m.firstName}'s House</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-heritage-cream-200 dark:bg-heritage-dark-hover text-heritage-green-700 dark:text-heritage-dark-muted'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recipe Categories / Sections */}
+      <div className="space-y-10 mt-6">
+        {SECTIONS.map((section) => {
+          const sectionRecipes = filteredRecipes.filter(r => r.category === section.key);
+          const Icon = SECTION_ICON[section.key];
+          return (
+            <div key={section.key} className="space-y-4">
+              <div className="flex items-center justify-between border-b border-heritage-cream-300 dark:border-heritage-dark-border pb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="bg-heritage-green-100 dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-gold-400 p-2 rounded-xl flex items-center justify-center">
+                    <Icon size={18} />
+                  </span>
+                  <h3 className="font-serif text-xl text-heritage-green-900 dark:text-heritage-dark-text font-semibold">
+                    {section.label}
+                  </h3>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-heritage-cream-200 dark:bg-heritage-dark-hover text-heritage-green-700 dark:text-heritage-dark-muted font-sans">
+                    {sectionRecipes.length}
+                  </span>
+                </div>
+                {canAdd && (
+                  <button
+                    onClick={() => {
+                      setOpenCategory(section.key);
+                      setShowAddRecipe(true);
+                    }}
+                    className="text-xs font-medium text-heritage-green-800 hover:text-heritage-green-950 dark:text-heritage-dark-muted dark:hover:text-heritage-dark-text flex items-center gap-1.5 bg-heritage-cream-100 dark:bg-heritage-dark-hover px-3 py-1.5 rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border transition-colors"
+                  >
+                    <Plus size={14} /> Add {section.label}
+                  </button>
+                )}
+              </div>
+
+              {sectionRecipes.length === 0 ? (
+                canAdd ? (
+                  <button
+                    onClick={() => {
+                      setOpenCategory(section.key);
+                      setShowAddRecipe(true);
+                    }}
+                    className="w-full py-8 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-500 dark:text-heritage-dark-muted hover:border-heritage-gold-400 hover:text-heritage-green-800 transition-colors text-xs"
+                  >
+                    <Plus size={20} className="text-heritage-gold-600" />
+                    <span>Add the first recipe to {section.label.toLowerCase()}</span>
+                  </button>
+                ) : (
+                  <p className="text-xs text-heritage-green-400 dark:text-heritage-dark-muted italic py-3">No {section.label.toLowerCase()} recipes yet in this branch.</p>
+                )
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {sectionRecipes.map((recipe) => {
+                    const contributor = recipe.contributedByMemberId ? data.members.find(m => m.id === recipe.contributedByMemberId) : undefined;
+                    return (
+                      <div
+                        key={recipe.id}
+                        className="group relative rounded-2xl overflow-hidden border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:shadow-soft-lg transition-all flex flex-col justify-between"
+                      >
+                        {recipe.isVegetarian && (
+                          <span
+                            className="absolute top-2 left-2 z-10 bg-heritage-gold-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                            title="Vegetarian"
+                          >
+                            <Star size={10} fill="currentColor" /> Veg
+                          </span>
+                        )}
+                        {canRemove && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRecipe(recipe.id);
+                            }}
+                            className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-red-600 text-white rounded-full p-1.5 transition-colors"
+                            aria-label="Delete recipe"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setOpenRecipeId(recipe.id)}
+                          className="block w-full text-left flex-1"
+                        >
+                          <div className="h-44 overflow-hidden bg-heritage-cream-200 flex items-center justify-center">
+                            {recipe.photoUrl ? (
+                              <img
+                                src={recipe.photoUrl}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                alt={recipe.title}
+                              />
+                            ) : (
+                              <span className="text-4xl">🍲</span>
+                            )}
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <h4 className="text-base font-serif font-semibold text-heritage-green-900 dark:text-heritage-dark-text group-hover:text-heritage-gold-600 transition-colors line-clamp-1">
+                              {recipe.title}
+                            </h4>
+                            {recipe.cookTime && (
+                              <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted flex items-center gap-1.5">
+                                <Clock size={12} className="text-heritage-gold-600 shrink-0" /> {recipe.cookTime}
+                              </p>
+                            )}
+                            {recipe.familyStory && (
+                              <p className="text-xs text-heritage-green-600/80 dark:text-heritage-dark-muted line-clamp-2 italic">
+                                "{recipe.familyStory}"
+                              </p>
+                            )}
+                            {contributor && (
+                              <p className="text-xs text-heritage-gold-700 dark:text-heritage-gold-400 flex items-center gap-1 font-medium pt-1 border-t border-heritage-cream-200 dark:border-heritage-dark-border truncate">
+                                <Tag size={11} className="shrink-0" /> {fullName(contributor)}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modals */}
+      {showAddRecipe && (
+        <AddRecipeModal
+          albumId={familyCookbook.id}
+          onClose={() => setShowAddRecipe(false)}
+          initialCategory={openCategory ?? undefined}
         />
-      )}
-
-      {showAddRecipe && openAlbum && (
-        <AddRecipeModal albumId={openAlbum.id} onClose={() => setShowAddRecipe(false)} initialCategory={openCategory ?? undefined} />
       )}
 
       {openRecipe && (
@@ -393,7 +337,10 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
 };
 
 const CATEGORY_LABEL: Record<RecipeCategory, string> = {
-  breakfast: 'Breakfast', main: 'Main meals', snacks: 'Snacks', desserts: 'Desserts',
+  breakfast: 'Breakfast',
+  main: 'Main meals',
+  snacks: 'Snacks',
+  desserts: 'Desserts',
 };
 
 const RecipeDetail: React.FC<{
@@ -406,56 +353,59 @@ const RecipeDetail: React.FC<{
   const contributor = recipe.contributedByMemberId ? data.members.find(m => m.id === recipe.contributedByMemberId) : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="absolute inset-0" onClick={onClose} />
-      {/* The "open book" spread: a photo page on one side, the recipe copy on the
-          other, split by a spine shadow — so it reads like a page from a
-          traditional printed cookbook rather than a modern recipe-card app. */}
-      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-thin bg-heritage-cream-50 dark:bg-heritage-dark-card rounded-2xl shadow-soft-lg">
+      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-thin bg-heritage-cream-50 dark:bg-heritage-dark-card rounded-2xl shadow-soft-lg border border-heritage-cream-300 dark:border-heritage-dark-border">
+        {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50/95 dark:bg-heritage-dark-card/95 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] uppercase tracking-wide font-medium text-heritage-gold-600 dark:text-heritage-gold-400">{CATEGORY_LABEL[recipe.category]}</span>
+            <span className="text-[11px] uppercase tracking-wider font-semibold px-2.5 py-0.5 rounded-full bg-heritage-gold-100 dark:bg-heritage-gold-950 text-heritage-gold-700 dark:text-heritage-gold-300">
+              {CATEGORY_LABEL[recipe.category]}
+            </span>
             {recipe.isVegetarian && (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-heritage-gold-600 dark:text-heritage-gold-400" title="Vegetarian">
+              <span className="flex items-center gap-1 text-[11px] font-medium text-heritage-gold-600 dark:text-heritage-gold-400">
                 <Star size={11} fill="currentColor" /> Vegetarian
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             {onDelete && (
-              <button onClick={onDelete} className="text-heritage-green-500 hover:text-red-600" aria-label="Delete recipe">
+              <button onClick={onDelete} className="text-heritage-green-500 hover:text-red-600 p-1 transition-colors" aria-label="Delete recipe">
                 <Trash2 size={18} />
               </button>
             )}
-            <button onClick={onClose} className="text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900" aria-label="Close">
+            <button onClick={onClose} className="text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 p-1" aria-label="Close">
               <X size={20} />
             </button>
           </div>
         </div>
 
+        {/* Content */}
         <div className="md:grid md:grid-cols-2">
-          {/* Left page: the photo, full-bleed within its column. */}
-          <div className="relative md:min-h-[26rem] md:border-r md:border-heritage-cream-300 dark:md:border-heritage-dark-border md:shadow-[3px_0_10px_-4px_rgba(0,0,0,0.18)]">
+          {/* Photo */}
+          <div className="relative md:min-h-[26rem] md:border-r md:border-heritage-cream-300 dark:md:border-heritage-dark-border bg-heritage-cream-200">
             {recipe.photoUrl ? (
-              <img src={recipe.photoUrl} className="w-full h-56 md:h-full object-cover" alt={recipe.title} />
+              <img src={recipe.photoUrl} className="w-full h-64 md:h-full object-cover" alt={recipe.title} />
             ) : (
-              <div className="w-full h-56 md:h-full flex items-center justify-center bg-heritage-cream-200 text-5xl">🍽️</div>
+              <div className="w-full h-64 md:h-full flex items-center justify-center text-6xl">🍲</div>
             )}
           </div>
 
-          {/* Right page: title, cook time, story, ingredients, and method. */}
-          <div className="p-6 space-y-5">
+          {/* Details */}
+          <div className="p-6 space-y-6">
             <div>
-              <h2 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text">{recipe.title}</h2>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+              <h2 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text font-bold leading-tight">
+                {recipe.title}
+              </h2>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
                 {recipe.cookTime && (
-                  <span className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted flex items-center gap-1">
-                    <Clock size={12} /> {recipe.cookTime}
+                  <span className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted flex items-center gap-1.5 font-medium">
+                    <Clock size={13} className="text-heritage-gold-600" /> {recipe.cookTime}
                   </span>
                 )}
                 {contributor && (
-                  <button onClick={() => onSelectMember(contributor.id)} className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 flex items-center gap-1 hover:underline">
-                    <Tag size={11} /> Contributed by {fullName(contributor)}
+                  <button onClick={() => onSelectMember(contributor.id)} className="text-xs text-heritage-gold-700 dark:text-heritage-gold-400 flex items-center gap-1 hover:underline font-medium">
+                    <Tag size={12} /> Contributed by {fullName(contributor)}
                   </button>
                 )}
               </div>
@@ -463,29 +413,30 @@ const RecipeDetail: React.FC<{
 
             {recipe.familyStory && (
               <div className="bg-heritage-cream-100 dark:bg-heritage-dark-hover rounded-xl p-4 border border-heritage-cream-300 dark:border-heritage-dark-border">
-                <p className="text-xs font-medium uppercase tracking-wide text-heritage-green-600 dark:text-heritage-dark-muted mb-1.5">Family Story</p>
-                <p className="text-sm text-heritage-green-800 dark:text-heritage-dark-text italic leading-relaxed">{recipe.familyStory}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-heritage-green-700 dark:text-heritage-dark-muted mb-1">Family Story</p>
+                <p className="text-sm text-heritage-green-900 dark:text-heritage-dark-text italic leading-relaxed">{recipe.familyStory}</p>
               </div>
             )}
 
             <div>
-              <p className="font-serif text-xs font-medium uppercase tracking-wide text-heritage-green-600 dark:text-heritage-dark-muted mb-2">Ingredients</p>
-              <ul className="space-y-1.5">
+              <p className="font-serif text-xs font-semibold uppercase tracking-wider text-heritage-green-700 dark:text-heritage-dark-muted mb-2">Ingredients</p>
+              <ul className="space-y-1.5 bg-white dark:bg-heritage-dark-hover/50 p-4 rounded-xl border border-heritage-cream-200 dark:border-heritage-dark-border">
                 {recipe.ingredients.map((ing, i) => (
-                  <li key={i} className="text-sm text-heritage-green-900 dark:text-heritage-dark-text flex gap-2">
-                    <span className="text-heritage-gold-500 mt-0.5">•</span> {ing}
+                  <li key={i} className="text-sm text-heritage-green-900 dark:text-heritage-dark-text flex items-start gap-2">
+                    <span className="text-heritage-gold-600 mt-0.5">•</span>
+                    <span>{ing}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div>
-              <p className="font-serif text-xs font-medium uppercase tracking-wide text-heritage-green-600 dark:text-heritage-dark-muted mb-2">Instructions</p>
-              <ol className="space-y-2.5">
+              <p className="font-serif text-xs font-semibold uppercase tracking-wider text-heritage-green-700 dark:text-heritage-dark-muted mb-2">Instructions</p>
+              <ol className="space-y-3">
                 {recipe.instructions.map((step, i) => (
-                  <li key={i} className="text-sm text-heritage-green-900 dark:text-heritage-dark-text flex gap-3">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-heritage-green-800 text-white text-[11px] flex items-center justify-center font-medium">{i + 1}</span>
-                    <span className="pt-0.5">{step}</span>
+                  <li key={i} className="text-sm text-heritage-green-900 dark:text-heritage-dark-text flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-heritage-green-800 text-white text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                    <span className="pt-0.5 leading-relaxed">{step}</span>
                   </li>
                 ))}
               </ol>
