@@ -579,7 +579,10 @@ features.post('/scores/trivia', async (c) => {
 // ===========================================================================
 features.post('/restoration', async (c) => {
   const body = await c.req.json();
-  const parsed = z.object({ profileId: z.string().uuid() }).safeParse(body);
+  const parsed = z.object({
+    profileId: z.string().uuid(),
+    code: z.string().min(4).max(20).optional(),
+  }).safeParse(body);
   if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
   const user = c.get('user');
 
@@ -588,7 +591,7 @@ features.post('/restoration', async (c) => {
     if (!profile?.family_id || (profile.role !== 'family_admin' && profile.role !== 'super_admin')) {
       return c.json({ error: 'Only family admins can issue restoration codes' }, 403);
     }
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const code = (parsed.data.code || Math.random().toString(36).slice(2, 8)).toUpperCase();
     const result = await client.query(
       `INSERT INTO restoration_codes (family_id, profile_id, code) VALUES ($1, $2, $3) RETURNING *`,
       [profile.family_id, parsed.data.profileId, code]
@@ -609,13 +612,13 @@ features.post('/restoration/redeem', async (c) => {
   const { email, code, newPassword } = parsed.data;
 
   return withClient(c.env, async (client) => {
-    const profRes = await client.query(`SELECT id, family_id FROM profiles WHERE email = $1`, [email.toLowerCase()]);
+    const profRes = await client.query(`SELECT id, family_id FROM profiles WHERE LOWER(email) = LOWER($1)`, [email.toLowerCase().trim()]);
     if (profRes.rowCount === 0) return c.json({ error: "That email doesn't match an account" }, 404);
     const targetProfile = profRes.rows[0];
 
     const codeRes = await client.query(
-      `SELECT id FROM restoration_codes WHERE profile_id = $1 AND code = $2 AND redeemed_at IS NULL`,
-      [targetProfile.id, code.toUpperCase()]
+      `SELECT id FROM restoration_codes WHERE profile_id = $1 AND UPPER(code) = UPPER($2) AND redeemed_at IS NULL`,
+      [targetProfile.id, code.toUpperCase().trim()]
     );
     if (codeRes.rowCount === 0) {
       return c.json({ error: 'That restoration code is invalid, expired, or already used.' }, 400);

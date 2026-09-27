@@ -511,13 +511,13 @@ family.put('/profiles/:id/display-name', async (c) => {
 });
 
 family.post('/invitations', async (c) => {
-  const { role, memberId } = await c.req.json();
+  const { role, memberId, code: providedCode } = await c.req.json();
   return withClient(c.env, async (client) => {
     const profile = await loadProfile(client, c.get('userId'));
     if (!profile || (profile.role !== 'family_admin' && profile.role !== 'super_admin')) {
       return c.json({ error: 'Not authorized' }, 403);
     }
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const code = (providedCode || Math.random().toString(36).slice(2, 8)).toUpperCase();
     await client.query(
       `INSERT INTO invitation_codes (family_id, code, role, member_id, created_by) VALUES ($1,$2,$3,$4,$5)`,
       [profile.family_id, code, role, memberId ?? null, profile.id]

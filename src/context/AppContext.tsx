@@ -898,8 +898,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, invitationCodes: [...prev.invitationCodes, invite] }));
     if (isOnlineMode) {
       persist('invitation code', async () => {
-        const res = await api.post<{ code: string }>('/family/invitations', { role, memberId });
-        if (res?.code) {
+        const res = await api.post<{ code: string }>('/family/invitations', { role, memberId, code });
+        if (res?.code && res.code !== code) {
           setData(prev => ({
             ...prev,
             invitationCodes: prev.invitationCodes.map(c => c.id === invite.id ? { ...c, code: res.code } : c)
@@ -917,8 +917,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, restorationCodes: [...prev.restorationCodes, restoration] }));
     if (isOnlineMode) {
       persist('restoration code', async () => {
-        const res = await api.post<{ code: string }>('/features/restoration', { profileId });
-        if (res?.code) {
+        const res = await api.post<{ code: string }>('/features/restoration', { profileId, code });
+        if (res?.code && res.code !== code) {
           setData(prev => ({
             ...prev,
             restorationCodes: prev.restorationCodes.map(r => r.id === restoration.id ? { ...r, code: res.code } : r)
