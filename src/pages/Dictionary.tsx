@@ -17,75 +17,76 @@ interface Props {
 
 export type VaultCategoryFilter =
   | 'all'
-  | 'proverb'
+  | 'word'
+  | 'phrase'
   | 'saying'
+  | 'proverb'
   | 'elder_wisdom'
-  | 'story'
-  | 'expression'
   | 'audio_only';
 
 const CATEGORY_HUBS = [
   {
-    key: 'proverb' as const,
-    title: 'Proverbs',
-    subtitle: "Timeless wisdom for life's journey.",
-    icon: Leaf,
-    badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-    iconBg: 'bg-emerald-700 text-white',
-    badgeText: 'PROVERB',
+    key: 'word' as const,
+    title: 'Words',
+    subtitle: 'Our native vocabulary and language terms.',
+    icon: BookOpen,
+    badgeBg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300',
+    iconBg: 'bg-heritage-gold-600 text-white',
+    badgeText: 'WORDS',
+  },
+  {
+    key: 'phrase' as const,
+    title: 'Phrases',
+    subtitle: 'Everyday phrases, greetings, and sentences.',
+    icon: MessageSquare,
+    badgeBg: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
+    iconBg: 'bg-blue-700 text-white',
+    badgeText: 'PHRASES',
   },
   {
     key: 'saying' as const,
-    title: 'Sayings',
-    subtitle: 'Unique expressions from our family.',
-    icon: MessageSquare,
+    title: 'Family Sayings',
+    subtitle: 'Unique personal sayings and catchphrases from our family.',
+    icon: Quote,
     badgeBg: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
     iconBg: 'bg-amber-700 text-white',
-    badgeText: 'SAYING',
+    badgeText: 'FAMILY SAYINGS',
+  },
+  {
+    key: 'proverb' as const,
+    title: 'Proverbs',
+    subtitle: 'Timeless proverbs passed down through generations.',
+    icon: Leaf,
+    badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+    iconBg: 'bg-emerald-700 text-white',
+    badgeText: 'PROVERBS',
   },
   {
     key: 'elder_wisdom' as const,
     title: 'Words of Elders',
-    subtitle: 'Advice, blessings and guidance.',
+    subtitle: 'Advice, blessings, and guided wisdom from our elders.',
     icon: Users,
     badgeBg: 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300',
     iconBg: 'bg-teal-800 text-white',
     badgeText: 'WORDS OF ELDERS',
   },
-  {
-    key: 'story' as const,
-    title: 'Stories & Lessons',
-    subtitle: 'Real stories behind the words.',
-    icon: BookOpen,
-    badgeBg: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
-    iconBg: 'bg-orange-700 text-white',
-    badgeText: 'STORY',
-  },
-  {
-    key: 'expression' as const,
-    title: 'Cultural Expressions',
-    subtitle: 'Our heritage, our language.',
-    icon: Sun,
-    badgeBg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300',
-    iconBg: 'bg-heritage-gold-600 text-white',
-    badgeText: 'CULTURAL EXPRESSION',
-  },
 ];
 
 const getEntryBadge = (type: LanguageEntryType) => {
   switch (type) {
+    case 'word':
+    case 'expression':
+      return { label: 'WORD', bg: 'bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300' };
+    case 'phrase':
+      return { label: 'PHRASE', bg: 'bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300' };
+    case 'saying':
+      return { label: 'FAMILY SAYING', bg: 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300' };
     case 'proverb':
       return { label: 'PROVERB', bg: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300' };
-    case 'saying':
-      return { label: 'SAYING', bg: 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300' };
     case 'elder_wisdom':
       return { label: 'WORDS OF ELDERS', bg: 'bg-teal-100 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300' };
     case 'story':
-      return { label: 'STORY', bg: 'bg-orange-100 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300' };
-    case 'expression':
-    case 'word':
-    case 'phrase':
-      return { label: 'CULTURAL EXPRESSION', bg: 'bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300' };
+      return { label: 'STORY & LESSON', bg: 'bg-orange-100 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300' };
     case 'riddle':
       return { label: 'RIDDLE', bg: 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300' };
     case 'recording':
@@ -98,18 +99,11 @@ const getEntryBadge = (type: LanguageEntryType) => {
 const matchesCategory = (entry: LanguageEntry, cat: VaultCategoryFilter): boolean => {
   if (cat === 'all') return true;
   if (cat === 'audio_only') return Boolean(entry.audioUrl);
-  if (cat === 'proverb') return entry.entryType === 'proverb';
+  if (cat === 'word') return entry.entryType === 'word' || entry.entryType === 'expression';
+  if (cat === 'phrase') return entry.entryType === 'phrase' || entry.entryType === 'riddle';
   if (cat === 'saying') return entry.entryType === 'saying';
-  if (cat === 'elder_wisdom') return entry.entryType === 'elder_wisdom';
-  if (cat === 'story') return entry.entryType === 'story';
-  if (cat === 'expression') {
-    return (
-      entry.entryType === 'expression' ||
-      entry.entryType === 'word' ||
-      entry.entryType === 'phrase' ||
-      entry.entryType === 'riddle'
-    );
-  }
+  if (cat === 'proverb') return entry.entryType === 'proverb';
+  if (cat === 'elder_wisdom') return entry.entryType === 'elder_wisdom' || entry.entryType === 'story';
   return true;
 };
 
@@ -354,15 +348,15 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-heritage-cream-300 font-medium">
+            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Words</span>
+            <span>•</span>
+            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Phrases</span>
+            <span>•</span>
+            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Family Sayings</span>
+            <span>•</span>
             <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Proverbs</span>
             <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Sayings</span>
-            <span>•</span>
             <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Words of Elders</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Stories & Lessons</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Cultural Expressions</span>
           </div>
 
           {canAdd && (
@@ -535,6 +529,39 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
             </button>
 
             <button
+              onClick={() => setFilter('word')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
+                filter === 'word'
+                  ? 'bg-yellow-800 text-white shadow-xs'
+                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
+              }`}
+            >
+              <BookOpen size={13} /> Words
+            </button>
+
+            <button
+              onClick={() => setFilter('phrase')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
+                filter === 'phrase'
+                  ? 'bg-blue-800 text-white shadow-xs'
+                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
+              }`}
+            >
+              <MessageSquare size={13} /> Phrases
+            </button>
+
+            <button
+              onClick={() => setFilter('saying')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
+                filter === 'saying'
+                  ? 'bg-amber-800 text-white shadow-xs'
+                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
+              }`}
+            >
+              <Quote size={13} /> Family Sayings
+            </button>
+
+            <button
               onClick={() => setFilter('proverb')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
                 filter === 'proverb'
@@ -546,17 +573,6 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
             </button>
 
             <button
-              onClick={() => setFilter('saying')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'saying'
-                  ? 'bg-amber-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <MessageSquare size={13} /> Sayings
-            </button>
-
-            <button
               onClick={() => setFilter('elder_wisdom')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
                 filter === 'elder_wisdom'
@@ -565,28 +581,6 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
               }`}
             >
               <Users size={13} /> Words of Elders
-            </button>
-
-            <button
-              onClick={() => setFilter('story')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'story'
-                  ? 'bg-orange-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <BookOpen size={13} /> Stories
-            </button>
-
-            <button
-              onClick={() => setFilter('expression')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'expression'
-                  ? 'bg-heritage-gold-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <Sun size={13} /> Cultural Expressions
             </button>
 
             <button
@@ -602,7 +596,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
           </div>
         </div>
 
-        {/* 2-COLUMN COLLECTION GRID */}
+        {/* MASONRY COLLECTION GRID */}
         {filteredEntries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border p-12 text-center space-y-3 bg-heritage-cream-50/50 dark:bg-heritage-dark-card/50">
             <Languages size={36} className="mx-auto text-heritage-green-400" />
@@ -622,7 +616,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [column-fill:_balance]">
             {filteredEntries.map(entry => {
               const badge = getEntryBadge(entry.entryType);
               const saidBy = entry.saidByMemberId
@@ -635,7 +629,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 <div
                   key={entry.id}
                   onClick={() => !isEditing && setSelectedEntry(entry)}
-                  className={`group rounded-2xl border transition-all p-5 flex flex-col justify-between relative bg-white dark:bg-heritage-dark-card hover:border-heritage-gold-400 hover:shadow-md cursor-pointer ${
+                  className={`break-inside-avoid mb-5 inline-block w-full group rounded-2xl border transition-all p-5 relative bg-white dark:bg-heritage-dark-card hover:border-heritage-gold-400 hover:shadow-md cursor-pointer ${
                     isFav
                       ? 'border-heritage-gold-300 dark:border-heritage-gold-900/50'
                       : 'border-heritage-cream-300 dark:border-heritage-dark-border'
