@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { X, MapPin, Briefcase, Calendar, Users as UsersIcon, Edit3, Crosshair, ChevronDown, ChevronUp, Building2, PawPrint } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getLineage, getAllAncestors, getAllDescendants, relationshipTerm, fullName, lifespan } from '../../lib/lineage';
+import {
+  getLineage, getAllAncestors, getAllDescendants, relationshipTerm, fullName, lifespan,
+  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel
+} from '../../lib/lineage';
 import type { Member } from '../../types';
 
 interface PersonDrawerProps {
@@ -152,9 +155,111 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
 
           <div className="mt-6 space-y-5">
             <Group title="Parents" people={lineage.parents} />
-            <Group title="Spouse" people={lineage.spouse} />
+
+            {/* Spouses / Wives */}
+            {lineage.spouse.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-heritage-green-500 mb-2">
+                  {lineage.spouse.length > 1 ? `Spouses / Wives (${lineage.spouse.length})` : 'Spouse'}
+                </p>
+                <div className="space-y-2">
+                  {lineage.spouse.map((s, idx) => {
+                    const spouseRel = data.relationships.find(
+                      r => r.relationshipType === 'spouse' &&
+                        ((r.fromMemberId === member.id && r.toMemberId === s.id) || (r.fromMemberId === s.id && r.toMemberId === member.id))
+                    );
+                    const color = WIFE_COLORS[idx % WIFE_COLORS.length];
+                    const label = getWifeLabel(idx, s, spouseRel);
+                    const mDate = spouseRel?.startedAt ? new Date(spouseRel.startedAt).getFullYear() : null;
+
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => onSelectMember(s.id)}
+                        className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover text-left border border-heritage-cream-300 dark:border-heritage-dark-border"
+                      >
+                        <img
+                          src={s.avatarUrl}
+                          className="w-9 h-9 rounded-full shrink-0 border-2"
+                          style={{ borderColor: color.ring }}
+                          alt=""
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(s)}</p>
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.2 rounded-full border"
+                              style={{ backgroundColor: color.bg, color: color.text, borderColor: color.border }}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                            {lifespan(s)}{mDate ? ` · m. ${mDate}` : ''}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <Group title="Children" people={lineage.children} />
-            <Group title="Siblings" people={lineage.siblings} />
+
+            {/* Siblings split into Full and Half */}
+            {(() => {
+              const fullSibs = getFullSiblings(member.id, data.relationships)
+                .map(id => data.members.find(m => m.id === id))
+                .filter((m): m is Member => Boolean(m));
+              const halfSibs = getHalfSiblings(member.id, data.relationships)
+                .map(id => data.members.find(m => m.id === id))
+                .filter((m): m is Member => Boolean(m));
+
+              if (fullSibs.length === 0 && halfSibs.length === 0) return null;
+
+              return (
+                <div className="space-y-3">
+                  {fullSibs.length > 0 && (
+                    <Group title={halfSibs.length > 0 ? "Full Siblings (Same Parents)" : "Siblings"} people={fullSibs} />
+                  )}
+                  {halfSibs.length > 0 && (
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-heritage-green-500 mb-1.5">
+                        Half-Siblings ({halfSibs.length})
+                      </p>
+                      <p className="text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted mb-2 italic">
+                        Shares one parent with {member.firstName}
+                      </p>
+                      <div className="space-y-1.5">
+                        {halfSibs.map(p => {
+                          const pParents = getParents(p.id, data.relationships);
+                          const myParents = getParents(member.id, data.relationships);
+                          const sharedParent = data.members.find(m => myParents.includes(m.id) && pParents.includes(m.id));
+                          const otherParent = data.members.find(m => !myParents.includes(m.id) && pParents.includes(m.id));
+
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => onSelectMember(p.id)}
+                              className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover text-left"
+                            >
+                              <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-gold-100" alt="" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</p>
+                                <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                                  {lifespan(p)}{otherParent ? ` · Mother/Father: ${otherParent.firstName}` : ''}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {(allAncestors.length > 0 || allDescendants.length > 0) && (

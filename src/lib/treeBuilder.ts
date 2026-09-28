@@ -1,16 +1,29 @@
 import type { Member, Relationship } from '../types';
-import { getChildren, getSpouses } from './lineage';
+import { getChildren, getSpouses, getParents, WIFE_COLORS, getWifeLabel } from './lineage';
+
+export interface WifeLine {
+  spouse: Member;
+  relationship?: Relationship;
+  order: number;
+  label: string;
+  color: typeof WIFE_COLORS[number];
+  children: TreeUnit[];
+}
 
 export interface TreeUnit {
   id: string;
-  members: Member[]; // 1 member, or a couple (member + spouse[s])
+  head: Member;
+  members: Member[]; // [head, ...spouses] in marriage order
+  wives: WifeLine[];
+  unassignedChildren: TreeUnit[];
   children: TreeUnit[];
 }
 
 /**
- * Builds a forest of TreeUnits from the flat members/relationships lists.
- * Each unit groups a person with their spouse(s) so couples render as one
- * node; children hang beneath the unit that contains either blood parent.
+ * Builds a forest of TreeUnits (Houses) from the flat members/relationships lists.
+ * Each unit groups a person with their spouse(s) in marriage order, assigning
+ * each wife her own distinct color, title ("First wife", "Second wife"), and
+ * grouping children strictly under their biological mother.
  */
 export function buildForest(members: Member[], relationships: Relationship[]): TreeUnit[] {
   if (members.length === 0) return [];
@@ -18,31 +31,78 @@ export function buildForest(members: Member[], relationships: Relationship[]): T
   const visited = new Set<string>();
   const byId = new Map(members.map(m => [m.id, m]));
 
+  const spouseRels = relationships.filter(r => r.relationshipType === 'spouse');
+  const getSpouseRel = (m1: string, m2: string) =>
+    spouseRels.find(r => (r.fromMemberId === m1 && r.toMemberId === m2) || (r.fromMemberId === m2 && r.toMemberId === m1));
+
   function buildUnit(memberId: string): TreeUnit | null {
     if (visited.has(memberId)) return null;
     const self = byId.get(memberId);
     if (!self) return null;
 
-    const spouseIds = getSpouses(memberId, relationships).filter(id => !visited.has(id) && byId.has(id));
+    const rawSpouseIds = getSpouses(memberId, relationships).filter(id => !visited.has(id) && byId.has(id));
     visited.add(memberId);
-    spouseIds.forEach(id => visited.add(id));
+    rawSpouseIds.forEach(id => visited.add(id));
 
-    const unitMembers = [self, ...spouseIds.map(id => byId.get(id)!)];
-
-    const childIdSet = new Set<string>();
-    unitMembers.forEach(m => getChildren(m.id, relationships).forEach(cid => childIdSet.add(cid)));
-
-    const children = Array.from(childIdSet)
-      .map(cid => buildUnit(cid))
-      .filter((u): u is TreeUnit => Boolean(u))
-      // keep birth order roughly stable via date of birth
+    // Sort spouses by marriage date (startedAt) ascending, then birth date
+    const sortedSpouses = rawSpouseIds
+      .map(id => ({ member: byId.get(id)!, rel: getSpouseRel(memberId, id) }))
       .sort((a, b) => {
-        const da = a.members[0].dateOfBirth ?? '';
-        const db = b.members[0].dateOfBirth ?? '';
-        return da.localeCompare(db);
+        const da = a.rel?.startedAt ?? '';
+        const db = b.rel?.startedAt ?? '';
+        if (da && db) return da.localeCompare(db);
+        if (da) return -1;
+        if (db) return 1;
+        return (a.member.dateOfBirth ?? '').localeCompare(b.member.dateOfBirth ?? '');
       });
 
-    return { id: `unit-${memberId}`, members: unitMembers, children };
+    const unitMembers = [self, ...sortedSpouses.map(s => s.member)];
+
+    // Find all children for the unit members
+    const allChildIdSet = new Set<string>();
+    unitMembers.forEach(m => getChildren(m.id, relationships).forEach(cid => allChildIdSet.add(cid)));
+
+    // Group children by wife/mother
+    const assignedChildIds = new Set<string>();
+    const wives: WifeLine[] = sortedSpouses.map((s, idx) => {
+      const wifeChildIds = getChildren(s.member.id, relationships).filter(cid => allChildIdSet.has(cid));
+      wifeChildIds.forEach(cid => assignedChildIds.add(cid));
+
+      const children = wifeChildIds
+        .map(cid => buildUnit(cid))
+        .filter((u): u is TreeUnit => Boolean(u))
+        .sort((a, b) => (a.head.dateOfBirth ?? '').localeCompare(b.head.dateOfBirth ?? ''));
+
+      return {
+        spouse: s.member,
+        relationship: s.rel,
+        order: idx,
+        label: getWifeLabel(idx, s.member, s.rel),
+        color: WIFE_COLORS[idx % WIFE_COLORS.length],
+        children,
+      };
+    });
+
+    // Unassigned children (mother not recorded among the spouses)
+    const unassignedChildIds = Array.from(allChildIdSet).filter(cid => !assignedChildIds.has(cid));
+    const unassignedChildren = unassignedChildIds
+      .map(cid => buildUnit(cid))
+      .filter((u): u is TreeUnit => Boolean(u))
+      .sort((a, b) => (a.head.dateOfBirth ?? '').localeCompare(b.head.dateOfBirth ?? ''));
+
+    const allChildren = [
+      ...wives.flatMap(w => w.children),
+      ...unassignedChildren,
+    ];
+
+    return {
+      id: `unit-${memberId}`,
+      head: self,
+      members: unitMembers,
+      wives,
+      unassignedChildren,
+      children: allChildren,
+    };
   }
 
   const roots: TreeUnit[] = [];

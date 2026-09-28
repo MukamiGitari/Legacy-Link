@@ -113,7 +113,53 @@ export function getLineage(memberId: string, members: Member[], rels: Relationsh
   };
 }
 
-/** Root ancestors = members in generation 1 (or with no parents recorded). */
+export const WIFE_COLORS = [
+  { name: 'Rose', ring: '#e11d48', bg: '#ffe4e6', text: '#9f1239', border: '#f43f5e', line: '#f43f5e', badge: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border-rose-200' },
+  { name: 'Teal', ring: '#0d9488', bg: '#ccfbf1', text: '#115e59', border: '#14b8a6', line: '#14b8a6', badge: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200 border-teal-200' },
+  { name: 'Amber', ring: '#d97706', bg: '#fef3c7', text: '#92400e', border: '#f59e0b', line: '#f59e0b', badge: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-200' },
+  { name: 'Indigo', ring: '#4f46e5', bg: '#e0e7ff', text: '#3730a3', border: '#6366f1', line: '#6366f1', badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 border-indigo-200' },
+  { name: 'Emerald', ring: '#059669', bg: '#d1fae5', text: '#065f46', border: '#10b981', line: '#10b981', badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border-emerald-200' },
+  { name: 'Purple', ring: '#9333ea', bg: '#f3e8ff', text: '#6b21a8', border: '#a855f7', line: '#a855f7', badge: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200 border-purple-200' },
+];
+
+export function getWifeOrdinal(index: number): string {
+  const ordinals = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+  return ordinals[index] || `${index + 1}th`;
+}
+
+export function getWifeLabel(index: number, member: Member, rel?: Relationship): string {
+  const ordinal = getWifeOrdinal(index);
+  const term = member.gender === 'male' ? 'husband' : 'wife';
+  let label = `${ordinal} ${term}`;
+  if (!member.isLiving) {
+    label += ' · late';
+  } else if (rel?.endedAt) {
+    label += ' · former';
+  }
+  return label;
+}
+
+export function getFullSiblings(memberId: string, rels: Relationship[]): string[] {
+  const parents = getParents(memberId, rels);
+  if (parents.length < 2) {
+    const allSiblings = getSiblings(memberId, rels);
+    return allSiblings.filter(sibId => {
+      const sibParents = getParents(sibId, rels);
+      return parents.every(p => sibParents.includes(p)) && sibParents.length === parents.length;
+    });
+  }
+  const [p1, p2] = parents;
+  const p1Children = new Set(getChildren(p1, rels));
+  const p2Children = new Set(getChildren(p2, rels));
+  return Array.from(p1Children).filter(cid => cid !== memberId && p2Children.has(cid));
+}
+
+export function getHalfSiblings(memberId: string, rels: Relationship[]): string[] {
+  const allSiblings = new Set(getSiblings(memberId, rels));
+  const fullSiblings = new Set(getFullSiblings(memberId, rels));
+  return Array.from(allSiblings).filter(id => !fullSiblings.has(id));
+}
+
 export function getRoots(members: Member[], rels: Relationship[]): Member[] {
   const minGen = Math.min(...members.map(m => m.generation));
   return members.filter(m => m.generation === minGen);
@@ -128,15 +174,6 @@ export function membersByGeneration(members: Member[]): Map<number, Member[]> {
   return map;
 }
 
-/**
- * Converts a number of generations removed into the term people actually use
- * ("Grandparent", "Great-great-grandchild"), instead of a generic
- * "ancestor" / "descendant" + generation count.
- *   1 -> Parent / Child
- *   2 -> Grandparent / Grandchild
- *   3 -> Great-grandparent / Great-grandchild
- *   4 -> Great-great-grandparent / Great-great-grandchild, and so on.
- */
 export function relationshipTerm(distance: number, direction: 'ancestor' | 'descendant'): string {
   if (distance <= 1) return direction === 'ancestor' ? 'Parent' : 'Child';
   const greats = distance - 2;

@@ -46,7 +46,18 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
 
   const [parent1Id, setParent1Id] = useState(existingParents[0] ?? '');
   const [parent2Id, setParent2Id] = useState(existingParents[1] ?? '');
-  const [spouseId, setSpouseId] = useState(existingSpouses[0] ?? '');
+
+  const existingSpouseEntries = existingSpouses.map(id => {
+    const rel = data.relationships.find(
+      r => r.relationshipType === 'spouse' &&
+        ((r.fromMemberId === existing?.id && r.toMemberId === id) || (r.fromMemberId === id && r.toMemberId === existing?.id))
+    );
+    return { spouseId: id, marriageDate: rel?.startedAt ?? '' };
+  });
+
+  const [marriages, setMarriages] = useState<Array<{ spouseId: string; marriageDate: string }>>(
+    existingSpouseEntries.length > 0 ? existingSpouseEntries : [{ spouseId: '', marriageDate: '' }]
+  );
 
   const handleParent1Change = (newParent1Id: string) => {
     setParent1Id(newParent1Id);
@@ -92,19 +103,23 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
       updateMember(existing.id, payload);
       if (parent1Id) addRelationship(parent1Id, existing.id, 'parent');
       if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, existing.id, 'parent');
-      if (spouseId) {
-        addRelationship(existing.id, spouseId, 'spouse');
-        addRelationship(spouseId, existing.id, 'spouse');
-      }
+      marriages.forEach(m => {
+        if (m.spouseId) {
+          addRelationship(existing.id, m.spouseId, 'spouse', m.marriageDate || undefined);
+          addRelationship(m.spouseId, existing.id, 'spouse', m.marriageDate || undefined);
+        }
+      });
       savedId = existing.id;
     } else {
       const created = addMember(payload);
       if (parent1Id) addRelationship(parent1Id, created.id, 'parent');
       if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, created.id, 'parent');
-      if (spouseId) {
-        addRelationship(created.id, spouseId, 'spouse');
-        addRelationship(spouseId, created.id, 'spouse');
-      }
+      marriages.forEach(m => {
+        if (m.spouseId) {
+          addRelationship(created.id, m.spouseId, 'spouse', m.marriageDate || undefined);
+          addRelationship(m.spouseId, created.id, 'spouse', m.marriageDate || undefined);
+        }
+      });
       savedId = created.id;
     }
 
@@ -274,27 +289,89 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
             </div>
           </div>
 
-          <div className="border-t border-heritage-cream-300 dark:border-heritage-dark-border pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className={labelCls}>Parent 1 (e.g. Father)</label>
-              <select className={inputCls} value={parent1Id} onChange={e => handleParent1Change(e.target.value)}>
-                <option value="">— None —</option>
-                {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
-              </select>
+          <div className="border-t border-heritage-cream-300 dark:border-heritage-dark-border pt-4 space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-heritage-green-800 dark:text-heritage-dark-text">Family Connections</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Parent 1 (e.g. Father)</label>
+                <select className={inputCls} value={parent1Id} onChange={e => handleParent1Change(e.target.value)}>
+                  <option value="">— None —</option>
+                  {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Parent 2 (e.g. Mother)</label>
+                <select className={inputCls} value={parent2Id} onChange={e => setParent2Id(e.target.value)}>
+                  <option value="">— None —</option>
+                  {otherMembers.filter(m => m.id !== parent1Id).map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Parent 2 (e.g. Mother)</label>
-              <select className={inputCls} value={parent2Id} onChange={e => setParent2Id(e.target.value)}>
-                <option value="">— None —</option>
-                {otherMembers.filter(m => m.id !== parent1Id).map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Spouse / Partner</label>
-              <select className={inputCls} value={spouseId} onChange={e => setSpouseId(e.target.value)}>
-                <option value="">— None —</option>
-                {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
-              </select>
+
+            {/* Marriages / Spouses */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className={labelCls}>Spouse(s) & Marriage Dates</label>
+                <button
+                  type="button"
+                  onClick={() => setMarriages(prev => [...prev, { spouseId: '', marriageDate: '' }])}
+                  className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 font-medium cursor-pointer"
+                >
+                  + Add another spouse
+                </button>
+              </div>
+
+              {marriages.map((marriage, idx) => (
+                <div key={idx} className="flex flex-col sm:flex-row items-end gap-3 p-3 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50/50 dark:bg-heritage-dark-hover/30">
+                  <div className="flex-1 w-full">
+                    <label className="block text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted mb-1">
+                      {marriages.length > 1 ? `Spouse ${idx + 1}` : 'Spouse / Partner'}
+                    </label>
+                    <select
+                      className={inputCls}
+                      value={marriage.spouseId}
+                      onChange={e => {
+                        const next = [...marriages];
+                        next[idx] = { ...next[idx], spouseId: e.target.value };
+                        setMarriages(next);
+                      }}
+                    >
+                      <option value="">— None —</option>
+                      {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="w-full sm:w-48">
+                    <label className="block text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted mb-1">
+                      Marriage date (optional)
+                    </label>
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={marriage.marriageDate}
+                      onChange={e => {
+                        const next = [...marriages];
+                        next[idx] = { ...next[idx], marriageDate: e.target.value };
+                        setMarriages(next);
+                      }}
+                    />
+                  </div>
+
+                  {marriages.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setMarriages(prev => prev.filter((_, i) => i !== idx))}
+                      className="px-2 py-2 text-xs text-red-600 hover:text-red-800 rounded-lg hover:bg-red-50 cursor-pointer"
+                      title="Remove spouse"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <p className="text-[11px] text-heritage-green-500 dark:text-heritage-dark-muted">
+                Marriage dates determine wife/husband order in houses (First wife, Second wife, etc.).
+              </p>
             </div>
           </div>
         </div>

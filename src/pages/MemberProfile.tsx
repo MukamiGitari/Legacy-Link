@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Edit3, MapPin, Briefcase, Calendar, BookHeart, Building2, Link as LinkIcon, PawPrint } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { getLineage, fullName, lifespan } from '../lib/lineage';
+import {
+  getLineage, fullName, lifespan,
+  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel
+} from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
 import { BiographyEditorModal } from '../components/members/BiographyEditorModal';
 import { LegacyContributions } from '../components/members/LegacyContributions';
+import type { Member } from '../types';
 
 type Tab = 'about' | 'family' | 'photos' | 'memories' | 'events' | 'timeline';
 const TABS: { key: Tab; label: string }[] = [
@@ -216,27 +220,226 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
             <BiographyEditorModal memberId={member.id} onClose={() => setShowBioEditor(false)} />
           )}
 
-          {tab === 'family' && (
-            <div className="grid sm:grid-cols-2 gap-6">
-              {([
-                ['Parents', lineage.parents], ['Spouse', lineage.spouse],
-                ['Children', lineage.children], ['Siblings', lineage.siblings],
-              ] as const).map(([label, people]) => (
-                <div key={label}>
-                  <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-2">{label}</p>
-                  {people.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
-                  <div className="space-y-1.5">
-                    {people.map(p => (
-                      <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
-                        <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200" alt="" />
-                        <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
-                      </button>
-                    ))}
+          {tab === 'family' && (() => {
+            const fullSibs = getFullSiblings(member.id, data.relationships)
+              .map(id => data.members.find(m => m.id === id))
+              .filter((m): m is Member => Boolean(m));
+            const halfSibs = getHalfSiblings(member.id, data.relationships)
+              .map(id => data.members.find(m => m.id === id))
+              .filter((m): m is Member => Boolean(m));
+
+            return (
+              <div className="space-y-8">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {/* Parents */}
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-2">Parents</p>
+                    {lineage.parents.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
+                    <div className="space-y-1.5">
+                      {lineage.parents.map(p => (
+                        <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                          <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200" alt="" />
+                          <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Spouses / Wives */}
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-2">
+                      {lineage.spouse.length > 1 ? `Spouses / Wives (${lineage.spouse.length})` : 'Spouse'}
+                    </p>
+                    {lineage.spouse.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
+                    <div className="space-y-2">
+                      {lineage.spouse.map((s, idx) => {
+                        const spouseRel = data.relationships.find(
+                          r => r.relationshipType === 'spouse' &&
+                            ((r.fromMemberId === member.id && r.toMemberId === s.id) || (r.fromMemberId === s.id && r.toMemberId === member.id))
+                        );
+                        const color = WIFE_COLORS[idx % WIFE_COLORS.length];
+                        const label = getWifeLabel(idx, s, spouseRel);
+                        const mDate = spouseRel?.startedAt ? new Date(spouseRel.startedAt).getFullYear() : null;
+
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => onSelectMember(s.id)}
+                            className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left border border-heritage-cream-300 dark:border-heritage-dark-border"
+                          >
+                            <img
+                              src={s.avatarUrl}
+                              className="w-8 h-8 rounded-full shrink-0 border-2"
+                              style={{ borderColor: color.ring }}
+                              alt=""
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text">{fullName(s)}</span>
+                                <span
+                                  className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full border"
+                                  style={{ backgroundColor: color.bg, color: color.text, borderColor: color.border }}
+                                >
+                                  {label}
+                                </span>
+                              </div>
+                              <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                                {lifespan(s)}{mDate ? ` · m. ${mDate}` : ''}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Children */}
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-2">Children</p>
+                    {lineage.children.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
+                    <div className="space-y-1.5">
+                      {lineage.children.map(p => {
+                        const otherParentId = getParents(p.id, data.relationships).find(id => id !== member.id);
+                        const otherParent = otherParentId ? data.members.find(m => m.id === otherParentId) : null;
+                        const wifeIdx = otherParent ? lineage.spouse.findIndex(s => s.id === otherParent.id) : -1;
+                        const wifeColor = wifeIdx >= 0 ? WIFE_COLORS[wifeIdx % WIFE_COLORS.length] : undefined;
+
+                        return (
+                          <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                              <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</span>
+                            </div>
+                            {otherParent && wifeColor && (
+                              <span
+                                className="text-[10px] font-medium px-1.5 py-0.2 rounded-full border shrink-0"
+                                style={{ backgroundColor: wifeColor.bg, color: wifeColor.text, borderColor: wifeColor.border }}
+                              >
+                                Mother: {otherParent.firstName}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Siblings */}
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-2">
+                      {halfSibs.length > 0 ? 'Full Siblings' : 'Siblings'}
+                    </p>
+                    {fullSibs.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
+                    <div className="space-y-1.5">
+                      {fullSibs.map(p => (
+                        <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                          <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200" alt="" />
+                          <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {halfSibs.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-xs uppercase tracking-wide text-heritage-green-500 mb-1">Half-Siblings ({halfSibs.length})</p>
+                        <p className="text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted mb-2 italic">Shares one parent with {member.firstName}</p>
+                        <div className="space-y-1.5">
+                          {halfSibs.map(p => {
+                            const pParents = getParents(p.id, data.relationships);
+                            const myParents = getParents(member.id, data.relationships);
+                            const otherParent = data.members.find(m => !myParents.includes(m.id) && pParents.includes(m.id));
+
+                            return (
+                              <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                                  <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</span>
+                                </div>
+                                {otherParent && (
+                                  <span className="text-[10px] text-heritage-green-500 dark:text-heritage-dark-muted shrink-0">
+                                    Parent: {otherParent.firstName}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* In-Laws Section (Parents-in-law & Siblings-in-law per spouse) */}
+                {lineage.spouse.length > 0 && (
+                  <div className="border-t border-heritage-cream-300 dark:border-heritage-dark-border pt-6">
+                    <h3 className="font-serif text-base text-heritage-green-900 dark:text-heritage-dark-text mb-4">
+                      In-Law Connections
+                    </h3>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      {lineage.spouse.map((s, idx) => {
+                        const inLawParents = getParents(s.id, data.relationships)
+                          .map(id => data.members.find(m => m.id === id))
+                          .filter((m): m is Member => Boolean(m));
+                        const inLawSiblings = getFullSiblings(s.id, data.relationships)
+                          .map(id => data.members.find(m => m.id === id))
+                          .filter((m): m is Member => Boolean(m));
+                        const color = WIFE_COLORS[idx % WIFE_COLORS.length];
+
+                        if (inLawParents.length === 0 && inLawSiblings.length === 0) return null;
+
+                        return (
+                          <div
+                            key={s.id}
+                            className="p-4 rounded-xl border bg-white dark:bg-heritage-dark-card space-y-3"
+                            style={{ borderColor: color.border }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color.ring }} />
+                              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: color.text }}>
+                                {s.firstName}'s Family (In-Laws)
+                              </p>
+                            </div>
+
+                            {inLawParents.length > 0 && (
+                              <div>
+                                <p className="text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted font-medium mb-1">
+                                  Parents-in-law ({s.firstName}'s parents)
+                                </p>
+                                <div className="space-y-1">
+                                  {inLawParents.map(p => (
+                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                                      <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200" alt="" />
+                                      <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {inLawSiblings.length > 0 && (
+                              <div>
+                                <p className="text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted font-medium mb-1">
+                                  Siblings-in-law ({s.firstName}'s siblings)
+                                </p>
+                                <div className="space-y-1">
+                                  {inLawSiblings.map(p => (
+                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                                      <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200" alt="" />
+                                      <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {tab === 'photos' && (
             taggedPhotos.length === 0 ? <p className="text-sm text-heritage-green-400">No tagged photos yet.</p> : (

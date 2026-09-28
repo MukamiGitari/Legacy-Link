@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { buildForest } from '../../lib/treeBuilder';
-import { OrgChartForest } from './OrgChartNode';
+import { OrgChartForest, CardRenderMeta } from './OrgChartNode';
 import { fullName, lifespan } from '../../lib/lineage';
 import type { Member } from '../../types';
 
@@ -13,16 +13,33 @@ export const ClassicTree: React.FC<Props> = ({ onSelect }) => {
   const { data } = useApp();
   const roots = useMemo(() => buildForest(data.members, data.relationships), [data.members, data.relationships]);
 
-  const renderCard = (m: Member) => (
-    <div className="group flex flex-col items-center w-24">
-      <div className={`relative w-16 h-16 rounded-full p-[3px] shadow-gold transition-transform group-hover:scale-105
-        ${m.isLiving ? 'bg-linear-to-br from-heritage-gold-300 to-heritage-gold-600' : 'bg-linear-to-br from-heritage-bark-300 to-heritage-bark-600'}`}>
-        <img src={m.avatarUrl} className="w-full h-full rounded-full object-cover bg-heritage-cream-100 border-2 border-white" alt="" />
+  const renderCard = (m: Member, meta?: CardRenderMeta) => {
+    const wifeMeta = meta?.wifeMeta;
+    return (
+      <div className="group flex flex-col items-center w-24">
+        <div
+          className={`relative w-16 h-16 rounded-full p-[3px] shadow-gold transition-transform group-hover:scale-105
+            ${!wifeMeta
+              ? m.isLiving ? 'bg-linear-to-br from-heritage-gold-300 to-heritage-gold-600' : 'bg-linear-to-br from-heritage-bark-300 to-heritage-bark-600'
+              : ''
+            }`}
+          style={wifeMeta ? { backgroundColor: wifeMeta.color.ring } : undefined}
+        >
+          <img src={m.avatarUrl} className="w-full h-full rounded-full object-cover bg-heritage-cream-100 border-2 border-white" alt="" />
+        </div>
+        <p className="mt-1.5 text-xs font-medium text-heritage-green-900 dark:text-heritage-dark-text leading-tight text-center truncate w-full">{fullName(m)}</p>
+        <p className="text-[10px] text-heritage-green-500 dark:text-heritage-dark-muted">{lifespan(m)}</p>
+        {wifeMeta && (
+          <span
+            className="mt-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border leading-tight text-center whitespace-nowrap"
+            style={{ backgroundColor: wifeMeta.color.bg, color: wifeMeta.color.text, borderColor: wifeMeta.color.border }}
+          >
+            {wifeMeta.label}
+          </span>
+        )}
       </div>
-      <p className="mt-1.5 text-xs font-medium text-heritage-green-900 dark:text-heritage-dark-text leading-tight">{fullName(m)}</p>
-      <p className="text-[10px] text-heritage-green-500 dark:text-heritage-dark-muted">{lifespan(m)}</p>
-    </div>
-  );
+    );
+  };
 
   return (
     // Deliberately NOT `overflow-hidden` on this outer box: it's a flex item inside

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { buildForest } from '../../lib/treeBuilder';
-import { OrgChartForest } from './OrgChartNode';
+import { OrgChartForest, CardRenderMeta } from './OrgChartNode';
 import { fullName, lifespan } from '../../lib/lineage';
 import type { Member } from '../../types';
 
@@ -13,27 +13,41 @@ export const HeritageTree: React.FC<Props> = ({ onSelect }) => {
   const { data } = useApp();
   const roots = useMemo(() => buildForest(data.members, data.relationships), [data.members, data.relationships]);
 
-  const renderCard = (m: Member) => (
-    <div className="w-28 flex flex-col items-center">
-      <div className="relative w-20 h-20 rounded-t-full rounded-b-lg border-[3px] border-heritage-gold-600 p-0.5 bg-heritage-cream-100 shadow-vintage">
-        <img
-          src={m.avatarUrl}
-          className="w-full h-full rounded-t-full rounded-b-md object-cover"
-          style={{ filter: 'sepia(0.55) contrast(1.05)' }}
-          alt=""
-        />
-        {!m.isLiving && (
-          <span className="absolute -bottom-1 -right-1 text-[9px] bg-heritage-bark-700 text-heritage-cream-50 px-1 rounded-sm">
-            ✝
+  const renderCard = (m: Member, meta?: CardRenderMeta) => {
+    const wifeMeta = meta?.wifeMeta;
+    return (
+      <div className="w-28 flex flex-col items-center">
+        <div
+          className="relative w-20 h-20 rounded-t-full rounded-b-lg border-[3px] p-0.5 bg-heritage-cream-100 shadow-vintage"
+          style={{ borderColor: wifeMeta ? wifeMeta.color.ring : '#a68241' }}
+        >
+          <img
+            src={m.avatarUrl}
+            className="w-full h-full rounded-t-full rounded-b-md object-cover"
+            style={{ filter: 'sepia(0.55) contrast(1.05)' }}
+            alt=""
+          />
+          {!m.isLiving && (
+            <span className="absolute -bottom-1 -right-1 text-[9px] bg-heritage-bark-700 text-heritage-cream-50 px-1 rounded-sm">
+              ✝
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 font-cinzel text-[11px] tracking-wide text-heritage-bark-900 dark:text-heritage-dark-text text-center leading-tight">
+          {fullName(m)}
+        </p>
+        <p className="text-[10px] text-heritage-bark-600 dark:text-heritage-dark-muted italic">{lifespan(m)}</p>
+        {wifeMeta && (
+          <span
+            className="mt-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border text-center whitespace-nowrap"
+            style={{ backgroundColor: wifeMeta.color.bg, color: wifeMeta.color.text, borderColor: wifeMeta.color.border }}
+          >
+            {wifeMeta.label}
           </span>
         )}
       </div>
-      <p className="mt-1.5 font-cinzel text-[11px] tracking-wide text-heritage-bark-900 dark:text-heritage-dark-text text-center leading-tight">
-        {fullName(m)}
-      </p>
-      <p className="text-[10px] text-heritage-bark-600 dark:text-heritage-dark-muted italic">{lifespan(m)}</p>
-    </div>
-  );
+    );
+  };
 
   return (
     // Same fix as ClassicTree: keep this outer box overflow-visible so it isn't
