@@ -127,10 +127,9 @@ export function getWifeOrdinal(index: number): string {
   return ordinals[index] || `${index + 1}th`;
 }
 
-export function getWifeLabel(index: number, member: Member, rel?: Relationship): string {
-  const ordinal = getWifeOrdinal(index);
+export function getWifeLabel(index: number, member: Member, rel?: Relationship, totalSpouses: number = 1): string {
   const term = member.gender === 'male' ? 'husband' : 'wife';
-  let label = `${ordinal} ${term}`;
+  let label = totalSpouses > 1 ? `${getWifeOrdinal(index)} ${term}` : (term.charAt(0).toUpperCase() + term.slice(1));
   if (!member.isLiving) {
     label += ' · late';
   } else if (rel?.endedAt) {

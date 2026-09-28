@@ -77,7 +77,7 @@ export function buildForest(members: Member[], relationships: Relationship[]): T
         spouse: s.member,
         relationship: s.rel,
         order: idx,
-        label: getWifeLabel(idx, s.member, s.rel),
+        label: getWifeLabel(idx, s.member, s.rel, sortedSpouses.length),
         color: WIFE_COLORS[idx % WIFE_COLORS.length],
         children,
       };

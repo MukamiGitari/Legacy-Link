@@ -258,7 +258,7 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                             ((r.fromMemberId === member.id && r.toMemberId === s.id) || (r.fromMemberId === s.id && r.toMemberId === member.id))
                         );
                         const color = WIFE_COLORS[idx % WIFE_COLORS.length];
-                        const label = getWifeLabel(idx, s, spouseRel);
+                        const label = getWifeLabel(idx, s, spouseRel, lineage.spouse.length);
                         const mDate = spouseRel?.startedAt ? new Date(spouseRel.startedAt).getFullYear() : null;
 
                         return (

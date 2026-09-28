@@ -178,7 +178,7 @@ export const MyFamily: React.FC<Props> = ({ onSelectMember, onViewFullTree }) =>
                   ((r.fromMemberId === anchor.id && r.toMemberId === p.id) || (r.fromMemberId === p.id && r.toMemberId === anchor.id))
               );
               const color = WIFE_COLORS[idx % WIFE_COLORS.length];
-              const label = getWifeLabel(idx, p, spouseRel);
+              const label = getWifeLabel(idx, p, spouseRel, circle.spouse.length);
               return { label, bg: color.bg, text: color.text, border: color.border, ring: color.ring };
             }}
           />
