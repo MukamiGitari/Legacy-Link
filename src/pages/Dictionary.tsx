@@ -1,1334 +1,725 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
-  Plus, Languages, Trash2, Pencil, Check, X, Mic, Volume2,
-  Leaf, MessageSquare, Users, BookOpen, Sun, Search, ArrowRight,
-  ChevronRight, Heart, Share2, Sparkles, Quote, MapPin, Calendar,
-  VolumeX, TreePine, BookmarkCheck
+  Plus, Trash2, X, Mic, Volume2, Heart, ArrowRight,
+  BookOpen, MessageSquare, Quote, Leaf, Users, BookMarked,
+  Feather, Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
-import { canAddContent } from '../lib/permissions';
+import { canAddContent, canDelete } from '../lib/permissions';
 import { AudioRecorder } from '../components/vault/AudioRecorder';
 import type { LanguageEntry, LanguageEntryType } from '../types';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
   onSelectMember: (id: string) => void;
 }
 
-export type VaultCategoryFilter =
-  | 'all'
-  | 'word'
-  | 'phrase'
-  | 'saying'
-  | 'proverb'
-  | 'elder_wisdom'
-  | 'audio_only';
+// ── Category metadata ─────────────────────────────────────────────────────────
 
-const CATEGORY_HUBS = [
+interface CategoryDef {
+  key: LanguageEntryType | 'story';
+  filterTypes: LanguageEntryType[];
+  label: string;
+  icon: React.ReactNode;
+  iconColor: string;
+  badgeColor: string;
+}
+
+const CATEGORIES: CategoryDef[] = [
   {
-    key: 'word' as const,
-    title: 'Words',
-    subtitle: 'Our native vocabulary and language terms.',
-    icon: BookOpen,
-    badgeBg: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300',
-    iconBg: 'bg-heritage-gold-600 text-white',
-    badgeText: 'WORDS',
+    key: 'word',
+    filterTypes: ['word', 'expression'],
+    label: 'Words',
+    icon: <BookOpen size={20} />,
+    iconColor: 'text-heritage-gold-700',
+    badgeColor: 'bg-yellow-50 text-yellow-800',
   },
   {
-    key: 'phrase' as const,
-    title: 'Phrases',
-    subtitle: 'Everyday phrases, greetings, and sentences.',
-    icon: MessageSquare,
-    badgeBg: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
-    iconBg: 'bg-blue-700 text-white',
-    badgeText: 'PHRASES',
+    key: 'phrase',
+    filterTypes: ['phrase', 'riddle'],
+    label: 'Phrases',
+    icon: <MessageSquare size={20} />,
+    iconColor: 'text-blue-700',
+    badgeColor: 'bg-blue-50 text-blue-800',
   },
   {
-    key: 'saying' as const,
-    title: 'Family Sayings',
-    subtitle: 'Unique personal sayings and catchphrases from our family.',
-    icon: Quote,
-    badgeBg: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
-    iconBg: 'bg-amber-700 text-white',
-    badgeText: 'FAMILY SAYINGS',
+    key: 'saying',
+    filterTypes: ['saying'],
+    label: 'Family Sayings',
+    icon: <Quote size={20} />,
+    iconColor: 'text-amber-700',
+    badgeColor: 'bg-amber-50 text-amber-700',
   },
   {
-    key: 'proverb' as const,
-    title: 'Proverbs',
-    subtitle: 'Timeless proverbs passed down through generations.',
-    icon: Leaf,
-    badgeBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
-    iconBg: 'bg-emerald-700 text-white',
-    badgeText: 'PROVERBS',
+    key: 'proverb',
+    filterTypes: ['proverb'],
+    label: 'Proverbs',
+    icon: <BookMarked size={20} />,
+    iconColor: 'text-heritage-bark-600',
+    badgeColor: 'bg-heritage-bark-50 text-heritage-bark-700',
   },
   {
-    key: 'elder_wisdom' as const,
-    title: 'Words of Elders',
-    subtitle: 'Advice, blessings, and guided wisdom from our elders.',
-    icon: Users,
-    badgeBg: 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300',
-    iconBg: 'bg-teal-800 text-white',
-    badgeText: 'WORDS OF ELDERS',
+    key: 'expression',
+    filterTypes: ['expression', 'elder_wisdom', 'story'],
+    label: 'Cultural Expressions',
+    icon: <Leaf size={20} />,
+    iconColor: 'text-amber-900',
+    badgeColor: 'bg-amber-50 text-amber-900',
   },
 ];
 
-const getEntryBadge = (type: LanguageEntryType) => {
-  switch (type) {
-    case 'word':
-    case 'expression':
-      return { label: 'WORD', bg: 'bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300' };
-    case 'phrase':
-      return { label: 'PHRASE', bg: 'bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300' };
-    case 'saying':
-      return { label: 'FAMILY SAYING', bg: 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300' };
-    case 'proverb':
-      return { label: 'PROVERB', bg: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300' };
-    case 'elder_wisdom':
-      return { label: 'WORDS OF ELDERS', bg: 'bg-teal-100 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300' };
-    case 'story':
-      return { label: 'STORY & LESSON', bg: 'bg-orange-100 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300' };
-    case 'riddle':
-      return { label: 'RIDDLE', bg: 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300' };
-    case 'recording':
-      return { label: 'VOICE RECORDING', bg: 'bg-heritage-gold-100 dark:bg-heritage-gold-950/40 text-heritage-gold-800 dark:text-heritage-gold-300' };
-    default:
-      return { label: 'WISDOM', bg: 'bg-heritage-green-100 text-heritage-green-800' };
-  }
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const matchesCategory = (entry: LanguageEntry, cat: VaultCategoryFilter): boolean => {
-  if (cat === 'all') return true;
-  if (cat === 'audio_only') return Boolean(entry.audioUrl);
-  if (cat === 'word') return entry.entryType === 'word' || entry.entryType === 'expression';
-  if (cat === 'phrase') return entry.entryType === 'phrase' || entry.entryType === 'riddle';
-  if (cat === 'saying') return entry.entryType === 'saying';
-  if (cat === 'proverb') return entry.entryType === 'proverb';
-  if (cat === 'elder_wisdom') return entry.entryType === 'elder_wisdom' || entry.entryType === 'story';
-  return true;
-};
+function categoryDef(entry: LanguageEntry): CategoryDef {
+  return (
+    CATEGORIES.find(c => c.filterTypes.includes(entry.entryType)) ?? CATEGORIES[CATEGORIES.length - 1]
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
   const { data, currentProfile, addLanguageEntry, updateLanguageEntry, removeLanguageEntry, pushToast } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
-  const isAdmin = currentProfile?.role === 'super_admin' || currentProfile?.role === 'family_admin';
+  const canRemove = canDelete(currentProfile?.role);
 
-  // Filters and search
-  const [filter, setFilter] = useState<VaultCategoryFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Local likes (no backend field)
+  const [likes, setLikes] = useState<Record<string, number>>({});
+
+  // Detail modal
   const [selectedEntry, setSelectedEntry] = useState<LanguageEntry | null>(null);
-  const [detailTab, setDetailTab] = useState<'meaning' | 'story' | 'related'>('meaning');
-  const [savedFavorites, setSavedFavorites] = useState<Set<string>>(() => new Set());
 
-  // Form modal / drawer
+  // Add wisdom modal
   const [showForm, setShowForm] = useState(false);
-  const [formType, setFormType] = useState<LanguageEntryType>('proverb');
-  const [formTerm, setFormTerm] = useState('');
+  const [formCategory, setFormCategory] = useState<CategoryDef>(CATEGORIES[0]);
+  const [formTitle, setFormTitle] = useState('');
+  const [formOriginal, setFormOriginal] = useState('');
+  const [formContributor, setFormContributor] = useState('');
   const [formMeaning, setFormMeaning] = useState('');
-  const [formAnswer, setFormAnswer] = useState('');
-  const [formStoryBehind, setFormStoryBehind] = useState('');
-  const [formLanguage, setFormLanguage] = useState('Kikuyu');
-  const [formCategory, setFormCategory] = useState('Family Wisdom');
-  const [formYear, setFormYear] = useState('');
-  const [formLocation, setFormLocation] = useState('');
-  const [formSaidBy, setFormSaidBy] = useState('');
+  const [formContext, setFormContext] = useState('');
   const [formAudioUrl, setFormAudioUrl] = useState('');
+  const [formAudioBusy, setFormAudioBusy] = useState(false);
 
-  // Editing state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTerm, setEditTerm] = useState('');
-  const [editMeaning, setEditMeaning] = useState('');
-  const [editAnswer, setEditAnswer] = useState('');
-  const [editStoryBehind, setEditStoryBehind] = useState('');
-  const [editLanguage, setEditLanguage] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [editYear, setEditYear] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [editAudioUrl, setEditAudioUrl] = useState('');
-
-  // Audio recording state
-  const [audioBusy, setAudioBusy] = useState(false);
-  const [audioEditId, setAudioEditId] = useState<string | null>(null);
-  const [pendingAudio, setPendingAudio] = useState('');
-
-  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
+  const toggleLike = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSavedFavorites(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        pushToast('Removed from your saved collection');
-      } else {
-        next.add(id);
-        pushToast('Saved to your collection ❤️');
-      }
-      return next;
-    });
+    setLikes(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
   };
 
-  const handleShare = (entry: LanguageEntry, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    const shareText = `"${entry.term}" — ${entry.meaning} (${entry.language || 'Family Wisdom'})`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(shareText);
-      pushToast('Quote copied to clipboard! 📋');
-    }
-  };
-
-  const audioLabel = (type: LanguageEntryType) =>
-    type === 'word' ? 'Record pronunciation'
-    : type === 'recording' ? 'Voice recording'
-    : "Record how it's spoken";
-
-  const startAudioEdit = (id: string, current?: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setAudioEditId(id);
-    setPendingAudio(current ?? '');
-  };
-
-  const saveAudioEdit = (id: string) => {
-    updateLanguageEntry(id, { audioUrl: pendingAudio });
-    setAudioEditId(null);
-    if (selectedEntry && selectedEntry.id === id) {
-      setSelectedEntry(prev => prev ? { ...prev, audioUrl: pendingAudio } : null);
-    }
-    pushToast('Voice recording saved successfully');
-  };
-
-  const startEdit = (entry: LanguageEntry, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setEditingId(entry.id);
-    setEditTerm(entry.term);
-    setEditMeaning(entry.meaning);
-    setEditAnswer(entry.answer ?? '');
-    setEditStoryBehind(entry.storyBehind ?? '');
-    setEditLanguage(entry.language ?? '');
-    setEditCategory(entry.category ?? '');
-    setEditYear(entry.yearRecorded ?? '');
-    setEditLocation(entry.location ?? '');
-    setEditAudioUrl(entry.audioUrl ?? '');
-  };
-
-  const saveEdit = (id: string, hasAnswer: boolean) => {
-    if (!editTerm.trim() || !editMeaning.trim()) return;
-    updateLanguageEntry(id, {
-      term: editTerm.trim(),
-      meaning: editMeaning.trim(),
-      answer: hasAnswer && editAnswer.trim() ? editAnswer.trim() : undefined,
-      storyBehind: editStoryBehind.trim() || undefined,
-      language: editLanguage.trim() || undefined,
-      category: editCategory.trim() || undefined,
-      yearRecorded: editYear.trim() || undefined,
-      location: editLocation.trim() || undefined,
-      audioUrl: editAudioUrl.trim() || undefined,
-    });
-    if (selectedEntry && selectedEntry.id === id) {
-      setSelectedEntry(prev =>
-        prev
-          ? {
-              ...prev,
-              term: editTerm.trim(),
-              meaning: editMeaning.trim(),
-              answer: hasAnswer && editAnswer.trim() ? editAnswer.trim() : undefined,
-              storyBehind: editStoryBehind.trim() || undefined,
-              language: editLanguage.trim() || undefined,
-              category: editCategory.trim() || undefined,
-              yearRecorded: editYear.trim() || undefined,
-              location: editLocation.trim() || undefined,
-              audioUrl: editAudioUrl.trim() || undefined,
-            }
-          : null
-      );
-    }
-    setEditingId(null);
-    pushToast('Heritage entry updated');
-  };
-
-  const submitNewEntry = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formTerm.trim() || !formMeaning.trim()) return;
-    addLanguageEntry({
-      entryType: formType,
-      term: formTerm.trim(),
-      meaning: formMeaning.trim(),
-      answer: formType === 'riddle' && formAnswer.trim() ? formAnswer.trim() : undefined,
-      storyBehind: formStoryBehind.trim() || undefined,
-      language: formLanguage.trim() || undefined,
-      category: formCategory.trim() || undefined,
-      yearRecorded: formYear.trim() || undefined,
-      location: formLocation.trim() || undefined,
-      saidByMemberId: formSaidBy || undefined,
-      audioUrl: formAudioUrl.trim() || undefined,
-    });
-    setFormTerm('');
+  const openAddForm = (cat: CategoryDef) => {
+    setFormCategory(cat);
+    setFormTitle('');
+    setFormOriginal('');
     setFormMeaning('');
-    setFormAnswer('');
-    setFormStoryBehind('');
-    setFormYear('');
-    setFormLocation('');
-    setFormSaidBy('');
+    setFormContext('');
     setFormAudioUrl('');
+    setFormContributor('');
+    setShowForm(true);
+  };
+
+  const submitForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formTitle.trim() || !formMeaning.trim()) return;
+    const contributor = data.members.find(m => m.id === formContributor);
+    addLanguageEntry({
+      entryType: formCategory.filterTypes[0],
+      term: formTitle.trim(),
+      meaning: formMeaning.trim(),
+      storyBehind: formContext.trim() || undefined,
+      language: formOriginal.trim() || undefined,
+      audioUrl: formAudioUrl.trim() || undefined,
+      saidByMemberId: formContributor || undefined,
+    });
     setShowForm(false);
     pushToast('Wisdom entry added to Heritage Vault 🎉');
   };
 
-  // Filtered and searched entries
-  const allEntries = useMemo(() => {
-    return [...data.languageEntries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [data.languageEntries]);
-
-  // Find featured quote (or default to the first saying/proverb)
-  const featuredQuote = useMemo(() => {
-    return (
-      allEntries.find(e => e.id === 'lang_featured' || e.term.includes('A tree does not forget')) ||
-      allEntries.find(e => e.entryType === 'saying' || e.entryType === 'proverb') ||
-      allEntries[0]
-    );
-  }, [allEntries]);
-
-  const filteredEntries = useMemo(() => {
-    return allEntries.filter(entry => {
-      const matchCat = matchesCategory(entry, filter);
-      if (!matchCat) return false;
-
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      const speaker = entry.saidByMemberId ? data.members.find(m => m.id === entry.saidByMemberId) : null;
-      const speakerName = speaker ? fullName(speaker).toLowerCase() : '';
-
-      return (
-        entry.term.toLowerCase().includes(q) ||
-        entry.meaning.toLowerCase().includes(q) ||
-        (entry.storyBehind && entry.storyBehind.toLowerCase().includes(q)) ||
-        (entry.language && entry.language.toLowerCase().includes(q)) ||
-        (entry.category && entry.category.toLowerCase().includes(q)) ||
-        speakerName.includes(q)
-      );
-    });
-  }, [allEntries, filter, searchQuery, data.members]);
-
-  // Related quotes for the detail view
-  const relatedQuotes = useMemo(() => {
-    if (!selectedEntry) return [];
-    return allEntries
-      .filter(e => e.id !== selectedEntry.id && (e.entryType === selectedEntry.entryType || e.language === selectedEntry.language))
-      .slice(0, 3);
-  }, [allEntries, selectedEntry]);
-
-  const scrollToCollection = (catKey: VaultCategoryFilter) => {
-    setFilter(catKey);
-    const el = document.getElementById('heritage-collection-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+  const handleDelete = (id: string) => {
+    if (window.confirm("Delete this wisdom entry? This can't be undone.")) {
+      removeLanguageEntry(id);
+      setSelectedEntry(null);
     }
   };
 
   return (
-    <div className="space-y-10 pb-16">
-      {/* 1. TOP HERO BANNER */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-heritage-green-950 via-heritage-green-900 to-heritage-green-800 text-white shadow-xl p-6 sm:p-10 border border-heritage-green-700/50">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-heritage-gold-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-        <div className="absolute bottom-0 right-10 opacity-10 pointer-events-none">
-          <TreePine size={220} className="text-white" />
-        </div>
-
-        <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="flex items-center gap-2">
-            <Leaf size={16} className="text-heritage-gold-400" />
-            <span className="text-xs font-bold tracking-widest text-heritage-gold-400 uppercase">
-              OUR FAMILY WISDOM
-            </span>
-          </div>
-
-          <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white">
-            Heritage Vault
-          </h1>
-
-          <p className="text-heritage-cream-100 text-base sm:text-lg leading-relaxed max-w-2xl">
-            Words, sayings and proverbs passed down through generations.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-heritage-cream-300 font-medium">
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Words</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Phrases</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Family Sayings</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Proverbs</span>
-            <span>•</span>
-            <span className="bg-heritage-green-800/80 px-2.5 py-1 rounded-full border border-heritage-green-600/40">Words of Elders</span>
-          </div>
-
-          {canAdd && (
-            <div className="pt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-2 bg-heritage-gold-500 hover:bg-heritage-gold-400 text-heritage-green-950 font-semibold text-sm px-4 py-2.5 rounded-xl shadow-md transition-transform active:scale-95 cursor-pointer"
-              >
-                <Plus size={18} /> Add Wisdom to Vault
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2. FEATURED HERO QUOTE CARD */}
-      {featuredQuote && (
-        <div className="relative overflow-hidden rounded-2xl border border-heritage-gold-300/80 dark:border-heritage-dark-border bg-gradient-to-r from-heritage-cream-100 via-white to-heritage-cream-50 dark:from-heritage-dark-card dark:to-heritage-dark-hover p-6 sm:p-8 shadow-sm">
-          <div className="absolute right-4 bottom-2 opacity-10 text-heritage-gold-600 pointer-events-none">
-            <TreePine size={180} />
-          </div>
-
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-start gap-4 max-w-3xl">
-              <Quote size={48} className="text-heritage-gold-500 shrink-0 mt-1 opacity-80" />
-              <div className="space-y-3">
-                <blockquote className="font-serif text-2xl sm:text-3xl font-bold text-heritage-green-950 dark:text-heritage-dark-text leading-snug">
-                  "{featuredQuote.term}"
-                </blockquote>
-
-                <p className="text-sm text-heritage-green-800 dark:text-heritage-dark-muted leading-relaxed">
-                  — {featuredQuote.language || 'Family Wisdom'} • {featuredQuote.meaning}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-heritage-green-700 dark:text-heritage-dark-muted pt-1">
-                  {featuredQuote.saidByMemberId && (
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <Users size={14} className="text-heritage-gold-600" />
-                      <span>
-                        Shared by:{' '}
-                        {fullName(data.members.find(m => m.id === featuredQuote.saidByMemberId) ?? { firstName: 'Family', lastName: 'Elder' } as any)}
-                      </span>
-                    </div>
-                  )}
-                  {featuredQuote.yearRecorded && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} className="text-heritage-gold-600" />
-                      <span>Recorded: {featuredQuote.yearRecorded}</span>
-                    </div>
-                  )}
-                  {featuredQuote.category && (
-                    <div className="flex items-center gap-1.5">
-                      <Leaf size={14} className="text-heritage-gold-600" />
-                      <span>Category: {featuredQuote.category}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSelectedEntry(featuredQuote)}
-              className="shrink-0 flex items-center gap-2 bg-heritage-green-900 hover:bg-heritage-green-800 text-white text-sm font-medium px-5 py-3 rounded-xl shadow transition-colors cursor-pointer"
-            >
-              <span>View Full Story</span>
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. EXPLORE OUR HERITAGE VAULT (5 CATEGORY CARDS) */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-center gap-4">
-          <div className="h-px bg-heritage-cream-300 dark:bg-heritage-dark-border flex-1 max-w-xs" />
-          <div className="flex items-center gap-2 text-heritage-green-900 dark:text-heritage-dark-text font-serif text-xl sm:text-2xl font-bold">
-            <Leaf size={20} className="text-heritage-gold-500" />
-            <h2>Explore Our Heritage Vault</h2>
-            <Leaf size={20} className="text-heritage-gold-500 transform scale-x-[-1]" />
-          </div>
-          <div className="h-px bg-heritage-cream-300 dark:bg-heritage-dark-border flex-1 max-w-xs" />
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {CATEGORY_HUBS.map(hub => {
-            const Icon = hub.icon;
-            const count = allEntries.filter(e => matchesCategory(e, hub.key)).length;
-            const isActive = filter === hub.key;
-            return (
-              <div
-                key={hub.key}
-                onClick={() => scrollToCollection(hub.key)}
-                className={`group rounded-2xl border transition-all p-5 flex flex-col justify-between items-center text-center cursor-pointer shadow-xs hover:shadow-md ${
-                  isActive
-                    ? 'border-heritage-gold-500 bg-heritage-gold-50/70 dark:bg-heritage-gold-950/30 ring-2 ring-heritage-gold-400'
-                    : 'border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card hover:border-heritage-gold-400'
-                }`}
-              >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-xs transition-transform group-hover:scale-110 ${hub.iconBg}`}>
-                  <Icon size={22} />
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="font-serif font-bold text-base text-heritage-green-900 dark:text-heritage-dark-text">
-                    {hub.title}
-                  </h3>
-                  <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted line-clamp-2">
-                    {hub.subtitle}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-heritage-cream-200 dark:border-heritage-dark-border/50 w-full flex items-center justify-center gap-1 text-xs font-semibold text-heritage-green-800 dark:text-heritage-gold-400 group-hover:text-heritage-gold-600">
-                  <span>View All ({count})</span>
-                  <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 4. HERITAGE VAULT COLLECTION & BROWSE SECTION */}
-      <div id="heritage-collection-section" className="space-y-6 pt-4">
-        {/* Banner with Filter & Search */}
-        <div className="rounded-2xl bg-heritage-cream-100/90 dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border p-5 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-serif text-xl font-bold text-heritage-green-950 dark:text-heritage-dark-text">
-                Heritage Collection
-              </h3>
-              <p className="text-xs sm:text-sm text-heritage-green-700 dark:text-heritage-dark-muted">
-                Explore our collection of proverbs, sayings and family wisdom ({filteredEntries.length} items)
-              </p>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full md:w-80">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-heritage-green-600 dark:text-heritage-dark-muted" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search proverbs, sayings, speakers..."
-                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-hover text-heritage-green-950 dark:text-heritage-dark-text focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-heritage-green-400 hover:text-heritage-green-700"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'all'
-                  ? 'bg-heritage-green-900 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              All ({allEntries.length})
-            </button>
-
-            <button
-              onClick={() => setFilter('word')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'word'
-                  ? 'bg-yellow-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <BookOpen size={13} /> Words
-            </button>
-
-            <button
-              onClick={() => setFilter('phrase')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'phrase'
-                  ? 'bg-blue-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <MessageSquare size={13} /> Phrases
-            </button>
-
-            <button
-              onClick={() => setFilter('saying')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'saying'
-                  ? 'bg-amber-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <Quote size={13} /> Family Sayings
-            </button>
-
-            <button
-              onClick={() => setFilter('proverb')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'proverb'
-                  ? 'bg-emerald-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <Leaf size={13} /> Proverbs
-            </button>
-
-            <button
-              onClick={() => setFilter('elder_wisdom')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
-                filter === 'elder_wisdom'
-                  ? 'bg-teal-800 text-white shadow-xs'
-                  : 'bg-white dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-300 dark:border-heritage-dark-border hover:bg-heritage-cream-200'
-              }`}
-            >
-              <Users size={13} /> Words of Elders
-            </button>
-
-            <button
-              onClick={() => setFilter('audio_only')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ml-auto ${
-                filter === 'audio_only'
-                  ? 'bg-heritage-gold-700 text-white shadow-xs'
-                  : 'bg-heritage-gold-50 dark:bg-heritage-gold-950/30 text-heritage-gold-800 dark:text-heritage-gold-300 border border-heritage-gold-300 dark:border-heritage-gold-800/50'
-              }`}
-            >
-              <Mic size={13} /> With Audio
-            </button>
-          </div>
-        </div>
-
-        {/* MASONRY COLLECTION GRID */}
-        {filteredEntries.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border p-12 text-center space-y-3 bg-heritage-cream-50/50 dark:bg-heritage-dark-card/50">
-            <Languages size={36} className="mx-auto text-heritage-green-400" />
-            <h4 className="font-serif text-lg font-semibold text-heritage-green-900 dark:text-heritage-dark-text">
-              No entries found
-            </h4>
-            <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted max-w-sm mx-auto">
-              No wisdom or language entries matched your search filter. Try resetting the filters or add a new entry.
-            </p>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-xs font-semibold text-heritage-gold-600 underline cursor-pointer"
-              >
-                Clear search query
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 [column-fill:_balance]">
-            {filteredEntries.map(entry => {
-              const badge = getEntryBadge(entry.entryType);
-              const saidBy = entry.saidByMemberId
-                ? data.members.find(m => m.id === entry.saidByMemberId)
-                : null;
-              const isFav = savedFavorites.has(entry.id);
-              const isEditing = editingId === entry.id;
-
-              return (
-                <div
-                  key={entry.id}
-                  onClick={() => !isEditing && setSelectedEntry(entry)}
-                  className={`break-inside-avoid mb-5 inline-block w-full group rounded-2xl border transition-all p-5 relative bg-white dark:bg-heritage-dark-card hover:border-heritage-gold-400 hover:shadow-md cursor-pointer ${
-                    isFav
-                      ? 'border-heritage-gold-300 dark:border-heritage-gold-900/50'
-                      : 'border-heritage-cream-300 dark:border-heritage-dark-border'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    {/* Top row: Badge & Actions */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md ${badge.bg}`}>
-                        {badge.label}
-                      </span>
-
-                      <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={e => toggleFavorite(entry.id, e)}
-                          title={isFav ? 'Remove favorite' : 'Save to favorites'}
-                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                            isFav
-                              ? 'text-red-500 bg-red-50 dark:bg-red-950/30'
-                              : 'text-heritage-green-400 hover:text-red-500 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
-                          }`}
-                        >
-                          <Heart size={14} className={isFav ? 'fill-current' : ''} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={e => handleShare(entry, e)}
-                          title="Share quote"
-                          className="p-1.5 rounded-lg text-heritage-green-400 hover:text-heritage-green-800 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover transition-colors cursor-pointer"
-                        >
-                          <Share2 size={14} />
-                        </button>
-
-                        {canAdd && !isEditing && (
-                          <button
-                            type="button"
-                            onClick={e => startEdit(entry, e)}
-                            title="Edit entry"
-                            className="p-1.5 rounded-lg text-heritage-green-400 hover:text-heritage-green-800 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover transition-colors cursor-pointer"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Term / Quote */}
-                    {isEditing ? (
-                      <div className="space-y-3 pt-2" onClick={e => e.stopPropagation()}>
-                        <input
-                          autoFocus
-                          value={editTerm}
-                          onChange={e => setEditTerm(e.target.value)}
-                          className="w-full font-serif text-lg rounded-lg border border-heritage-gold-400 dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-1.5 focus:outline-hidden"
-                          placeholder="Term / Quote"
-                        />
-                        <textarea
-                          value={editMeaning}
-                          onChange={e => setEditMeaning(e.target.value)}
-                          rows={2}
-                          className="w-full text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2"
-                          placeholder="Meaning / Translation"
-                        />
-                        <textarea
-                          value={editStoryBehind}
-                          onChange={e => setEditStoryBehind(e.target.value)}
-                          rows={2}
-                          className="w-full text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2"
-                          placeholder="Story or context behind the words..."
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            value={editLanguage}
-                            onChange={e => setEditLanguage(e.target.value)}
-                            placeholder="Language (e.g. Kikuyu, Swahili)"
-                            className="text-xs rounded-lg border border-heritage-cream-400 px-2.5 py-1.5 dark:bg-heritage-dark-hover"
-                          />
-                          <input
-                            value={editYear}
-                            onChange={e => setEditYear(e.target.value)}
-                            placeholder="Year recorded (e.g. 1965)"
-                            className="text-xs rounded-lg border border-heritage-cream-400 px-2.5 py-1.5 dark:bg-heritage-dark-hover"
-                          />
-                        </div>
-                        <AudioRecorder
-                          value={editAudioUrl}
-                          onChange={setEditAudioUrl}
-                          onBusyChange={setAudioBusy}
-                          label={audioLabel(entry.entryType)}
-                        />
-                        <div className="flex justify-end gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="px-3 py-1 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(entry.id, entry.entryType === 'riddle')}
-                            disabled={audioBusy}
-                            className="px-3 py-1 text-xs rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <h4 className="font-serif text-lg font-bold text-heritage-green-950 dark:text-heritage-dark-text leading-snug group-hover:text-heritage-green-800 dark:group-hover:text-heritage-gold-300 transition-colors">
-                          "{entry.term}"
-                        </h4>
-
-                        <p className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted leading-relaxed line-clamp-2">
-                          {entry.meaning}
-                        </p>
-
-                        {entry.language && (
-                          <span className="inline-block text-[11px] font-medium text-heritage-gold-700 dark:text-heritage-gold-400">
-                            {entry.language}
-                          </span>
-                        )}
-
-                        {/* Audio Player Widget if clip exists */}
-                        {entry.audioUrl && (
-                          <div
-                            className="bg-heritage-cream-100/80 dark:bg-heritage-dark-hover/80 rounded-lg p-2 flex items-center gap-2.5 border border-heritage-cream-300 dark:border-heritage-dark-border"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <Volume2 size={16} className="text-heritage-gold-600 shrink-0" />
-                            <audio controls src={entry.audioUrl} className="w-full h-7 rounded-sm" />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Card Footer */}
-                  {!isEditing && (
-                    <div className="mt-4 pt-3 border-t border-heritage-cream-200 dark:border-heritage-dark-border/50 flex items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2 text-heritage-green-600 dark:text-heritage-dark-muted truncate">
-                        {saidBy ? (
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation();
-                              onSelectMember(saidBy.id);
-                            }}
-                            className="flex items-center gap-1.5 hover:underline font-medium text-heritage-green-800 dark:text-heritage-dark-text truncate cursor-pointer"
-                          >
-                            <img
-                              src={saidBy.avatarUrl}
-                              alt=""
-                              className="w-4 h-4 rounded-full bg-heritage-cream-300 shrink-0"
-                            />
-                            <span className="truncate">{fullName(saidBy)}</span>
-                          </button>
-                        ) : (
-                          <span className="flex items-center gap-1 text-heritage-green-500 dark:text-heritage-dark-muted truncate">
-                            <Users size={12} /> Family Lineage
-                          </span>
-                        )}
-                        {entry.yearRecorded && <span>• {entry.yearRecorded}</span>}
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {(isAdmin || entry.contributedByProfileId === currentProfile?.id) && (
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation();
-                              if (window.confirm(`Remove "${entry.term}" from the Heritage Vault?`)) {
-                                removeLanguageEntry(entry.id);
-                              }
-                            }}
-                            title="Remove entry"
-                            className="p-1 text-heritage-green-400 hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-
-                        <div className="w-6 h-6 rounded-full bg-heritage-gold-500/10 dark:bg-heritage-gold-500/20 text-heritage-gold-700 dark:text-heritage-gold-400 flex items-center justify-center transition-transform group-hover:translate-x-0.5">
-                          <ArrowRight size={13} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+    <div className="space-y-0">
+      {/* ── Category Shortcut Nav ── */}
+      <div className="flex flex-wrap items-center gap-2 mb-6 bg-white dark:bg-heritage-dark-card p-3 rounded-2xl shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.key as string}
+            onClick={() => {
+              const el = document.getElementById(`vault-section-${cat.key as string}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors border border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-card ${cat.iconColor}`}
+          >
+            {cat.icon}
+            <span className="text-heritage-green-800 dark:text-heritage-dark-text">{cat.label}</span>
+          </button>
+        ))}
+        {canAdd && (
+          <button
+            onClick={() => openAddForm(CATEGORIES[0])}
+            className="ml-auto flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-soft transition-colors shrink-0"
+          >
+            <Plus size={14} /> Add Wisdom
+          </button>
         )}
       </div>
 
-      {/* 5. INTERACTIVE DETAIL VIEW MODAL (BOTTOM-LEFT SCREEN DESIGN) */}
-      {selectedEntry && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
-          onClick={() => setSelectedEntry(null)}
-        >
-          <div
-            className="bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header / Breadcrumb */}
-            <div className="px-6 py-4 bg-heritage-cream-100/80 dark:bg-heritage-dark-hover border-b border-heritage-cream-300 dark:border-heritage-dark-border flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-xs text-heritage-green-700 dark:text-heritage-dark-muted font-medium truncate">
-                <span className="hover:underline cursor-pointer" onClick={() => setSelectedEntry(null)}>
-                  Heritage Vault
-                </span>
-                <ChevronRight size={13} />
-                <span className="capitalize">{getEntryBadge(selectedEntry.entryType).label}</span>
-                <ChevronRight size={13} />
-                <span className="text-heritage-green-950 dark:text-heritage-dark-text font-bold truncate">
-                  "{selectedEntry.term}"
-                </span>
-              </div>
+      {/* ── Category Sections ── */}
+      <div className="space-y-10">
+        {CATEGORIES.map(cat => {
+          const entries = data.languageEntries.filter(e => cat.filterTypes.includes(e.entryType));
+          return (
+            <CategorySection
+              key={cat.key as string}
+              sectionId={`vault-section-${cat.key as string}`}
+              cat={cat}
+              entries={entries}
+              members={data.members}
+              likes={likes}
+              canAdd={canAdd}
+              canRemove={canRemove}
+              onAdd={() => openAddForm(cat)}
+              onView={setSelectedEntry}
+              onToggleLike={toggleLike}
+              onDelete={handleDelete}
+            />
+          );
+        })}
+      </div>
 
+      {/* ── Add Wisdom Modal ── */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="absolute inset-0" onClick={() => setShowForm(false)} />
+          <div className="relative bg-white dark:bg-heritage-dark-card rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-heritage-cream-200 dark:border-heritage-dark-border my-8 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-heritage-dark-card py-2 z-10 border-b border-heritage-cream-100 dark:border-heritage-dark-border">
+              <h3 className="text-xl font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text flex items-center gap-2">
+                <Feather size={18} className="text-heritage-bark-600" /> Add Wisdom Item
+              </h3>
               <button
-                type="button"
-                onClick={() => setSelectedEntry(null)}
-                className="p-1.5 rounded-lg text-heritage-green-600 hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-              {/* Top Hero Section of Detail View */}
-              <div className="flex flex-col md:flex-row gap-6 items-start">
-                {/* Left Visual Illustration Box */}
-                <div className="w-full md:w-64 h-48 sm:h-56 rounded-xl bg-gradient-to-br from-heritage-green-900 via-heritage-green-800 to-heritage-gold-900 text-white p-6 flex flex-col justify-between shrink-0 shadow-inner relative overflow-hidden border border-heritage-green-700">
-                  <div className="absolute -right-6 -bottom-6 opacity-20 pointer-events-none">
-                    <TreePine size={160} />
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-heritage-gold-300 font-semibold tracking-wide">
-                    <Sparkles size={14} />
-                    <span>ANCESTRAL WISDOM</span>
-                  </div>
-                  <div className="space-y-1 relative z-10">
-                    <p className="font-serif text-lg font-bold leading-tight line-clamp-3">
-                      "{selectedEntry.term}"
-                    </p>
-                    <p className="text-[11px] text-heritage-cream-200">
-                      {selectedEntry.language || 'Family Heritage'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Details & Title */}
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-md ${getEntryBadge(selectedEntry.entryType).bg}`}>
-                      {getEntryBadge(selectedEntry.entryType).label}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={e => toggleFavorite(selectedEntry.id, e)}
-                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
-                          savedFavorites.has(selectedEntry.id)
-                            ? 'border-red-300 bg-red-50 dark:bg-red-950/40 text-red-700 font-medium'
-                            : 'border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-muted hover:bg-heritage-cream-100'
-                        }`}
-                      >
-                        <Heart size={14} className={savedFavorites.has(selectedEntry.id) ? 'fill-current' : ''} />
-                        <span>{savedFavorites.has(selectedEntry.id) ? 'Saved' : 'Save to Collection'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={e => handleShare(selectedEntry, e)}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 transition-colors cursor-pointer"
-                      >
-                        <Share2 size={14} />
-                        <span>Share</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-heritage-green-950 dark:text-heritage-dark-text leading-snug">
-                    "{selectedEntry.term}"
-                  </h3>
-
-                  {selectedEntry.language && (
-                    <p className="text-sm font-medium text-heritage-green-700 dark:text-heritage-gold-400">
-                      — {selectedEntry.language}
-                    </p>
-                  )}
-
-                  {/* Metadata Chips */}
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-heritage-green-700 dark:text-heritage-dark-muted pt-1">
-                    {selectedEntry.saidByMemberId && (
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <Users size={14} className="text-heritage-gold-600" />
-                        <span>
-                          Shared by:{' '}
-                          {fullName(data.members.find(m => m.id === selectedEntry.saidByMemberId) ?? { firstName: 'Family', lastName: 'Elder' } as any)}
-                        </span>
-                      </div>
-                    )}
-                    {selectedEntry.yearRecorded && (
-                      <div className="flex items-center gap-1.5">
-                        <Calendar size={14} className="text-heritage-gold-600" />
-                        <span>Recorded: {selectedEntry.yearRecorded}</span>
-                      </div>
-                    )}
-                    {selectedEntry.category && (
-                      <div className="flex items-center gap-1.5">
-                        <Leaf size={14} className="text-heritage-gold-600" />
-                        <span>Category: {selectedEntry.category}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Audio Widget in Detail View */}
-                  {selectedEntry.audioUrl && (
-                    <div className="mt-3 bg-heritage-cream-100/90 dark:bg-heritage-dark-hover rounded-xl p-3 flex items-center gap-3 border border-heritage-cream-300 dark:border-heritage-dark-border">
-                      <Volume2 size={20} className="text-heritage-gold-600 shrink-0" />
-                      <audio controls src={selectedEntry.audioUrl} className="w-full h-8 rounded-sm" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom 2-Column Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-heritage-cream-200 dark:border-heritage-dark-border">
-                {/* Left 2 Columns: Tabs (The Meaning | The Story Behind It | Related Quotes) */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div className="flex items-center gap-3 border-b border-heritage-cream-300 dark:border-heritage-dark-border text-sm">
-                    <button
-                      type="button"
-                      onClick={() => setDetailTab('meaning')}
-                      className={`pb-2 font-medium transition-colors cursor-pointer ${
-                        detailTab === 'meaning'
-                          ? 'text-heritage-green-900 dark:text-heritage-gold-400 border-b-2 border-heritage-green-900 dark:border-heritage-gold-400 font-bold'
-                          : 'text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900'
-                      }`}
-                    >
-                      The Meaning
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDetailTab('story')}
-                      className={`pb-2 font-medium transition-colors cursor-pointer ${
-                        detailTab === 'story'
-                          ? 'text-heritage-green-900 dark:text-heritage-gold-400 border-b-2 border-heritage-green-900 dark:border-heritage-gold-400 font-bold'
-                          : 'text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900'
-                      }`}
-                    >
-                      The Story Behind It
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDetailTab('related')}
-                      className={`pb-2 font-medium transition-colors cursor-pointer ${
-                        detailTab === 'related'
-                          ? 'text-heritage-green-900 dark:text-heritage-gold-400 border-b-2 border-heritage-green-900 dark:border-heritage-gold-400 font-bold'
-                          : 'text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900'
-                      }`}
-                    >
-                      Related Quotes ({relatedQuotes.length})
-                    </button>
-                  </div>
-
-                  {/* Tab 1: The Meaning */}
-                  {detailTab === 'meaning' && (
-                    <div className="space-y-5 pt-2">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-heritage-green-900 dark:text-heritage-dark-text font-serif font-bold text-base">
-                          <Leaf size={16} className="text-heritage-gold-600" />
-                          <h4>The Meaning & Lesson</h4>
-                        </div>
-                        <p className="text-sm text-heritage-green-800 dark:text-heritage-dark-muted leading-relaxed">
-                          {selectedEntry.meaning}
-                        </p>
-                      </div>
-
-                      {selectedEntry.answer && (
-                        <div className="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50">
-                          <span className="text-xs font-bold text-purple-900 dark:text-purple-300">Answer: </span>
-                          <span className="text-xs text-purple-800 dark:text-purple-200">{selectedEntry.answer}</span>
-                        </div>
-                      )}
-
-                      {/* Highlighted Quote Callout */}
-                      <div className="p-4 rounded-xl bg-heritage-cream-100/90 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border flex items-start gap-3">
-                        <TreePine size={24} className="text-heritage-green-800 dark:text-heritage-gold-400 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <blockquote className="font-serif text-sm font-semibold italic text-heritage-green-950 dark:text-heritage-dark-text">
-                            "{selectedEntry.term}"
-                          </blockquote>
-                          <p className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted">
-                            — {selectedEntry.language || 'Family Wisdom'} • Passed down for posterity
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Tab 2: The Story Behind It */}
-                  {detailTab === 'story' && (
-                    <div className="space-y-4 pt-2">
-                      <div className="flex items-center gap-2 text-heritage-green-900 dark:text-heritage-dark-text font-serif font-bold text-base">
-                        <BookOpen size={16} className="text-heritage-gold-600" />
-                        <h4>The Context & Memories</h4>
-                      </div>
-                      <p className="text-sm text-heritage-green-800 dark:text-heritage-dark-muted leading-relaxed">
-                        {selectedEntry.storyBehind ||
-                          'This wisdom was passed down by our family elders during harvests, gatherings, and evening stories to remind future generations of their values and heritage.'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Tab 3: Related Quotes */}
-                  {detailTab === 'related' && (
-                    <div className="space-y-3 pt-2">
-                      {relatedQuotes.length === 0 ? (
-                        <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
-                          No other related quotes in this category yet.
-                        </p>
-                      ) : (
-                        relatedQuotes.map(rel => (
-                          <div
-                            key={rel.id}
-                            onClick={() => setSelectedEntry(rel)}
-                            className="p-3 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border hover:border-heritage-gold-400 bg-white dark:bg-heritage-dark-hover transition-colors cursor-pointer flex items-center justify-between gap-3"
-                          >
-                            <div className="space-y-0.5">
-                              <p className="font-serif text-sm font-bold text-heritage-green-900 dark:text-heritage-dark-text">
-                                "{rel.term}"
-                              </p>
-                              <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted line-clamp-1">
-                                {rel.meaning}
-                              </p>
-                            </div>
-                            <ArrowRight size={14} className="text-heritage-gold-600 shrink-0" />
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Column: "Details" Card */}
-                <div className="rounded-2xl border border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50/80 dark:bg-heritage-dark-hover/60 p-5 space-y-4 relative overflow-hidden">
-                  <div className="absolute right-0 bottom-0 opacity-15 pointer-events-none text-heritage-green-800">
-                    <Leaf size={100} />
-                  </div>
-
-                  <h4 className="font-serif font-bold text-base text-heritage-green-950 dark:text-heritage-dark-text border-b border-heritage-cream-300 dark:border-heritage-dark-border pb-2">
-                    Details
-                  </h4>
-
-                  <div className="space-y-3 text-xs">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-heritage-green-600 dark:text-heritage-dark-muted font-medium">Original Language</span>
-                      <span className="font-semibold text-heritage-green-950 dark:text-heritage-dark-text text-right">
-                        {selectedEntry.language || 'Kimeru / Kikuyu'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-heritage-green-600 dark:text-heritage-dark-muted font-medium">Source / Speaker</span>
-                      <span className="font-semibold text-heritage-green-950 dark:text-heritage-dark-text text-right">
-                        {selectedEntry.saidByMemberId
-                          ? fullName(data.members.find(m => m.id === selectedEntry.saidByMemberId) ?? { firstName: 'Elder', lastName: '' } as any)
-                          : 'Family Tradition'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-heritage-green-600 dark:text-heritage-dark-muted font-medium">Recorded Year</span>
-                      <span className="font-semibold text-heritage-green-950 dark:text-heritage-dark-text text-right">
-                        {selectedEntry.yearRecorded || 'Passed orally'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-heritage-green-600 dark:text-heritage-dark-muted font-medium">Location</span>
-                      <span className="font-semibold text-heritage-green-950 dark:text-heritage-dark-text text-right">
-                        {selectedEntry.location || 'Nkubu, Kenya'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-heritage-green-600 dark:text-heritage-dark-muted font-medium">Category</span>
-                      <span className="font-semibold text-heritage-green-950 dark:text-heritage-dark-text text-right">
-                        {selectedEntry.category || 'Family Wisdom'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 6. ADD / RECORD NEW WISDOM MODAL */}
-      {showForm && canAdd && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-heritage-dark-card border border-heritage-cream-300 dark:border-heritage-dark-border rounded-2xl w-full max-w-2xl shadow-2xl p-6 sm:p-8 my-auto space-y-5">
-            <div className="flex items-center justify-between border-b border-heritage-cream-300 dark:border-heritage-dark-border pb-3">
-              <div className="flex items-center gap-2">
-                <Plus size={20} className="text-heritage-gold-600" />
-                <h3 className="font-serif text-xl font-bold text-heritage-green-950 dark:text-heritage-dark-text">
-                  Add to Heritage Vault
-                </h3>
-              </div>
-              <button
-                type="button"
                 onClick={() => setShowForm(false)}
-                className="p-1.5 rounded-lg text-heritage-green-600 hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover"
+                className="text-heritage-green-500 hover:text-heritage-green-900 p-2 rounded-full hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={submitNewEntry} className="space-y-4">
-              {/* Category Picker */}
-              <div>
-                <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1.5">
-                  Category Type
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {(['proverb', 'saying', 'elder_wisdom', 'story', 'expression', 'riddle', 'recording'] as LanguageEntryType[]).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setFormType(t)}
-                      className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
-                        formType === t
-                          ? 'bg-heritage-green-900 text-white border-heritage-green-900'
-                          : 'border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-muted'
-                      }`}
-                    >
-                      {getEntryBadge(t).label}
-                    </button>
-                  ))}
+            <form onSubmit={submitForm} className="space-y-4">
+              {/* Title + Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                    Title / Phrase
+                  </label>
+                  <input
+                    required
+                    value={formTitle}
+                    onChange={e => setFormTitle(e.target.value)}
+                    placeholder="e.g. Agendi mũirĩru..."
+                    className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={formCategory.key as string}
+                    onChange={e => setFormCategory(CATEGORIES.find(c => c.key === e.target.value) ?? CATEGORIES[0])}
+                    className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text"
+                  >
+                    {CATEGORIES.map(c => (
+                      <option key={c.key as string} value={c.key as string}>{c.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Term / Quote */}
-              <div>
-                <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                  The Proverb, Saying, or Phrase
-                </label>
-                <input
-                  required
-                  value={formTerm}
-                  onChange={e => setFormTerm(e.target.value)}
-                  placeholder='e.g. "A tree does not forget its roots."'
-                  className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3.5 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
-                />
+              {/* Original Language + Contributor */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                    Original Language / Text
+                  </label>
+                  <input
+                    value={formOriginal}
+                    onChange={e => setFormOriginal(e.target.value)}
+                    placeholder="e.g. Kĩmĩrũ / Native phrasing"
+                    className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                    Contributor
+                  </label>
+                  <select
+                    value={formContributor}
+                    onChange={e => setFormContributor(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text"
+                  >
+                    <option value="">— Select contributor —</option>
+                    {data.members.map(m => (
+                      <option key={m.id} value={m.id}>{fullName(m)}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Meaning */}
               <div>
-                <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                  Meaning & Translation
+                <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                  English Translation & Meaning
                 </label>
                 <textarea
                   required
-                  rows={2}
+                  rows={3}
                   value={formMeaning}
                   onChange={e => setFormMeaning(e.target.value)}
-                  placeholder="What it means, and its life lesson for the family..."
-                  className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3.5 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
+                  placeholder="Explain the deeper meaning and translation..."
+                  className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text resize-none"
                 />
               </div>
 
-              {/* Context / Story Behind */}
+              {/* Context */}
               <div>
-                <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                  The Story Behind It (Context & Memories)
+                <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                  Full Story / Context (Optional)
                 </label>
                 <textarea
-                  rows={2}
-                  value={formStoryBehind}
-                  onChange={e => setFormStoryBehind(e.target.value)}
-                  placeholder="When or how was this shared? Any memories attached to it? (optional)"
-                  className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3.5 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
+                  rows={3}
+                  value={formContext}
+                  onChange={e => setFormContext(e.target.value)}
+                  placeholder="Provide background story, context, or lesson..."
+                  className="w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text resize-none"
                 />
               </div>
 
-              {formType === 'riddle' && (
-                <div>
-                  <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                    Traditional Riddle Answer
-                  </label>
-                  <input
-                    value={formAnswer}
-                    onChange={e => setFormAnswer(e.target.value)}
-                    placeholder="The answer to the riddle"
-                    className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm"
-                  />
-                </div>
-              )}
-
-              {/* Speaker / Attributed Member */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                    Spoken By or Featuring (Optional)
-                  </label>
-                  <select
-                    value={formSaidBy}
-                    onChange={e => setFormSaidBy(e.target.value)}
-                    className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm"
-                  >
-                    <option value="">Family Elder / General Tradition</option>
-                    {data.members.map(mem => (
-                      <option key={mem.id} value={mem.id}>
-                        {fullName(mem)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                    Original Language
-                  </label>
-                  <input
-                    value={formLanguage}
-                    onChange={e => setFormLanguage(e.target.value)}
-                    placeholder="e.g. Kikuyu, Swahili, Kimeru, English"
-                    className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Year & Location */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                    Approximate Year / Era
-                  </label>
-                  <input
-                    value={formYear}
-                    onChange={e => setFormYear(e.target.value)}
-                    placeholder="e.g. 1965, 1987"
-                    className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-muted mb-1">
-                    Location / Setting
-                  </label>
-                  <input
-                    value={formLocation}
-                    onChange={e => setFormLocation(e.target.value)}
-                    placeholder="e.g. Nkubu, Kenya"
-                    className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Voice Recorder */}
-              <div className="pt-1">
+              {/* Audio Recording */}
+              <div>
+                <label className="block text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted uppercase tracking-wider mb-1">
+                  Voice Recording (Optional)
+                </label>
                 <AudioRecorder
                   value={formAudioUrl}
                   onChange={setFormAudioUrl}
-                  onBusyChange={setAudioBusy}
-                  label={audioLabel(formType)}
+                  label="Record how it's spoken"
+                  onBusyChange={setFormAudioBusy}
                 />
               </div>
 
-              {/* Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-heritage-cream-300 dark:border-heritage-dark-border">
+              {/* Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-heritage-cream-100 dark:border-heritage-dark-border">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-sm rounded-xl border border-heritage-cream-400 text-heritage-green-800 dark:text-heritage-dark-muted cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-muted transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={audioBusy || !formTerm.trim() || !formMeaning.trim()}
-                  className="px-5 py-2 text-sm font-semibold rounded-xl bg-heritage-green-900 hover:bg-heritage-green-800 text-white shadow disabled:opacity-50 cursor-pointer"
+                  disabled={formAudioBusy}
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-heritage-bark-600 hover:bg-heritage-bark-700 text-white shadow-soft transition-all disabled:opacity-50"
                 >
-                  Add to Heritage Vault
+                  Save Wisdom
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* ── Detail Modal ── */}
+      {selectedEntry && (
+        <WisdomDetailModal
+          entry={selectedEntry}
+          members={data.members}
+          likes={likes[selectedEntry.id] ?? 0}
+          canRemove={canRemove}
+          canAdd={canAdd}
+          onClose={() => setSelectedEntry(null)}
+          onDelete={() => handleDelete(selectedEntry.id)}
+          onLike={() => toggleLike(selectedEntry.id)}
+          onSelectMember={onSelectMember}
+          onAudioSaved={(url) => {
+            updateLanguageEntry(selectedEntry.id, { audioUrl: url });
+            setSelectedEntry(prev => prev ? { ...prev, audioUrl: url } : null);
+            pushToast('Voice recording saved');
+          }}
+        />
+      )}
     </div>
   );
 };
+
+// ── CategorySection ───────────────────────────────────────────────────────────
+
+interface CategorySectionProps {
+  sectionId: string;
+  cat: CategoryDef;
+  entries: LanguageEntry[];
+  members: ReturnType<typeof useApp>['data']['members'];
+  likes: Record<string, number>;
+  canAdd: boolean;
+  canRemove: boolean;
+  onAdd: () => void;
+  onView: (entry: LanguageEntry) => void;
+  onToggleLike: (id: string, e?: React.MouseEvent) => void;
+  onDelete: (id: string) => void;
+}
+
+function CategorySection({
+  sectionId, cat, entries, members, likes, canAdd, canRemove,
+  onAdd, onView, onToggleLike, onDelete,
+}: CategorySectionProps) {
+  return (
+    <div id={sectionId} className="bg-white dark:bg-heritage-dark-card rounded-2xl p-6 sm:p-8 shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border space-y-6 scroll-mt-4">
+      {/* Section header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-heritage-cream-100 dark:border-heritage-dark-border pb-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-12 h-12 rounded-2xl bg-heritage-cream-100 dark:bg-heritage-dark-hover flex items-center justify-center shadow-inner ${cat.iconColor}`}>
+            {cat.icon}
+          </div>
+          <div>
+            <h3 className="font-serif text-xl sm:text-2xl font-bold text-heritage-green-900 dark:text-heritage-dark-text">
+              {cat.label}
+            </h3>
+            <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted font-medium">
+              {entries.length} Item{entries.length !== 1 ? 's' : ''} Added
+            </p>
+          </div>
+        </div>
+        {canAdd && (
+          <button
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-muted transition-all shadow-soft border border-heritage-cream-300 dark:border-heritage-dark-border"
+          >
+            <Plus size={13} /> Add Item
+          </button>
+        )}
+      </div>
+
+      {/* Empty state */}
+      {entries.length === 0 ? (
+        <div className="border-2 border-dashed border-heritage-cream-200 dark:border-heritage-dark-border rounded-2xl p-8 text-center bg-heritage-cream-50/50 dark:bg-heritage-dark-hover/30">
+          <div className="w-12 h-12 rounded-full bg-heritage-cream-100 dark:bg-heritage-dark-hover mx-auto flex items-center justify-center text-heritage-green-500 dark:text-heritage-dark-muted mb-3">
+            <Feather size={20} />
+          </div>
+          <h4 className="font-bold text-heritage-green-800 dark:text-heritage-dark-text text-sm">0 Items Added</h4>
+          <p className="text-heritage-green-500 dark:text-heritage-dark-muted text-xs mt-1 max-w-sm mx-auto">
+            Add the first item to {cat.label.toLowerCase()}
+          </p>
+          {canAdd && (
+            <button
+              onClick={onAdd}
+              className="mt-4 inline-flex items-center gap-2 bg-heritage-bark-600 hover:bg-heritage-bark-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-soft transition-all"
+            >
+              <Plus size={13} /> Add the first item to {cat.label.toLowerCase()}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {entries.map(entry => (
+            <WisdomCard
+              key={entry.id}
+              entry={entry}
+              members={members}
+              likes={likes[entry.id] ?? 0}
+              cat={cat}
+              canRemove={canRemove}
+              onView={() => onView(entry)}
+              onLike={e => onToggleLike(entry.id, e)}
+              onDelete={e => { e.stopPropagation(); onDelete(entry.id); }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── WisdomCard ────────────────────────────────────────────────────────────────
+
+interface WisdomCardProps {
+  entry: LanguageEntry;
+  members: ReturnType<typeof useApp>['data']['members'];
+  likes: number;
+  cat: CategoryDef;
+  canRemove: boolean;
+  onView: () => void;
+  onLike: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
+}
+
+function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onDelete }: WisdomCardProps) {
+  const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
+
+  return (
+    <div
+      onClick={onView}
+      className="group bg-heritage-cream-50 dark:bg-heritage-dark-hover rounded-2xl p-6 border border-heritage-cream-200 dark:border-heritage-dark-border hover:border-heritage-bark-400 dark:hover:border-heritage-bark-600 transition-all duration-300 shadow-soft hover:shadow-soft-lg cursor-pointer flex flex-col justify-between space-y-4"
+    >
+      <div className="space-y-3">
+        {/* Category badge + likes */}
+        <div className="flex items-center justify-between">
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${cat.badgeColor}`}>
+            {cat.label}
+          </span>
+          <div className="flex items-center gap-2">
+            {/* Audio indicator */}
+            {entry.audioUrl && (
+              <span className="flex items-center gap-1 text-[10px] text-heritage-green-600 dark:text-heritage-dark-muted font-semibold">
+                <Volume2 size={10} /> Audio
+              </span>
+            )}
+            {/* Likes */}
+            <button
+              onClick={onLike}
+              className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted flex items-center gap-1 font-semibold hover:text-rose-500 transition-colors"
+            >
+              <Heart size={12} className="text-rose-500 fill-rose-500" /> {likes}
+            </button>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h4 className="font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text text-lg group-hover:text-heritage-bark-600 dark:group-hover:text-heritage-bark-400 transition-colors line-clamp-2">
+          {entry.term}
+        </h4>
+
+        {/* Original text (language field) */}
+        {entry.language && (
+          <div className="text-xs italic font-serif text-heritage-green-800 dark:text-heritage-dark-muted bg-heritage-cream-100 dark:bg-heritage-dark-card/60 p-2.5 rounded-xl border-l-2 border-heritage-bark-400 line-clamp-2">
+            "{entry.language}"
+          </div>
+        )}
+
+        {/* Meaning */}
+        <p className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted line-clamp-3 leading-relaxed">
+          {entry.meaning}
+        </p>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-heritage-cream-200 dark:border-heritage-dark-border text-xs">
+        <span className="text-heritage-green-600 dark:text-heritage-dark-muted italic truncate max-w-[60%]">
+          {contributor ? `By ${fullName(contributor)}` : ''}
+        </span>
+        <div className="flex items-center gap-2">
+          {canRemove && (
+            <button
+              onClick={onDelete}
+              className="text-heritage-green-400 hover:text-red-600 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+              aria-label="Delete"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+          <span className="text-heritage-bark-600 dark:text-heritage-bark-400 font-semibold group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
+            Read <ArrowRight size={11} />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── WisdomDetailModal ─────────────────────────────────────────────────────────
+
+interface WisdomDetailModalProps {
+  entry: LanguageEntry;
+  members: ReturnType<typeof useApp>['data']['members'];
+  likes: number;
+  canRemove: boolean;
+  canAdd: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  onLike: () => void;
+  onSelectMember: (id: string) => void;
+  onAudioSaved: (url: string) => void;
+}
+
+function WisdomDetailModal({
+  entry, members, likes, canRemove, canAdd,
+  onClose, onDelete, onLike, onSelectMember, onAudioSaved,
+}: WisdomDetailModalProps) {
+  const cat = categoryDef(entry);
+  const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
+  const [showAudioEdit, setShowAudioEdit] = useState(false);
+  const [pendingAudio, setPendingAudio] = useState(entry.audioUrl ?? '');
+  const [audioBusy, setAudioBusy] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-white dark:bg-heritage-dark-card rounded-2xl shadow-2xl border border-heritage-cream-200 dark:border-heritage-dark-border my-8 overflow-hidden flex flex-col max-h-[90vh]">
+
+        {/* Scrollable body */}
+        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-grow">
+          {/* Header row */}
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white mb-2 shadow-soft ${
+                cat.iconColor.includes('bark') ? 'bg-heritage-bark-600' :
+                cat.iconColor.includes('amber-700') ? 'bg-amber-600' :
+                cat.iconColor.includes('green') ? 'bg-heritage-green-700' :
+                cat.iconColor.includes('blue') ? 'bg-blue-700' :
+                'bg-amber-800'
+              }`}>
+                {cat.label}
+              </span>
+              <h3 className="text-2xl font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">
+                {entry.term}
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-heritage-green-500 hover:text-heritage-green-900 p-2 rounded-full hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover shrink-0"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Original text box */}
+          {entry.language && (
+            <div className="bg-heritage-cream-100/70 dark:bg-heritage-dark-hover p-4 rounded-2xl border-l-4 border-heritage-bark-400 italic text-heritage-green-900 dark:text-heritage-dark-text text-sm font-serif">
+              "{entry.language}"
+            </div>
+          )}
+
+          {/* Meaning */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-heritage-green-600 dark:text-heritage-dark-muted">
+              Meaning & Translation
+            </h4>
+            <p className="text-heritage-green-800 dark:text-heritage-dark-text text-sm leading-relaxed bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
+              {entry.meaning}
+            </p>
+          </div>
+
+          {/* Context / Story */}
+          {entry.storyBehind && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-heritage-green-600 dark:text-heritage-dark-muted">
+                Historical Context & Lesson
+              </h4>
+              <p className="text-heritage-green-800 dark:text-heritage-dark-text text-sm leading-relaxed bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
+                {entry.storyBehind}
+              </p>
+            </div>
+          )}
+
+          {/* Audio section */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-heritage-green-600 dark:text-heritage-dark-muted flex items-center gap-1.5">
+              <Mic size={13} /> Voice Recording
+            </h4>
+
+            {entry.audioUrl && !showAudioEdit && (
+              <div className="space-y-2">
+                <audio controls src={entry.audioUrl} className="w-full h-9 rounded-lg" />
+                {canAdd && (
+                  <button
+                    onClick={() => { setPendingAudio(entry.audioUrl ?? ''); setShowAudioEdit(true); }}
+                    className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 dark:hover:text-heritage-dark-text underline"
+                  >
+                    Replace recording
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!entry.audioUrl && !showAudioEdit && canAdd && (
+              <button
+                onClick={() => { setPendingAudio(''); setShowAudioEdit(true); }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-200 dark:border-heritage-dark-border transition-all"
+              >
+                <Mic size={13} /> Add voice recording
+              </button>
+            )}
+
+            {!entry.audioUrl && !showAudioEdit && !canAdd && (
+              <p className="text-xs text-heritage-green-400 dark:text-heritage-dark-muted italic">No recording yet.</p>
+            )}
+
+            {showAudioEdit && (
+              <div className="space-y-3">
+                <AudioRecorder
+                  value={pendingAudio}
+                  onChange={setPendingAudio}
+                  label="Record how it's spoken"
+                  onBusyChange={setAudioBusy}
+                />
+                <div className="flex gap-2">
+                  <button
+                    disabled={audioBusy}
+                    onClick={() => { onAudioSaved(pendingAudio); setShowAudioEdit(false); }}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-heritage-green-800 hover:bg-heritage-green-700 text-white transition-all disabled:opacity-50"
+                  >
+                    Save Recording
+                  </button>
+                  <button
+                    onClick={() => setShowAudioEdit(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 text-heritage-green-700 dark:text-heritage-dark-muted transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer: contributor + likes */}
+          <div className="flex items-center justify-between pt-4 border-t border-heritage-cream-100 dark:border-heritage-dark-border text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
+            <span>
+              Contributed by:{' '}
+              {contributor ? (
+                <button
+                  onClick={() => { onClose(); onSelectMember(contributor.id); }}
+                  className="font-semibold text-heritage-green-900 dark:text-heritage-dark-text hover:underline"
+                >
+                  {fullName(contributor)}
+                </button>
+              ) : (
+                <strong className="text-heritage-green-900 dark:text-heritage-dark-text font-semibold">Family</strong>
+              )}
+            </span>
+            <button
+              onClick={onLike}
+              className="px-3 py-1.5 rounded-xl bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text font-semibold transition-all flex items-center gap-1.5 border border-heritage-cream-200 dark:border-heritage-dark-border"
+            >
+              <Heart size={12} className="text-rose-500 fill-rose-500" />
+              {likes} Like{likes !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-4 bg-heritage-cream-50 dark:bg-heritage-dark-hover border-t border-heritage-cream-200 dark:border-heritage-dark-border flex justify-end gap-3 flex-shrink-0">
+          {canRemove && (
+            <button
+              onClick={onDelete}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1.5"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-heritage-cream-200 dark:bg-heritage-dark-card hover:bg-heritage-cream-300 dark:hover:bg-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-muted transition-all"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

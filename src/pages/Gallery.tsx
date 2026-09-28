@@ -94,47 +94,6 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
 
   return (
     <div className="space-y-0">
-      {/* ── Hero Banner ── */}
-      <div
-        className="relative rounded-2xl overflow-hidden mb-6"
-        style={{ background: 'linear-gradient(135deg, #f5f0e8 0%, #e8dcc8 60%, #c8b99a 100%)' }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none select-none">
-          <TreeDeciduous size={260} className="text-heritage-green-800" />
-        </div>
-        <div className="relative z-10 flex items-center justify-between px-8 py-8 gap-6">
-          {/* Left */}
-          <div className="flex items-start gap-4 flex-1 min-w-0">
-            <div className="shrink-0 w-12 h-12 rounded-xl bg-heritage-green-800/10 flex items-center justify-center">
-              <Camera size={26} className="text-heritage-green-800" />
-            </div>
-            <div>
-              <h1 className="font-serif text-3xl font-bold text-heritage-green-900 leading-tight">
-                Photo Gallery
-              </h1>
-              <p className="text-heritage-green-700 font-medium mt-0.5 italic text-sm">
-                Cherished moments. Timeless memories.
-              </p>
-              <p className="text-heritage-green-600 text-xs mt-1 max-w-md">
-                Explore our family's journey through photos — from childhood smiles to lifelong
-                milestones and the moments that keep us connected.
-              </p>
-              <div className="mt-2 w-12 h-0.5 bg-heritage-gold-500 rounded-full" />
-            </div>
-          </div>
-          {/* Right — quote */}
-          <div className="shrink-0 max-w-xs text-right hidden md:block">
-            <p className="font-serif text-lg italic text-heritage-green-800 leading-snug">
-              "Family is where life begins and love never ends."
-            </p>
-            <div className="mt-2 flex justify-end">
-              <div className="w-5 h-5 rounded-full border-2 border-heritage-green-700 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-heritage-green-700" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* ── Top action row ── */}
       <div className="flex items-center justify-between mb-6">

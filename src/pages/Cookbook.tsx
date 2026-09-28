@@ -102,42 +102,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
 
   return (
     <div className="space-y-0">
-      {/* ── Hero Banner ── */}
-      <div
-        className="relative rounded-2xl overflow-hidden mb-6"
-        style={{ background: 'linear-gradient(135deg, #fdf8f0 0%, #f0e6d0 60%, #d4c4a0 100%)' }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none select-none">
-          <ChefHat size={260} className="text-heritage-green-800" />
-        </div>
-        <div className="relative z-10 flex items-center justify-between px-8 py-8 gap-6">
-          <div className="flex items-start gap-4 flex-1 min-w-0">
-            <div className="shrink-0 w-12 h-12 rounded-xl bg-heritage-green-800/10 flex items-center justify-center">
-              <ChefHat size={26} className="text-heritage-green-800" />
-            </div>
-            <div>
-              <h1 className="font-serif text-3xl font-bold text-heritage-green-900 leading-tight">
-                {familyCookbook.title}
-              </h1>
-              <p className="text-heritage-green-600 text-sm mt-1">
-                {familyCookbook.description}
-              </p>
-              <div className="mt-2 w-12 h-0.5 bg-heritage-gold-500 rounded-full" />
-            </div>
-          </div>
-          <div className="shrink-0 max-w-xs text-right hidden md:block">
-            <p className="font-serif text-lg italic text-heritage-green-800 leading-snug">
-              "Food is the thread that weaves our family stories together."
-            </p>
-            <div className="mt-2 flex justify-end">
-              <div className="w-5 h-5 rounded-full border-2 border-heritage-green-700 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-heritage-green-700" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ── Search & Filter Bar ── */}
       <div className="flex flex-col sm:flex-row items-center gap-4 bg-white dark:bg-heritage-dark-card p-4 rounded-2xl shadow-soft border border-heritage-cream-300 dark:border-heritage-dark-border mb-8">
         {/* Search */}
