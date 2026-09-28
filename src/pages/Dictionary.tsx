@@ -243,30 +243,25 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                     {TYPE_LABEL[entry.entryType]}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+
+                {/* Top Right: Edit button */}
+                <div className="flex items-center gap-2 shrink-0">
                   {canAdd && !isEditing && (
                     <button
+                      type="button"
                       onClick={() => startEdit(entry.id, entry.term, entry.meaning, entry.answer, entry.audioUrl)}
-                      className="text-heritage-green-400 hover:text-heritage-green-800 dark:text-heritage-dark-muted"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover transition-colors cursor-pointer"
                       title="Suggest a correction"
                     >
-                      <Pencil size={15} />
-                    </button>
-                  )}
-                  {(isAdmin || entry.contributedByProfileId === currentProfile?.id) && !isEditing && (
-                    <button
-                      onClick={() => removeLanguageEntry(entry.id)}
-                      className="text-heritage-green-400 hover:text-red-600"
-                      title="Remove entry"
-                    >
-                      <Trash2 size={15} />
+                      <Pencil size={13} />
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                   )}
                 </div>
               </div>
 
               {isEditing ? (
-                <div className="space-y-2">
+                <div className="space-y-2 mt-2">
                   <input
                     autoFocus
                     value={editTerm} onChange={e => setEditTerm(e.target.value)}
@@ -328,14 +323,14 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                           <button
                             onClick={() => setAudioEditId(null)}
                             disabled={audioBusy}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted disabled:opacity-50"
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted disabled:opacity-50 cursor-pointer"
                           >
                             <X size={13} /> Cancel
                           </button>
                           <button
                             onClick={() => saveAudioEdit(entry.id)}
                             disabled={audioBusy || pendingAudio === (entry.audioUrl ?? '')}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50"
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50 cursor-pointer"
                           >
                             <Check size={13} /> Save audio
                           </button>
@@ -344,7 +339,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                     ) : (
                       <button
                         onClick={() => startAudioEdit(entry.id, entry.audioUrl)}
-                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-heritage-green-700 dark:text-heritage-gold-400 hover:underline"
+                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-heritage-green-700 dark:text-heritage-gold-400 hover:underline cursor-pointer"
                       >
                         <Mic size={14} /> {entry.audioUrl ? 'Replace or remove audio' : audioLabel(entry.entryType)}
                       </button>
@@ -353,16 +348,34 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 </>
               )}
 
-              <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+              {/* Footer: Speaker info on left, Contributor & Delete on right */}
+              <div className="flex items-center justify-between mt-4 pt-3 border-t border-heritage-cream-200 dark:border-heritage-dark-border/60 flex-wrap gap-2">
                 {saidBy ? (
-                  <button onClick={() => onSelectMember(saidBy.id)} className="flex items-center gap-2 text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900">
-                    <img src={saidBy.avatarUrl} className="w-6 h-6 rounded-full bg-heritage-cream-200" alt="" />
-                    {entry.entryType === 'recording' ? 'recorded by / featuring' : 'said often by'} {fullName(saidBy)}
+                  <button onClick={() => onSelectMember(saidBy.id)} className="flex items-center gap-2 text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 cursor-pointer">
+                    <img src={saidBy.avatarUrl} className="w-5 h-5 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                    <span>{entry.entryType === 'recording' ? 'recorded by / featuring' : 'said often by'} {fullName(saidBy)}</span>
                   </button>
                 ) : <span />}
-                <span className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
-                  added by {entry.contributedByName}
-                </span>
+
+                <div className="flex items-center gap-3 ml-auto">
+                  <span className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                    added by {entry.contributedByName}
+                  </span>
+                  {(isAdmin || entry.contributedByProfileId === currentProfile?.id) && !isEditing && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Remove "${entry.term}" from the dictionary?`)) {
+                          removeLanguageEntry(entry.id);
+                        }
+                      }}
+                      className="flex items-center gap-1 text-xs text-heritage-green-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                      title="Remove entry"
+                    >
+                      <Trash2 size={13} />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
