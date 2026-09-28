@@ -140,10 +140,10 @@ interface AppContextValue {
   addLegacyContribution: (memberId: string, body: string, taggedMemberIds: string[]) => void;
   removeLegacyContribution: (id: string) => void;
 
-  // language dictionary
-  addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; audioUrl?: string; saidByMemberId?: string }) => void;
+  // heritage vault & language entries
+  addLanguageEntry: (entry: Omit<LanguageEntry, 'id' | 'familyId' | 'createdAt' | 'contributedByProfileId' | 'contributedByName'>) => void;
   /** `audioUrl: ''` removes the entry's recording. */
-  updateLanguageEntry: (id: string, patch: Partial<{ term: string; meaning: string; answer: string; audioUrl: string; saidByMemberId: string }>) => void;
+  updateLanguageEntry: (id: string, patch: Partial<Omit<LanguageEntry, 'id' | 'familyId' | 'createdAt'>>) => void;
   removeLanguageEntry: (id: string) => void;
 
   // trivia & leaderboard
@@ -633,16 +633,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logActivity(`Removed a legacy memory`, 'legacy_contribution');
   };
 
-  const addLanguageEntry: AppContextValue['addLanguageEntry'] = ({ entryType, term, meaning, answer, audioUrl, saidByMemberId }) => {
+  const addLanguageEntry: AppContextValue['addLanguageEntry'] = (entryData) => {
     const entry: LanguageEntry = {
+      ...entryData,
       id: newId(),
       familyId: data.family.id,
-      entryType,
-      term,
-      meaning,
-      answer,
-      audioUrl,
-      saidByMemberId,
       contributedByProfileId: currentProfile?.id,
       contributedByName: currentProfile?.displayName ?? 'A family member',
       createdAt: new Date().toISOString(),
@@ -650,16 +645,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, languageEntries: [entry, ...prev.languageEntries] }));
     if (isOnlineMode) {
       persist('language entry', () => api.post('/features/language', {
-        entryType,
-        term,
-        meaning,
-        answer,
-        audioUrl,
-        saidByMemberId,
+        ...entryData,
         contributedByName: entry.contributedByName,
       }));
     }
-    logActivity(`Added a ${entryType} to the family language dictionary`, 'language_entry');
+    logActivity(`Added "${entry.term}" to the Heritage Vault`, 'language_entry');
   };
 
   const removeLanguageEntry: AppContextValue['removeLanguageEntry'] = (id) => {

@@ -289,15 +289,11 @@ export interface FamilyDataset {
   auditLog: AuditLogEntry[];
 }
 
-export type LanguageEntryType = 'word' | 'phrase' | 'proverb' | 'riddle' | 'saying' | 'recording';
+export type LanguageEntryType = 'proverb' | 'saying' | 'elder_wisdom' | 'story' | 'expression' | 'word' | 'phrase' | 'riddle' | 'recording';
 
 /**
- * One crowd-sourced entry in the family's language dictionary — a tribal-language word,
- * sentence, proverb, riddle, or voice recording, contributed by any family member along with
- * its meaning (and, for riddles, the traditional answer). A 'saying' entry is
- * a personal catchphrase attributed to a specific family member (living or
- * passed on) rather than a piece of the wider tribal language — e.g. something
- * Grandpa always says at dinner — and can optionally be linked to that member.
+ * One entry in the family's Heritage Vault — a proverb, family saying, word of elder wisdom,
+ * story/lesson, cultural expression, word, phrase, riddle, or voice recording.
  */
 export interface LanguageEntry {
   id: string;
@@ -307,9 +303,21 @@ export interface LanguageEntry {
   meaning: string;
   /** Only used for entryType 'riddle' — the traditional answer/reveal. */
   answer?: string;
+  /** The story, context, or lesson behind the words. */
+  storyBehind?: string;
+  /** Original language or dialect (e.g. 'Kikuyu', 'Kimeru', 'Swahili', 'English'). */
+  language?: string;
+  /** Topic or category (e.g. 'Family Wisdom', 'Life Lessons', 'Hard Work', 'Faith'). */
+  category?: string;
+  /** Year or approximate era when this was spoken / recorded (e.g. '1965', '1987'). */
+  yearRecorded?: string;
+  /** Geographic origin or setting (e.g. 'Nkubu, Kenya', 'Meru'). */
+  location?: string;
+  /** Optional image URL representing this heritage entry. */
+  photoUrl?: string;
   /** Optional audio recording URL (R2 uploaded file or voice recording). */
   audioUrl?: string;
-  /** Only used for entryType 'saying' — which family member is known for saying this. */
+  /** Which family member is known for saying this or shared this wisdom. */
   saidByMemberId?: string;
   contributedByProfileId?: string;
   contributedByName: string;
