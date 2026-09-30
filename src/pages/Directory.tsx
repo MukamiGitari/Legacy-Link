@@ -4,10 +4,11 @@ import {
   Users, TreeDeciduous
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { fullName } from '../lib/lineage';
+import { fullName, isBloodlineMember, isMarriedIn } from '../lib/lineage';
 import type { Member } from '../types';
 
 type StatusFilter = 'all' | 'living' | 'deceased';
+type LineageFilter = 'all' | 'bloodline' | 'inlaws';
 type GenFilter = 'gen1' | 'gen2' | 'gen3' | 'gen4' | null;
 type GenderFilter = 'male' | 'female' | null;
 
@@ -37,6 +38,7 @@ function GenderIcon({ gender }: { gender: Member['gender'] }) {
 export const Directory: React.FC<Props> = ({ onSelectMember }) => {
   const { data } = useApp();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [lineageFilter, setLineageFilter] = useState<LineageFilter>('all');
   const [genFilter, setGenFilter] = useState<GenFilter>(null);
   const [genderFilter, setGenderFilter] = useState<GenderFilter>(null);
   const [query, setQuery] = useState('');
@@ -46,13 +48,21 @@ export const Directory: React.FC<Props> = ({ onSelectMember }) => {
     all: data.members.length,
     living: data.members.filter(m => m.isLiving).length,
     deceased: data.members.filter(m => !m.isLiving).length,
-  }), [data.members]);
+    bloodline: data.members.filter(m => isBloodlineMember(m.id, data.members, data.relationships)).length,
+    inlaws: data.members.filter(m => !isBloodlineMember(m.id, data.members, data.relationships)).length,
+  }), [data.members, data.relationships]);
 
   const filtered = useMemo(() => {
     let list = data.members;
 
     if (statusFilter === 'living') list = list.filter(m => m.isLiving);
     else if (statusFilter === 'deceased') list = list.filter(m => !m.isLiving);
+
+    if (lineageFilter === 'bloodline') {
+      list = list.filter(m => isBloodlineMember(m.id, data.members, data.relationships));
+    } else if (lineageFilter === 'inlaws') {
+      list = list.filter(m => !isBloodlineMember(m.id, data.members, data.relationships));
+    }
 
     if (genFilter) list = list.filter(m => m.generation === Number(genFilter.slice(3)));
     if (genderFilter) list = list.filter(m => m.gender === genderFilter);
@@ -63,7 +73,7 @@ export const Directory: React.FC<Props> = ({ onSelectMember }) => {
     }
 
     return [...list].sort((a, b) => a.generation - b.generation || a.firstName.localeCompare(b.firstName));
-  }, [data.members, statusFilter, genFilter, genderFilter, query]);
+  }, [data.members, data.relationships, statusFilter, lineageFilter, genFilter, genderFilter, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -106,6 +116,31 @@ export const Directory: React.FC<Props> = ({ onSelectMember }) => {
                   <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
                 )}
                 <span className="capitalize">{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}</span>
+                <span className={`text-xs font-semibold ml-0.5 ${isActive ? 'text-white/80' : 'text-heritage-green-500 dark:text-heritage-dark-muted'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Lineage group */}
+        <div className="flex items-center rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border overflow-hidden bg-white dark:bg-heritage-dark-card shadow-soft">
+          {(['all', 'bloodline', 'inlaws'] as LineageFilter[]).map(l => {
+            const isActive = lineageFilter === l;
+            const count = l === 'all' ? counts.all : l === 'bloodline' ? counts.bloodline : counts.inlaws;
+            const label = l === 'all' ? 'All' : l === 'bloodline' ? 'Bloodline' : 'Married In / In-Laws';
+            return (
+              <button
+                key={l}
+                onClick={() => setFilters(() => setLineageFilter(l))}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-r last:border-r-0 border-heritage-cream-300 dark:border-heritage-dark-border
+                  ${isActive
+                    ? 'bg-heritage-green-800 text-white'
+                    : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
+                  }`}
+              >
+                <span>{label}</span>
                 <span className={`text-xs font-semibold ml-0.5 ${isActive ? 'text-white/80' : 'text-heritage-green-500 dark:text-heritage-dark-muted'}`}>
                   {count}
                 </span>
@@ -268,12 +303,30 @@ const GEN_COLORS: Record<number, string> = {
 };
 
 function MemberCard({ member, onClick }: MemberCardProps) {
+  const { data } = useApp();
   const isLiving = member.isLiving;
   const genColor = GEN_COLORS[member.generation] ?? 'bg-heritage-cream-200 text-heritage-green-700';
   const birthYear = member.dateOfBirth ? new Date(member.dateOfBirth).getFullYear() : null;
+  const isMarried = isMarriedIn(member.id, data.members, data.relationships);
+  const isBlood = isBloodlineMember(member.id, data.members, data.relationships);
 
   return (
     <div className="relative rounded-2xl border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card overflow-visible hover:shadow-soft-lg hover:-translate-y-0.5 transition-all group">
+      {/* Lineage badge — top left */}
+      {isMarried ? (
+        <div className="absolute top-2.5 left-2.5 z-10 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 shadow-xs">
+          💍 Married In
+        </div>
+      ) : !isBlood ? (
+        <div className="absolute top-2.5 left-2.5 z-10 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-300 dark:bg-stone-900 dark:text-stone-300 shadow-xs">
+          In-Law
+        </div>
+      ) : (
+        <div className="absolute top-2.5 left-2.5 z-10 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs">
+          Bloodline
+        </div>
+      )}
+
       {/* Living / Deceased badge — top right */}
       <div className={`absolute top-2.5 right-2.5 z-10 text-[9px] font-semibold px-2 py-0.5 rounded-full ${
         isLiving

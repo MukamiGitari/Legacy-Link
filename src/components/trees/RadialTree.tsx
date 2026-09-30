@@ -1,19 +1,26 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { membersByGeneration, fullName } from '../../lib/lineage';
+import { membersByGeneration, fullName, isMarriedIn, isBloodlineMember } from '../../lib/lineage';
 
 interface Props {
   onSelect: (memberId: string) => void;
+  filter?: 'bloodline' | 'inlaws';
 }
 
 const AVATAR_HALF = 40; // roughly half an avatar + label width, so outer nodes aren't flush against the edge
 const RING_GAP = 118;
 
-export const RadialTree: React.FC<Props> = ({ onSelect }) => {
+export const RadialTree: React.FC<Props> = ({ onSelect, filter = 'bloodline' }) => {
   const { data } = useApp();
 
   const rings = useMemo(() => {
-    const byGen = membersByGeneration(data.members);
+    let membersList = data.members;
+    if (filter === 'bloodline') {
+      membersList = data.members.filter(
+        m => isBloodlineMember(m.id, data.members, data.relationships) || isMarriedIn(m.id, data.members, data.relationships)
+      );
+    }
+    const byGen = membersByGeneration(membersList);
     return Array.from(byGen.entries())
       .sort(([a], [b]) => a - b)
       .map(([gen, members], idx) => {
@@ -34,7 +41,7 @@ export const RadialTree: React.FC<Props> = ({ onSelect }) => {
           }),
         };
       });
-  }, [data.members]);
+  }, [data.members, data.relationships, filter]);
 
   // The canvas has to grow with however many generations exist — a fixed
   // size would push outer-ring members past its own bounds, where they'd
@@ -67,12 +74,19 @@ export const RadialTree: React.FC<Props> = ({ onSelect }) => {
               className="absolute flex flex-col items-center -translate-x-1/2 -translate-y-1/2 group"
               style={{ left: CENTER + pt.rx, top: CENTER + pt.ry }}
             >
-              <img
-                src={pt.member.avatarUrl}
-                className={`rounded-full bg-heritage-cream-200 border-2 shadow-soft group-hover:scale-110 transition-transform
-                  ${r.gen === rings[0].gen ? 'w-16 h-16 border-heritage-gold-500' : 'w-11 h-11 border-white dark:border-heritage-dark-border'}`}
-                alt=""
-              />
+              <div className="relative">
+                <img
+                  src={pt.member.avatarUrl}
+                  className={`rounded-full bg-heritage-cream-200 border-2 shadow-soft group-hover:scale-110 transition-transform
+                    ${r.gen === rings[0].gen ? 'w-16 h-16 border-heritage-gold-500' : 'w-11 h-11 border-white dark:border-heritage-dark-border'}`}
+                  alt=""
+                />
+                {isMarriedIn(pt.member.id, data.members, data.relationships) && (
+                  <span className="absolute -top-1 -right-1 text-[8px] bg-amber-100 text-amber-900 border border-amber-300 rounded-full px-0.5" title="Married In">
+                    💍
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-[10px] font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-heritage-cream-50/90 dark:bg-heritage-dark-card/90 rounded-sm px-1 whitespace-nowrap">
                 {fullName(pt.member)}
               </p>

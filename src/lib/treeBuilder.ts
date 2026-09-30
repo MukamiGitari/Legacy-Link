@@ -1,5 +1,5 @@
 import type { Member, Relationship } from '../types';
-import { getChildren, getSpouses, getParents, WIFE_COLORS, getWifeLabel } from './lineage';
+import { getChildren, getSpouses, WIFE_COLORS, getWifeLabel, getSpouseFamily, isBloodlineMember } from './lineage';
 
 export interface WifeLine {
   spouse: Member;
@@ -8,6 +8,10 @@ export interface WifeLine {
   label: string;
   color: typeof WIFE_COLORS[number];
   children: TreeUnit[];
+  inLawFamily: {
+    parents: Member[];
+    siblings: Member[];
+  };
 }
 
 export interface TreeUnit {
@@ -25,8 +29,13 @@ export interface TreeUnit {
  * each wife her own distinct color, title ("First wife", "Second wife"), and
  * grouping children strictly under their biological mother.
  */
-export function buildForest(members: Member[], relationships: Relationship[]): TreeUnit[] {
+export function buildForest(
+  members: Member[],
+  relationships: Relationship[],
+  options?: { filter?: 'bloodline' | 'inlaws' }
+): TreeUnit[] {
   if (members.length === 0) return [];
+  const filter = options?.filter ?? 'bloodline';
   const minGen = Math.min(...members.map(m => m.generation));
   const visited = new Set<string>();
   const byId = new Map(members.map(m => [m.id, m]));
@@ -73,6 +82,8 @@ export function buildForest(members: Member[], relationships: Relationship[]): T
         .filter((u): u is TreeUnit => Boolean(u))
         .sort((a, b) => (a.head.dateOfBirth ?? '').localeCompare(b.head.dateOfBirth ?? ''));
 
+      const inLawFamily = getSpouseFamily(s.member.id, members, relationships);
+
       return {
         spouse: s.member,
         relationship: s.rel,
@@ -80,6 +91,7 @@ export function buildForest(members: Member[], relationships: Relationship[]): T
         label: getWifeLabel(idx, s.member, s.rel, sortedSpouses.length),
         color: WIFE_COLORS[idx % WIFE_COLORS.length],
         children,
+        inLawFamily,
       };
     });
 
@@ -106,20 +118,30 @@ export function buildForest(members: Member[], relationships: Relationship[]): T
   }
 
   const roots: TreeUnit[] = [];
+
+  // Founding roots
   members
-    .filter(m => m.generation === minGen)
+    .filter(m => {
+      if (filter === 'bloodline') {
+        return m.generation === minGen && isBloodlineMember(m.id, members, relationships);
+      }
+      return m.generation === minGen;
+    })
     .forEach(m => {
       const unit = buildUnit(m.id);
       if (unit) roots.push(unit);
     });
 
-  // Catch any members never reached (orphans / disconnected records)
-  members.forEach(m => {
-    if (!visited.has(m.id)) {
-      const unit = buildUnit(m.id);
-      if (unit) roots.push(unit);
-    }
-  });
+  // When 'inlaws' is selected, also catch any disconnected member roots
+  if (filter === 'inlaws') {
+    members.forEach(m => {
+      if (!visited.has(m.id)) {
+        const unit = buildUnit(m.id);
+        if (unit) roots.push(unit);
+      }
+    });
+  }
 
   return roots;
 }
+

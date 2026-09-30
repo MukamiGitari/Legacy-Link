@@ -3,7 +3,8 @@ import { ArrowLeft, Edit3, MapPin, Briefcase, Calendar, BookHeart, Building2, Li
 import { useApp } from '../context/AppContext';
 import {
   getLineage, fullName, lifespan,
-  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel
+  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel,
+  isMarriedIn, getDerivedInLawRelationships
 } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
 import { BiographyEditorModal } from '../components/members/BiographyEditorModal';
@@ -65,7 +66,14 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
               <Edit3 size={14} /> Edit
             </button>
           </div>
-          <h2 className="font-serif text-2xl mt-3 text-heritage-green-900 dark:text-heritage-dark-text">{fullName(member)}</h2>
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <h2 className="font-serif text-2xl text-heritage-green-900 dark:text-heritage-dark-text">{fullName(member)}</h2>
+            {isMarriedIn(member.id, data.members, data.relationships) && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                💍 Married In
+              </span>
+            )}
+          </div>
           {member.maidenName && <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">née {member.maidenName}</p>}
           {member.professionalTitle && (
             <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-0.5">
@@ -407,9 +415,14 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                                 </p>
                                 <div className="space-y-1">
                                   {inLawParents.map(p => (
-                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
-                                      <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200" alt="" />
-                                      <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                                        <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</span>
+                                      </div>
+                                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-full border bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800 shrink-0">
+                                        {p.gender === 'male' ? 'Father-in-law' : p.gender === 'female' ? 'Mother-in-law' : 'Parent-in-law'}
+                                      </span>
                                     </button>
                                   ))}
                                 </div>
@@ -423,9 +436,14 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                                 </p>
                                 <div className="space-y-1">
                                   {inLawSiblings.map(p => (
-                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
-                                      <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200" alt="" />
-                                      <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                                    <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <img src={p.avatarUrl} className="w-7 h-7 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                                        <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</span>
+                                      </div>
+                                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-full border bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800 shrink-0">
+                                        {p.gender === 'male' ? 'Brother-in-law' : p.gender === 'female' ? 'Sister-in-law' : 'Sibling-in-law'}
+                                      </span>
                                     </button>
                                   ))}
                                 </div>

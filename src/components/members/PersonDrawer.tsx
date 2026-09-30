@@ -3,7 +3,8 @@ import { X, MapPin, Briefcase, Calendar, Users as UsersIcon, Edit3, Crosshair, C
 import { useApp } from '../../context/AppContext';
 import {
   getLineage, getAllAncestors, getAllDescendants, relationshipTerm, fullName, lifespan,
-  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel
+  getParents, getFullSiblings, getHalfSiblings, WIFE_COLORS, getWifeLabel,
+  isMarriedIn, getDerivedInLawRelationships
 } from '../../lib/lineage';
 import type { Member } from '../../types';
 
@@ -27,6 +28,8 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
   const lineage = getLineage(member.id, data.members, data.relationships);
   const allAncestors = getAllAncestors(member.id, data.members, data.relationships);
   const allDescendants = getAllDescendants(member.id, data.members, data.relationships);
+  const derivedInLaws = getDerivedInLawRelationships(member.id, data.members, data.relationships);
+  const memberIsMarriedIn = isMarriedIn(member.id, data.members, data.relationships);
 
   const Group: React.FC<{ title: string; people: Member[] }> = ({ title, people }) => {
     if (people.length === 0) return null;
@@ -102,9 +105,16 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
                 <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">née {member.maidenName}</p>
               )}
             </div>
-            <span className={`shrink-0 text-[11px] px-2 py-1 rounded-full font-medium ${member.isLiving ? 'bg-heritage-green-100 text-heritage-green-700' : 'bg-heritage-bark-100 text-heritage-bark-700'}`}>
-              {member.isLiving ? 'Living' : 'In Memoriam'}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              {memberIsMarriedIn && (
+                <span className="text-[11px] px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                  💍 Married In
+                </span>
+              )}
+              <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${member.isLiving ? 'bg-heritage-green-100 text-heritage-green-700' : 'bg-heritage-bark-100 text-heritage-bark-700'}`}>
+                {member.isLiving ? 'Living' : 'In Memoriam'}
+              </span>
+            </div>
           </div>
           <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-0.5">Generation {member.generation}</p>
           {member.professionalTitle && (
@@ -260,6 +270,44 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
                 </div>
               );
             })()}
+
+            {/* In-Laws & Derived Connections */}
+            {derivedInLaws.length > 0 && (
+              <div className="pt-2 border-t border-heritage-cream-300 dark:border-heritage-dark-border">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] uppercase tracking-wide text-heritage-green-500">
+                    In-Laws ({derivedInLaws.length})
+                  </p>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                    Derived from links
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {derivedInLaws.map((item, idx) => (
+                    <button
+                      key={`${item.member.id}-${item.label}-${idx}`}
+                      onClick={() => onSelectMember(item.member.id)}
+                      className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover text-left"
+                    >
+                      <img src={item.member.avatarUrl} className="w-8 h-8 rounded-full bg-amber-50 shrink-0" alt="" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">
+                            {fullName(item.member)}
+                          </p>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full border bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800 shrink-0">
+                            {item.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted truncate">
+                          {lifespan(item.member)} · <span className="italic">{item.connection}</span>
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {(allAncestors.length > 0 || allDescendants.length > 0) && (

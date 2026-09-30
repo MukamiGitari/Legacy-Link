@@ -70,6 +70,27 @@ export const members: Member[] = [
     dateOfBirth: '2010-12-01', birthPlace: 'Mombasa, Kenya', occupation: 'Student' }),
   m({ id: 'm20', firstName: 'Amani', lastName: 'Omondi', gender: 'female', generation: 4,
     dateOfBirth: '2012-05-27', birthPlace: 'Nairobi, Kenya', occupation: 'Student' }),
+
+  // In-Law Families (Spouses' parents and siblings)
+  // Alice Kaimenyi's family (m4's parents & brother)
+  m({ id: 'm21', firstName: 'Jackson', lastName: 'Kaimenyi', gender: 'male', generation: 1,
+    dateOfBirth: '1929-01-15', dateOfPassing: '2008-04-20', birthPlace: 'Maua, Kenya',
+    restingPlace: 'Maua Family Land', occupation: 'Retired School Inspector',
+    bio: 'Jackson was an esteemed educator in Meru North and founded Maua Methodist Academy.' }),
+  m({ id: 'm22', firstName: 'Elizabeth', lastName: 'Kaimenyi', maidenName: 'M’Mwirichia', gender: 'female', generation: 1,
+    dateOfBirth: '1933-05-18', birthPlace: 'Maua, Kenya', occupation: 'Retired Midwife',
+    bio: 'Elizabeth delivered hundreds of babies across Meru North over a 40-year nursing career.' }),
+  m({ id: 'm23', firstName: 'Timothy', lastName: 'Kaimenyi', gender: 'male', generation: 2,
+    dateOfBirth: '1958-11-04', birthPlace: 'Maua, Kenya', occupation: 'Pharmacist' }),
+
+  // Mary Otieno's family (m10's parents & sister)
+  m({ id: 'm24', firstName: 'George', lastName: 'Otieno', gender: 'male', generation: 2,
+    dateOfBirth: '1952-09-12', birthPlace: 'Kisumu, Kenya', occupation: 'Retired High Court Registrar' }),
+  m({ id: 'm25', firstName: 'Grace', lastName: 'Otieno', maidenName: 'Adhiambo', gender: 'female', generation: 2,
+    dateOfBirth: '1956-02-28', dateOfPassing: '2018-06-14', birthPlace: 'Kisumu, Kenya',
+    restingPlace: 'Kisumu Memorial Gardens', occupation: 'High School Principal' }),
+  m({ id: 'm26', firstName: 'Beatrice', lastName: 'Otieno', gender: 'female', generation: 3,
+    dateOfBirth: '1984-04-16', birthPlace: 'Kisumu, Kenya', occupation: 'Financial Analyst' }),
 ];
 
 let relId = 0;
@@ -93,6 +114,10 @@ export const relationships: Relationship[] = [
   ...spouse('m11', 'm12', '2007-05-26'),
   ...spouse('m15', 'm16', '2009-12-05'),
 
+  // In-law marriages
+  ...spouse('m21', 'm22', '1953-12-20'),
+  ...spouse('m24', 'm25', '1978-08-19'),
+
   parentOf('m1', 'm3'), parentOf('m2', 'm3'),
   parentOf('m1', 'm5'), parentOf('m2', 'm5'),
   parentOf('m1', 'm7'), parentOf('m2', 'm7'),
@@ -107,6 +132,14 @@ export const relationships: Relationship[] = [
   parentOf('m9', 'm18'), parentOf('m10', 'm18'),
   parentOf('m11', 'm19'), parentOf('m12', 'm19'),
   parentOf('m15', 'm20'), parentOf('m16', 'm20'),
+
+  // Alice's parents & sibling links
+  parentOf('m21', 'm4'), parentOf('m22', 'm4'),
+  parentOf('m21', 'm23'), parentOf('m22', 'm23'),
+
+  // Mary's parents & sibling links
+  parentOf('m24', 'm10'), parentOf('m25', 'm10'),
+  parentOf('m24', 'm26'), parentOf('m25', 'm26'),
 ];
 
 export const albums: Album[] = [

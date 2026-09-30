@@ -193,3 +193,159 @@ export function lifespan(m: Member): string {
   }
   return `b. ${born}`;
 }
+
+export interface DerivedInLaw {
+  member: Member;
+  role:
+    | 'father_in_law'
+    | 'mother_in_law'
+    | 'parent_in_law'
+    | 'brother_in_law'
+    | 'sister_in_law'
+    | 'sibling_in_law'
+    | 'son_in_law'
+    | 'daughter_in_law'
+    | 'child_in_law'
+    | 'co_in_law';
+  label: string;
+  connection: string;
+  category: 'parents_in_law' | 'siblings_in_law' | 'children_in_law' | 'extended_in_law';
+}
+
+/**
+ * Determines whether a member is in the core bloodline (i.e. one of the founding
+ * root ancestors or a direct blood descendant of the founding ancestors).
+ */
+export function isBloodlineMember(memberId: string, members: Member[], rels: Relationship[]): boolean {
+  if (members.length === 0) return false;
+  const minGen = Math.min(...members.map(m => m.generation));
+  const roots = members.filter(m => m.generation === minGen);
+  const rootIds = new Set(roots.map(r => r.id));
+  if (rootIds.has(memberId)) return true;
+
+  const visited = new Set<string>();
+  const queue = [memberId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const parents = getParents(current, rels);
+    for (const p of parents) {
+      if (rootIds.has(p)) return true;
+      queue.push(p);
+    }
+  }
+  return false;
+}
+
+/**
+ * Determines whether a member is married into the family (i.e. has a spouse in
+ * the bloodline but is not a direct blood descendant themselves).
+ */
+export function isMarriedIn(memberId: string, members: Member[], rels: Relationship[]): boolean {
+  const spouses = getSpouses(memberId, rels);
+  if (spouses.length === 0) return false;
+  const isBlood = isBloodlineMember(memberId, members, rels);
+  if (isBlood) return false;
+  return spouses.some(sId => isBloodlineMember(sId, members, rels));
+}
+
+/**
+ * Returns a spouse's parents and siblings (in-laws from the bloodline perspective).
+ */
+export function getSpouseFamily(spouseId: string, members: Member[], rels: Relationship[]): { parents: Member[]; siblings: Member[] } {
+  const byId = (id: string) => members.find(m => m.id === id);
+  const parents = getParents(spouseId, rels).map(byId).filter((m): m is Member => Boolean(m));
+  const siblings = getSiblings(spouseId, rels).map(byId).filter((m): m is Member => Boolean(m));
+  return { parents, siblings };
+}
+
+/**
+ * Computes all derived in-law relationships for a member based on existing links:
+ * - Parents-in-law: Father-in-law, Mother-in-law (spouse's parents)
+ * - Siblings-in-law: Brother-in-law, Sister-in-law (spouse's siblings OR sibling's spouses)
+ * - Children-in-law: Son-in-law, Daughter-in-law (child's spouses)
+ */
+export function getDerivedInLawRelationships(memberId: string, members: Member[], rels: Relationship[]): DerivedInLaw[] {
+  const byId = (id: string) => members.find(m => m.id === id);
+  const results: DerivedInLaw[] = [];
+  const seen = new Set<string>();
+
+  const self = byId(memberId);
+  if (!self) return [];
+
+  const spouses = getSpouses(memberId, rels).map(byId).filter((m): m is Member => Boolean(m));
+  const siblings = getSiblings(memberId, rels).map(byId).filter((m): m is Member => Boolean(m));
+  const children = getChildren(memberId, rels).map(byId).filter((m): m is Member => Boolean(m));
+
+  // 1. Parents-in-law (Spouse's parents)
+  spouses.forEach(s => {
+    const sParents = getParents(s.id, rels).map(byId).filter((m): m is Member => Boolean(m));
+    sParents.forEach(p => {
+      if (p.id === memberId || seen.has(p.id)) return;
+      seen.add(p.id);
+      const label = p.gender === 'male' ? 'Father-in-law' : p.gender === 'female' ? 'Mother-in-law' : 'Parent-in-law';
+      results.push({
+        member: p,
+        role: p.gender === 'male' ? 'father_in_law' : p.gender === 'female' ? 'mother_in_law' : 'parent_in_law',
+        label,
+        connection: `${s.firstName}'s ${p.gender === 'male' ? 'father' : p.gender === 'female' ? 'mother' : 'parent'}`,
+        category: 'parents_in_law',
+      });
+    });
+  });
+
+  // 2a. Siblings-in-law (Spouse's siblings)
+  spouses.forEach(s => {
+    const sSiblings = getSiblings(s.id, rels).map(byId).filter((m): m is Member => Boolean(m));
+    sSiblings.forEach(sib => {
+      if (sib.id === memberId || seen.has(sib.id)) return;
+      seen.add(sib.id);
+      const label = sib.gender === 'male' ? 'Brother-in-law' : sib.gender === 'female' ? 'Sister-in-law' : 'Sibling-in-law';
+      results.push({
+        member: sib,
+        role: sib.gender === 'male' ? 'brother_in_law' : sib.gender === 'female' ? 'sister_in_law' : 'sibling_in_law',
+        label,
+        connection: `${s.firstName}'s ${sib.gender === 'male' ? 'brother' : sib.gender === 'female' ? 'sister' : 'sibling'}`,
+        category: 'siblings_in_law',
+      });
+    });
+  });
+
+  // 2b. Siblings-in-law (Sibling's spouses)
+  siblings.forEach(sib => {
+    const sibSpouses = getSpouses(sib.id, rels).map(byId).filter((m): m is Member => Boolean(m));
+    sibSpouses.forEach(sp => {
+      if (sp.id === memberId || seen.has(sp.id)) return;
+      seen.add(sp.id);
+      const label = sp.gender === 'male' ? 'Brother-in-law' : sp.gender === 'female' ? 'Sister-in-law' : 'Sibling-in-law';
+      results.push({
+        member: sp,
+        role: sp.gender === 'male' ? 'brother_in_law' : sp.gender === 'female' ? 'sister_in_law' : 'sibling_in_law',
+        label,
+        connection: `${sib.firstName}'s ${sp.gender === 'male' ? 'husband' : sp.gender === 'female' ? 'wife' : 'spouse'}`,
+        category: 'siblings_in_law',
+      });
+    });
+  });
+
+  // 3. Children-in-law (Child's spouses)
+  children.forEach(c => {
+    const cSpouses = getSpouses(c.id, rels).map(byId).filter((m): m is Member => Boolean(m));
+    cSpouses.forEach(csp => {
+      if (csp.id === memberId || seen.has(csp.id)) return;
+      seen.add(csp.id);
+      const label = csp.gender === 'male' ? 'Son-in-law' : csp.gender === 'female' ? 'Daughter-in-law' : 'Child-in-law';
+      results.push({
+        member: csp,
+        role: csp.gender === 'male' ? 'son_in_law' : csp.gender === 'female' ? 'daughter_in_law' : 'child_in_law',
+        label,
+        connection: `${c.firstName}'s ${csp.gender === 'male' ? 'husband' : csp.gender === 'female' ? 'wife' : 'spouse'}`,
+        category: 'children_in_law',
+      });
+    });
+  });
+
+  return results;
+}
+

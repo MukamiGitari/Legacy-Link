@@ -7,14 +7,16 @@ import type { Member } from '../../types';
 
 interface Props {
   onSelect: (memberId: string) => void;
+  filter?: 'bloodline' | 'inlaws';
 }
 
-export const HeritageTree: React.FC<Props> = ({ onSelect }) => {
+export const HeritageTree: React.FC<Props> = ({ onSelect, filter = 'bloodline' }) => {
   const { data } = useApp();
-  const roots = useMemo(() => buildForest(data.members, data.relationships), [data.members, data.relationships]);
+  const roots = useMemo(() => buildForest(data.members, data.relationships, { filter }), [data.members, data.relationships, filter]);
 
   const renderCard = (m: Member, meta?: CardRenderMeta) => {
     const wifeMeta = meta?.wifeMeta;
+    const isSpouse = meta?.isSpouse || meta?.isMarriedIn;
     return (
       <div className="w-28 flex flex-col items-center">
         <div
@@ -32,6 +34,14 @@ export const HeritageTree: React.FC<Props> = ({ onSelect }) => {
               ✝
             </span>
           )}
+          {isSpouse && (
+            <span
+              className="absolute -top-1 -right-1 text-[9px] bg-amber-100 text-amber-900 border border-amber-400 px-1 py-0.2 rounded-full shadow-xs"
+              title="Married into the family"
+            >
+              💍
+            </span>
+          )}
         </div>
         <p className="mt-1.5 font-cinzel text-[11px] tracking-wide text-heritage-bark-900 dark:text-heritage-dark-text text-center leading-tight">
           {fullName(m)}
@@ -43,6 +53,11 @@ export const HeritageTree: React.FC<Props> = ({ onSelect }) => {
             style={{ backgroundColor: wifeMeta.color.bg, color: wifeMeta.color.text, borderColor: wifeMeta.color.border }}
           >
             {wifeMeta.label}
+          </span>
+        )}
+        {isSpouse && !wifeMeta && (
+          <span className="mt-0.5 text-[8px] font-medium px-1.5 py-0.2 rounded-full border bg-amber-100/80 text-amber-900 border-amber-300">
+            Married In
           </span>
         )}
       </div>

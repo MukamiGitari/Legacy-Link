@@ -11,6 +11,7 @@ export interface WifeMeta {
 
 export interface CardRenderMeta {
   isSpouse?: boolean;
+  isMarriedIn?: boolean;
   wifeMeta?: WifeMeta;
 }
 
@@ -23,10 +24,16 @@ interface OrgChartNodeProps {
 
 export const OrgChartNode: React.FC<OrgChartNodeProps> = ({ unit, renderCard, onSelect, lineColor }) => {
   const [collapsedWives, setCollapsedWives] = useState<Record<string, boolean>>({});
+  const [expandedInLaws, setExpandedInLaws] = useState<Record<string, boolean>>({});
 
   const toggleWife = (spouseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsedWives(prev => ({ ...prev, [spouseId]: !prev[spouseId] }));
+  };
+
+  const toggleInLaws = (spouseId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedInLaws(prev => ({ ...prev, [spouseId]: !prev[spouseId] }));
   };
 
   const isHouse = unit.wives.length > 0;
@@ -60,11 +67,105 @@ export const OrgChartNode: React.FC<OrgChartNodeProps> = ({ unit, renderCard, on
           </div>
 
           {/* Spouses in marriage order */}
-          {unit.wives.map(w => (
-            <div key={w.spouse.id} onClick={() => onSelect(w.spouse.id)} className="cursor-pointer">
-              {renderCard(w.spouse, { isSpouse: true, wifeMeta: wifeMetaMap.get(w.spouse.id) })}
-            </div>
-          ))}
+          {unit.wives.map(w => {
+            const hasInLaws = w.inLawFamily && (w.inLawFamily.parents.length > 0 || w.inLawFamily.siblings.length > 0);
+            const isInLawsOpen = Boolean(expandedInLaws[w.spouse.id]);
+
+            return (
+              <div key={w.spouse.id} className="relative flex flex-col items-center">
+                <div onClick={() => onSelect(w.spouse.id)} className="cursor-pointer">
+                  {renderCard(w.spouse, { isSpouse: true, isMarriedIn: true, wifeMeta: wifeMetaMap.get(w.spouse.id) })}
+                </div>
+
+                {/* Collapsed Spouse's Family branch expander button */}
+                {hasInLaws && (
+                  <button
+                    type="button"
+                    onClick={(e) => toggleInLaws(w.spouse.id, e)}
+                    className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium border bg-amber-50/90 text-amber-900 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-800 dark:hover:bg-amber-900/60 shadow-xs transition-colors cursor-pointer"
+                    title={`View ${w.spouse.firstName}'s parents and siblings`}
+                  >
+                    <span>{w.spouse.firstName}'s Family</span>
+                    {isInLawsOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  </button>
+                )}
+
+                {/* Expanded Spouse's in-law family drawer/panel */}
+                {hasInLaws && isInLawsOpen && (
+                  <div className="absolute top-full mt-1.5 z-30 w-52 p-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-white/95 dark:bg-heritage-dark-card/95 backdrop-blur-xs shadow-soft-lg text-left space-y-2">
+                    <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800/80 pb-1">
+                      <p className="text-[10px] font-semibold text-amber-900 dark:text-amber-200">
+                        {w.spouse.firstName}'s In-Laws
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleInLaws(w.spouse.id, e)}
+                        className="text-amber-600 hover:text-amber-900 dark:text-amber-400 text-[10px] px-1 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {w.inLawFamily.parents.length > 0 && (
+                      <div>
+                        <p className="text-[8px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-semibold mb-1">
+                          Parents-in-law
+                        </p>
+                        <div className="space-y-1">
+                          {w.inLawFamily.parents.map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onSelect(p.id); }}
+                              className="w-full flex items-center gap-1.5 p-1 rounded-md hover:bg-amber-100/70 dark:hover:bg-amber-900/40 text-left cursor-pointer"
+                            >
+                              <img src={p.avatarUrl} className="w-5 h-5 rounded-full bg-amber-100 shrink-0" alt="" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate leading-tight">
+                                  {p.firstName} {p.lastName}
+                                </p>
+                                <p className="text-[9px] text-amber-700 dark:text-amber-400 leading-none">
+                                  {p.gender === 'male' ? 'Father-in-law' : p.gender === 'female' ? 'Mother-in-law' : 'Parent-in-law'}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {w.inLawFamily.siblings.length > 0 && (
+                      <div>
+                        <p className="text-[8px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-semibold mb-1">
+                          Siblings-in-law
+                        </p>
+                        <div className="space-y-1">
+                          {w.inLawFamily.siblings.map(sib => (
+                            <button
+                              key={sib.id}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onSelect(sib.id); }}
+                              className="w-full flex items-center gap-1.5 p-1 rounded-md hover:bg-amber-100/70 dark:hover:bg-amber-900/40 text-left cursor-pointer"
+                            >
+                              <img src={sib.avatarUrl} className="w-5 h-5 rounded-full bg-amber-100 shrink-0" alt="" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate leading-tight">
+                                  {sib.firstName} {sib.lastName}
+                                </p>
+                                <p className="text-[9px] text-amber-700 dark:text-amber-400 leading-none">
+                                  {sib.gender === 'male' ? 'Brother-in-law' : sib.gender === 'female' ? 'Sister-in-law' : 'Sibling-in-law'}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
