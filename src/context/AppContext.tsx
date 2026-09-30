@@ -14,11 +14,27 @@ const STORAGE_KEY = 'heritage-hub-dataset-v1';
 const SESSION_KEY = 'heritage-hub-session-v1';
 const AUTH_KEY = 'legacy-link-auth-v1';
 
+function deduplicateRelationships(rels: Relationship[]): Relationship[] {
+  const map = new Map<string, Relationship>();
+  for (const r of rels) {
+    if (!r.fromMemberId || !r.toMemberId || !r.relationshipType) continue;
+    if (r.fromMemberId === r.toMemberId) continue;
+    const key = `${r.fromMemberId}->${r.toMemberId}:${r.relationshipType}`;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, r);
+    } else if (!existing.startedAt && r.startedAt) {
+      map.set(key, r);
+    }
+  }
+  return Array.from(map.values());
+}
+
 function assembleDataset(raw: Partial<FamilyDataset>): FamilyDataset {
   return {
     family: raw.family || { id: '', name: 'Family', activeTreeTemplate: 'classic' },
     members: raw.members || [],
-    relationships: raw.relationships || [],
+    relationships: deduplicateRelationships(raw.relationships || []),
     albums: raw.albums || [],
     photos: raw.photos || [],
     cookbookAlbums: raw.cookbookAlbums || [],
@@ -106,6 +122,7 @@ interface AppContextValue {
   // relationships
   addRelationship: (fromId: string, toId: string, type: RelationshipType, startedAt?: string) => void;
   removeRelationshipsForMember: (memberId: string) => void;
+  removeRelationship: (fromId: string, toId: string, type?: RelationshipType) => void;
 
   // template
   setActiveTreeTemplate: (t: TreeTemplate) => void;
@@ -311,10 +328,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Relationships
   const addRelationship: AppContextValue['addRelationship'] = (fromId, toId, type, startedAt) => {
-    const relationship: Relationship = { id: newId(), familyId: data.family.id, fromMemberId: fromId, toMemberId: toId, relationshipType: type, startedAt };
-    setData(prev => ({ ...prev, relationships: [...prev.relationships, relationship] }));
+    if (!fromId || !toId || fromId === toId) return;
+    const cleanDate = startedAt || undefined;
+    setData(prev => {
+      const existingIdx = prev.relationships.findIndex(
+        r => r.fromMemberId === fromId && r.toMemberId === toId && r.relationshipType === type
+      );
+      if (existingIdx >= 0) {
+        if (prev.relationships[existingIdx].startedAt === cleanDate) {
+          return prev;
+        }
+        const updated = [...prev.relationships];
+        updated[existingIdx] = { ...updated[existingIdx], startedAt: cleanDate };
+        return { ...prev, relationships: updated };
+      }
+      const relationship: Relationship = { id: newId(), familyId: prev.family.id, fromMemberId: fromId, toMemberId: toId, relationshipType: type, startedAt: cleanDate };
+      return { ...prev, relationships: [...prev.relationships, relationship] };
+    });
     if (isOnlineMode) {
+      const relationship: Relationship = { id: newId(), familyId: data.family.id, fromMemberId: fromId, toMemberId: toId, relationshipType: type, startedAt: cleanDate };
       persist('add relationship', () => api.post('/family/relationships', relationship));
+    }
+  };
+
+  const removeRelationship: AppContextValue['removeRelationship'] = (fromId, toId, type) => {
+    setData(prev => ({
+      ...prev,
+      relationships: prev.relationships.filter(r => {
+        const matchesPair =
+          (r.fromMemberId === fromId && r.toMemberId === toId) ||
+          (r.fromMemberId === toId && r.toMemberId === fromId);
+        if (!matchesPair) return true;
+        if (type) return r.relationshipType !== type;
+        return false;
+      }),
+    }));
+    if (isOnlineMode) {
+      persist('remove relationship', () =>
+        api.post('/family/relationships/delete', { fromMemberId: fromId, toMemberId: toId, relationshipType: type })
+      );
     }
   };
 
@@ -1073,7 +1125,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toasts, pushToast, dismissToast,
     isAuthenticated, login, signup, logout, continueAsDemo,
     addMember, updateMember, removeMember,
-    addRelationship, removeRelationshipsForMember,
+    addRelationship, removeRelationshipsForMember, removeRelationship,
     setActiveTreeTemplate,
     addAlbum, updateAlbum, removeAlbum, addPhoto, removePhoto,
     addCookbookAlbum, updateCookbookAlbum, removeCookbookAlbum, addRecipe, updateRecipe, removeRecipe,

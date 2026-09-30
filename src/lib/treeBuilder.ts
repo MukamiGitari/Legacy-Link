@@ -49,7 +49,9 @@ export function buildForest(
     const self = byId.get(memberId);
     if (!self) return null;
 
-    const rawSpouseIds = getSpouses(memberId, relationships).filter(id => !visited.has(id) && byId.has(id));
+    const rawSpouseIds = Array.from(
+      new Set(getSpouses(memberId, relationships).filter(id => id !== memberId && !visited.has(id) && byId.has(id)))
+    );
     visited.add(memberId);
     rawSpouseIds.forEach(id => visited.add(id));
 

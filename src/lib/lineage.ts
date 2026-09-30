@@ -1,21 +1,51 @@
 import type { Member, Relationship, Lineage } from '../types';
 
 export function getParents(memberId: string, rels: Relationship[]): string[] {
-  return rels
-    .filter(r => r.relationshipType === 'parent' && r.toMemberId === memberId)
-    .map(r => r.fromMemberId);
+  const set = new Set<string>();
+  for (const r of rels) {
+    if (r.relationshipType === 'parent' && r.toMemberId === memberId && r.fromMemberId && r.fromMemberId !== memberId) {
+      set.add(r.fromMemberId);
+    }
+  }
+  return Array.from(set);
 }
 
 export function getChildren(memberId: string, rels: Relationship[]): string[] {
-  return rels
-    .filter(r => r.relationshipType === 'parent' && r.fromMemberId === memberId)
-    .map(r => r.toMemberId);
+  const set = new Set<string>();
+  for (const r of rels) {
+    if (r.relationshipType === 'parent' && r.fromMemberId === memberId && r.toMemberId && r.toMemberId !== memberId) {
+      set.add(r.toMemberId);
+    }
+  }
+  return Array.from(set);
 }
 
 export function getSpouses(memberId: string, rels: Relationship[]): string[] {
-  return rels
-    .filter(r => r.relationshipType === 'spouse' && r.fromMemberId === memberId)
-    .map(r => r.toMemberId);
+  const spouseDates = new Map<string, string | undefined>();
+  for (const r of rels) {
+    if (r.relationshipType === 'spouse') {
+      const spouseId =
+        r.fromMemberId === memberId && r.toMemberId && r.toMemberId !== memberId
+          ? r.toMemberId
+          : r.toMemberId === memberId && r.fromMemberId && r.fromMemberId !== memberId
+          ? r.fromMemberId
+          : null;
+      if (spouseId) {
+        const existingDate = spouseDates.get(spouseId);
+        if (!spouseDates.has(spouseId) || (r.startedAt && (!existingDate || r.startedAt < existingDate))) {
+          spouseDates.set(spouseId, r.startedAt || existingDate);
+        }
+      }
+    }
+  }
+  return Array.from(spouseDates.keys()).sort((a, b) => {
+    const da = spouseDates.get(a) || '';
+    const db = spouseDates.get(b) || '';
+    if (da && db) return da.localeCompare(db);
+    if (da) return -1;
+    if (db) return 1;
+    return 0;
+  });
 }
 
 export function getSiblings(memberId: string, rels: Relationship[]): string[] {
@@ -103,7 +133,18 @@ export function getOtherDescendants(memberId: string, members: Member[], rels: R
 
 export function getLineage(memberId: string, members: Member[], rels: Relationship[]): Lineage {
   const byId = (id: string) => members.find(m => m.id === id);
-  const toMembers = (ids: string[]) => ids.map(byId).filter((m): m is Member => Boolean(m));
+  const toMembers = (ids: string[]) => {
+    const seen = new Set<string>();
+    const list: Member[] = [];
+    for (const id of ids) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        const m = byId(id);
+        if (m) list.push(m);
+      }
+    }
+    return list;
+  };
 
   return {
     parents: toMembers(getParents(memberId, rels)),

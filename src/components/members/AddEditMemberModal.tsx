@@ -15,7 +15,7 @@ interface AddEditMemberModalProps {
 }
 
 export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId, onClose }) => {
-  const { data, addMember, updateMember, removeMember, addRelationship, removeRelationshipsForMember, currentProfile, isOnlineMode, pushToast } = useApp();
+  const { data, addMember, updateMember, removeMember, addRelationship, removeRelationshipsForMember, removeRelationship, currentProfile, isOnlineMode, pushToast } = useApp();
   const canRemove = canDelete(currentProfile?.role);
   const existing = memberId ? data.members.find(m => m.id === memberId) : null;
 
@@ -101,29 +101,50 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
       ...(isFounder !== (existing?.isFounder ?? false) || (!existing && isFounder) ? { isFounder } : {}),
     };
 
+    // Deduplicate marriages to prevent duplicate spouse links
+    const seenSpouses = new Set<string>();
+    const cleanedMarriages: Array<{ spouseId: string; marriageDate?: string }> = [];
+    for (const m of marriages) {
+      if (m.spouseId && m.spouseId !== (existing?.id || '') && !seenSpouses.has(m.spouseId)) {
+        seenSpouses.add(m.spouseId);
+        cleanedMarriages.push({ spouseId: m.spouseId, marriageDate: m.marriageDate || undefined });
+      }
+    }
+
     let savedId: string;
     if (existing) {
       updateMember(existing.id, payload);
+      savedId = existing.id;
+
+      // Handle parents: remove previously selected parents that were unselected/changed
+      const newParentIds = [parent1Id, parent2Id].filter(Boolean);
+      existingParents.forEach(pId => {
+        if (!newParentIds.includes(pId)) {
+          removeRelationship(pId, existing.id, 'parent');
+        }
+      });
       if (parent1Id) addRelationship(parent1Id, existing.id, 'parent');
       if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, existing.id, 'parent');
-      marriages.forEach(m => {
-        if (m.spouseId) {
-          addRelationship(existing.id, m.spouseId, 'spouse', m.marriageDate || undefined);
-          addRelationship(m.spouseId, existing.id, 'spouse', m.marriageDate || undefined);
+
+      // Handle spouses: remove any previous spouses that were removed
+      existingSpouses.forEach(sId => {
+        if (!seenSpouses.has(sId)) {
+          removeRelationship(existing.id, sId, 'spouse');
         }
       });
-      savedId = existing.id;
+      cleanedMarriages.forEach(m => {
+        addRelationship(existing.id, m.spouseId, 'spouse', m.marriageDate);
+        addRelationship(m.spouseId, existing.id, 'spouse', m.marriageDate);
+      });
     } else {
       const created = addMember(payload);
+      savedId = created.id;
       if (parent1Id) addRelationship(parent1Id, created.id, 'parent');
       if (parent2Id && parent2Id !== parent1Id) addRelationship(parent2Id, created.id, 'parent');
-      marriages.forEach(m => {
-        if (m.spouseId) {
-          addRelationship(created.id, m.spouseId, 'spouse', m.marriageDate || undefined);
-          addRelationship(m.spouseId, created.id, 'spouse', m.marriageDate || undefined);
-        }
+      cleanedMarriages.forEach(m => {
+        addRelationship(created.id, m.spouseId, 'spouse', m.marriageDate);
+        addRelationship(m.spouseId, created.id, 'spouse', m.marriageDate);
       });
-      savedId = created.id;
     }
 
     // If a real photo was uploaded (rather than a preset), push the actual
@@ -351,7 +372,14 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
                       }}
                     >
                       <option value="">— None —</option>
-                      {otherMembers.map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+                      {otherMembers.map(m => {
+                        const isAlreadySelected = marriages.some((other, otherIdx) => otherIdx !== idx && other.spouseId === m.id);
+                        return (
+                          <option key={m.id} value={m.id} disabled={isAlreadySelected}>
+                            {m.firstName} {m.lastName} {isAlreadySelected ? '(Already selected)' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 

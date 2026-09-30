@@ -284,10 +284,19 @@ family.get('/dataset', async (c) => {
       [profile.family_id]
     );
 
+    const seenRels = new Map();
+    for (const row of relRes.rows) {
+      const key = `${row.from_member_id}->${row.to_member_id}:${row.relationship_type}`;
+      const existing = seenRels.get(key);
+      if (!existing || (!existing.started_at && row.started_at)) {
+        seenRels.set(key, row);
+      }
+    }
+
     return c.json({
       family: mapFamily(familyRes.rows[0], c.env),
       members: membersRes.rows.map(r => mapMember(r, c.env)),
-      relationships: relRes.rows.map(mapRelationship),
+      relationships: Array.from(seenRels.values()).map(mapRelationship),
       profiles: profilesRes.rows.map(r => mapProfile(r, c.env)),
       invitationCodes: invitesRes.rows.map(mapInvitationCode),
       albums: albumsRes.rows.map(r => mapAlbum(r, c.env)),
@@ -441,10 +450,36 @@ family.post('/relationships', async (c) => {
     await client.query(
       `INSERT INTO relationships (id, family_id, from_member_id, to_member_id, relationship_type, started_at)
        VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (from_member_id, to_member_id, relationship_type) DO NOTHING`,
+       ON CONFLICT (from_member_id, to_member_id, relationship_type) 
+       DO UPDATE SET started_at = COALESCE(EXCLUDED.started_at, relationships.started_at)`,
       [r.id, profile.family_id, r.fromMemberId, r.toMemberId, r.relationshipType, r.startedAt ?? null]
     );
     return c.json({ ok: true, id: r.id }, 201);
+  });
+});
+
+family.post('/relationships/delete', async (c) => {
+  const { fromMemberId, toMemberId, relationshipType } = await c.req.json();
+  return withClient(c.env, async (client) => {
+    const profile = await loadProfile(client, c.get('userId'));
+    if (!profile) return c.json({ error: 'No family profile linked to this account' }, 403);
+    if (relationshipType) {
+      await client.query(
+        `DELETE FROM relationships 
+         WHERE family_id = $1 
+           AND ((from_member_id = $2 AND to_member_id = $3) OR (from_member_id = $3 AND to_member_id = $2))
+           AND relationship_type = $4`,
+        [profile.family_id, fromMemberId, toMemberId, relationshipType]
+      );
+    } else {
+      await client.query(
+        `DELETE FROM relationships 
+         WHERE family_id = $1 
+           AND ((from_member_id = $2 AND to_member_id = $3) OR (from_member_id = $3 AND to_member_id = $2))`,
+        [profile.family_id, fromMemberId, toMemberId]
+      );
+    }
+    return c.json({ ok: true });
   });
 });
 
