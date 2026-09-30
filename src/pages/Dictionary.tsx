@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
-  Plus, Trash2, X, Mic, Volume2, Heart, ArrowRight,
+  Plus, Trash2, X, Mic, Heart, ArrowRight,
   BookOpen, MessageSquare, Quote, Leaf, Users, BookMarked,
   Feather, Search, Music2,
 } from 'lucide-react';
@@ -505,12 +505,6 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
             {cat.label}
           </span>
           <div className="flex items-center gap-2">
-            {/* Audio indicator */}
-            {entry.audioUrl && (
-              <span className="flex items-center gap-1 text-[10px] text-heritage-green-600 dark:text-heritage-dark-muted font-semibold">
-                <Volume2 size={10} /> Audio
-              </span>
-            )}
             {/* Likes */}
             <button
               onClick={onLike}
@@ -537,6 +531,18 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
         <p className="text-xs text-heritage-green-700 dark:text-heritage-dark-muted line-clamp-3 leading-relaxed">
           {entry.meaning}
         </p>
+
+        {/* Inline audio player — visible on the card face, no tap needed */}
+        {entry.audioUrl && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <audio
+              controls
+              src={entry.audioUrl}
+              className="w-full h-8 mt-1"
+              style={{ colorScheme: 'light' }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Footer */}
