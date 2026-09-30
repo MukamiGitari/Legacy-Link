@@ -40,6 +40,8 @@ export interface Member {
   petName?: string;
   /** Marks a founding ancestor — the family tree starts from the people flagged here. */
   isFounder?: boolean;
+  /** Cultural heritage — records who this member was named after (e.g. "Grandfather Reuben Kobia"). */
+  namedAfter?: string;
 }
 
 export type RelationshipType =

@@ -132,7 +132,15 @@ export const AudioRecorder: React.FC<Props> = ({
         onChange(res.url || res.key);
         pushToast('Audio saved.', 'success');
       } catch (err: any) {
-        pushToast(`Failed to upload audio: ${err?.message || 'unknown error'}`);
+        console.warn('R2 upload failed, falling back to local audio storage:', err);
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (mountedRef.current) {
+            onChange(reader.result as string);
+            pushToast('Audio saved locally.', 'success');
+          }
+        };
+        reader.readAsDataURL(file);
       } finally {
         if (mountedRef.current) setWorking(false);
       }

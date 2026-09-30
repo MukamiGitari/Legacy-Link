@@ -635,9 +635,7 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
               <Trash2 size={13} />
             </button>
           )}
-          <span className="text-heritage-bark-600 dark:text-heritage-bark-400 font-semibold group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
-            Read <ArrowRight size={11} />
-          </span>
+
         </div>
       </div>
     </div>

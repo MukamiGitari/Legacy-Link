@@ -23,6 +23,7 @@ function mapMember(r, env) {
     location: r.location ?? undefined, contactLinks: r.contact_links ?? undefined,
     hasPet: r.has_pet ?? undefined, petName: r.pet_name ?? undefined,
     isFounder: r.is_founder === true ? true : undefined,
+    namedAfter: r.named_after ?? undefined,
   };
 }
 
@@ -358,6 +359,7 @@ const memberSchema = z.object({
   location: z.string().nullish(), contactLinks: z.string().nullish(),
   hasPet: z.boolean().nullish(), petName: z.string().nullish(),
   isFounder: z.boolean().nullish(),
+  namedAfter: z.string().nullish(),
 });
 
 family.post('/members', async (c) => {
@@ -407,6 +409,7 @@ family.put('/members/:id', async (c) => {
       occupation: 'occupation', bio: 'bio', professionalTitle: 'professional_title',
       currentOrganization: 'current_organization', location: 'location', contactLinks: 'contact_links',
       hasPet: 'has_pet', petName: 'pet_name', isFounder: 'is_founder',
+      namedAfter: 'named_after',
     };
     const sets = [];
     const values = [];

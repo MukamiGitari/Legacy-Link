@@ -41,6 +41,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const [hasPet, setHasPet] = useState(existing?.hasPet ?? false);
   const [petName, setPetName] = useState(existing?.petName ?? '');
   const [isFounder, setIsFounder] = useState(existing?.isFounder ?? false);
+  const [namedAfter, setNamedAfter] = useState(existing?.namedAfter ?? '');
   const [avatarUrl, setAvatarUrl] = useState(existing?.avatarUrl ?? AVATAR_PRESETS[0]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
@@ -99,6 +100,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
       hasPet, petName: hasPet ? (petName || undefined) : undefined,
       // Only sent when it matters, so ordinary saves never touch the founder column.
       ...(isFounder !== (existing?.isFounder ?? false) || (!existing && isFounder) ? { isFounder } : {}),
+      namedAfter: namedAfter || undefined,
     };
 
     // Deduplicate marriages to prevent duplicate spouse links
@@ -341,6 +343,21 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
                   {otherMembers.filter(m => m.id !== parent1Id).map(m => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Named After — cultural naming lineage */}
+            <div>
+              <label className={labelCls}>Named After</label>
+              <input
+                type="text"
+                className={inputCls}
+                placeholder="e.g. Grandfather Reuben Kobia, Grandmother Wanjiku…"
+                value={namedAfter}
+                onChange={e => setNamedAfter(e.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-heritage-green-500 dark:text-heritage-dark-muted">
+                In many African cultures, children are named after an ancestor. Record who this person's name originates from.
+              </p>
             </div>
 
             {/* Marriages / Spouses */}

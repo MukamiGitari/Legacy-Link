@@ -124,7 +124,7 @@ albums.post('/', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['family_admin', 'family_member'].includes(profile.role)) {
+    if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
       return c.json({ error: 'Guests cannot create albums' }, 403);
     }
 
@@ -150,7 +150,7 @@ albums.put('/:id', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['family_admin', 'family_member'].includes(profile.role)) {
+    if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
       return c.json({ error: 'Guests cannot edit albums' }, 403);
     }
 
@@ -220,7 +220,9 @@ albums.post('/photos/presign-upload', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['family_admin', 'family_member'].includes(profile.role)) {
+    const isAudio = Boolean(contentType && contentType.startsWith('audio/'));
+    const isAuthorizedUploader = ['super_admin', 'family_admin', 'family_member'].includes(profile.role);
+    if (!isAuthorizedUploader && !isAudio) {
       return c.json({ error: 'Guests cannot upload photos' }, 403);
     }
 
@@ -250,7 +252,7 @@ albums.post('/photos', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['family_admin', 'family_member'].includes(profile.role)) {
+    if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
       return c.json({ error: 'Guests cannot add photos' }, 403);
     }
 

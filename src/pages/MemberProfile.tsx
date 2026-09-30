@@ -75,6 +75,12 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
             )}
           </div>
           {member.maidenName && <p className="text-sm text-heritage-green-500 dark:text-heritage-dark-muted">née {member.maidenName}</p>}
+          {member.namedAfter && (
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted flex items-center gap-1.5 mt-0.5">
+              <span title="Name origin">🪶</span>
+              <span>Named after <span className="font-medium text-heritage-green-800 dark:text-heritage-dark-text">{member.namedAfter}</span></span>
+            </p>
+          )}
           {member.professionalTitle && (
             <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-0.5">
               {member.professionalTitle}{member.currentOrganization ? ` at ${member.currentOrganization}` : ''}
