@@ -15,7 +15,8 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api';
+const DEFAULT_API_URL = 'https://legacy-link-api.heritagehub.workers.dev';
+const API_BASE = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/$/, '') + '/api';
 
 interface RequestOptions {
   method?: string;

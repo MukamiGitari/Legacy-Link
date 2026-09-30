@@ -18,8 +18,8 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().min(1, 'Email or username is required'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 auth.post('/register', async (c) => {
@@ -102,9 +102,14 @@ auth.post('/login', async (c) => {
   const { email, password } = parsed.data;
 
   return withClient(c.env, async (client) => {
+    const inputVal = email.trim().toLowerCase();
     const result = await client.query(
-      `SELECT id, email, name, role, password_hash FROM users WHERE email = $1`,
-      [email.toLowerCase()]
+      `SELECT u.id, u.email, u.name, u.role, u.password_hash 
+       FROM users u
+       LEFT JOIN profiles p ON p.id = u.id
+       WHERE LOWER(u.email) = $1 OR LOWER(u.name) = $1 OR LOWER(p.display_name) = $1
+       LIMIT 1`,
+      [inputVal]
     );
     const user = result.rows[0];
 
