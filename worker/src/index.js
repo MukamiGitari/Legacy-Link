@@ -7,6 +7,7 @@ import recipeRoutes from './routes/recipes.js';
 import familyRoutes from './routes/family.js';
 import albumRoutes from './routes/albums.js';
 import featureRoutes from './routes/features.js';
+import songRoutes from './routes/songs.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = new Hono();
@@ -42,6 +43,7 @@ app.use('/api/recipes/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/family/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/albums/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/features/*', rateLimit('API_RATE_LIMITER'));
+app.use('/api/songs/*', rateLimit('API_RATE_LIMITER'));
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 
@@ -50,6 +52,7 @@ app.route('/api/recipes', recipeRoutes);
 app.route('/api/family', familyRoutes);
 app.route('/api/albums', albumRoutes);
 app.route('/api/features', featureRoutes);
+app.route('/api/songs', songRoutes);
 
 // Centralized error handler.
 app.onError((err, c) => {

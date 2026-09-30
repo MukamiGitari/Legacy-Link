@@ -1,6 +1,6 @@
 import { AwsClient } from 'aws4fetch';
 
-const ALLOWED_CATEGORIES = ['photos', 'documents', 'videos', 'recipe-images'];
+const ALLOWED_CATEGORIES = ['photos', 'documents', 'videos', 'recipe-images', 'song-audio', 'song-photos'];
 const UPLOAD_EXPIRES_SECONDS = 60 * 5;
 const DOWNLOAD_EXPIRES_SECONDS = 60 * 10;
 
