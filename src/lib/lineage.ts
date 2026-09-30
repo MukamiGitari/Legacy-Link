@@ -244,7 +244,7 @@ export function lifespan(m: Member): string {
     const died = m.dateOfPassing ? new Date(m.dateOfPassing).getFullYear() : '?';
     return `${born} – ${died}`;
   }
-  return `b. ${born}`;
+  return `${born}`;
 }
 
 export interface DerivedInLaw {

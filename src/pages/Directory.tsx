@@ -367,7 +367,7 @@ function MemberCard({ member, onClick }: MemberCardProps) {
 
         {/* Birth year */}
         <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted mt-0.5">
-          b. {birthYear ?? '?'}
+          {birthYear ?? '?'}
         </p>
 
         {/* Generation badge */}
