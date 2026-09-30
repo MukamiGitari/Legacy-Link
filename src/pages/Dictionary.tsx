@@ -157,7 +157,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
               : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-50 dark:hover:bg-heritage-dark-hover'
           }`}
         >
-          <Music2 size={16} /> Family Song
+          <Music2 size={16} /> Family Songs
         </button>
         <button
           onClick={() => setActiveTab('vault')}

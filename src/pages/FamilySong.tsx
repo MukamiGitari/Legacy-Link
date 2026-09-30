@@ -493,7 +493,7 @@ export const FamilySong: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-heritage-green-600 dark:text-heritage-dark-muted gap-2">
-        <Loader2 size={20} className="animate-spin" /> Loading Family Song…
+        <Loader2 size={20} className="animate-spin" /> Loading Family Songs…
       </div>
     );
   }
@@ -506,7 +506,7 @@ export const FamilySong: React.FC = () => {
           <div className="flex items-center gap-3">
             <Music2 size={22} className="text-heritage-gold-600" />
             <div>
-              <h2 className="text-lg font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">Family Song</h2>
+              <h2 className="text-lg font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">Family Songs</h2>
               <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
                 Each person records their part — recordings are shared across all devices.
               </p>
