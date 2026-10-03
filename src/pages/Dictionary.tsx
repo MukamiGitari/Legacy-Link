@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Languages, Trash2, Pencil, Check, X, Mic, MicOff, Volume2, Upload, Square } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Languages, Trash2, Pencil, Check, X, Mic, Volume2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
-import { uploadFileToR2 } from '../lib/api';
+import { AudioRecorder } from '../components/vault/AudioRecorder';
 import type { LanguageEntryType } from '../types';
 
 interface Props {
@@ -49,95 +49,27 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
   const [editAnswer, setEditAnswer] = useState('');
   const [editAudioUrl, setEditAudioUrl] = useState('');
 
-  // Audio recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
+  // Audio: `audioBusy` is true while any recorder is recording/uploading so
+  // forms can't be saved with a half-finished clip.
+  const [audioBusy, setAudioBusy] = useState(false);
+  // Recording straight onto an existing entry card.
+  const [audioEditId, setAudioEditId] = useState<string | null>(null);
+  const [pendingAudio, setPendingAudio] = useState('');
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+  const audioLabel = (type: LanguageEntryType) =>
+    type === 'word' ? 'Record the pronunciation'
+    : type === 'recording' ? 'Voice recording'
+    : "Record how it's said";
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
-
-        if (isOnlineMode) {
-          setUploadingAudio(true);
-          try {
-            const file = new File([audioBlob], `voicenote-${Date.now()}.webm`, { type: 'audio/webm' });
-            const res = await uploadFileToR2({ file });
-            setAudioUrl(res.url || res.key);
-            pushToast('Voice note recorded & uploaded successfully!', 'success');
-          } catch (err: any) {
-            pushToast(`Failed to upload voice note: ${err.message || 'unknown error'}`);
-          } finally {
-            setUploadingAudio(false);
-          }
-        } else {
-          const reader = new FileReader();
-          reader.onload = () => setAudioUrl(reader.result as string);
-          reader.readAsDataURL(audioBlob);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      timerRef.current = window.setInterval(() => {
-        setRecordingSeconds(sec => sec + 1);
-      }, 1000);
-    } catch (err) {
-      pushToast('Microphone access denied or not supported in this browser.');
-    }
+  const startAudioEdit = (id: string, current?: string) => {
+    setAudioEditId(id);
+    setPendingAudio(current ?? '');
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-  };
-
-  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (isOnlineMode) {
-      setUploadingAudio(true);
-      try {
-        const res = await uploadFileToR2({ file });
-        setAudioUrl(res.url || res.key);
-        pushToast('Audio file uploaded successfully!', 'success');
-      } catch (err: any) {
-        pushToast(`Failed to upload audio file: ${err.message || 'unknown error'}`);
-      } finally {
-        setUploadingAudio(false);
-      }
-    } else {
-      const reader = new FileReader();
-      reader.onload = () => setAudioUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    }
+  const saveAudioEdit = (id: string) => {
+    // '' (not undefined) so removing a clip is also sent to the server.
+    updateLanguageEntry(id, { audioUrl: pendingAudio });
+    setAudioEditId(null);
   };
 
   const startEdit = (id: string, currentTerm: string, currentMeaning: string, currentAnswer?: string, currentAudioUrl?: string) => {
@@ -154,7 +86,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
       term: editTerm.trim(),
       meaning: editMeaning.trim(),
       answer: hasAnswer && editAnswer.trim() ? editAnswer.trim() : undefined,
-      audioUrl: editAudioUrl.trim() || undefined,
+      audioUrl: editAudioUrl.trim(),
     });
     setEditingId(null);
   };
@@ -258,63 +190,16 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
             </select>
           )}
 
-          {/* Audio Recording & File Upload Section */}
-          <div className="rounded-lg border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover/50 p-4 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs font-medium text-heritage-green-800 dark:text-heritage-dark-text flex items-center gap-1.5">
-                <Volume2 size={15} /> Voice Note / Audio Recording
-              </span>
-              {audioUrl && (
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Audio attached</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              {!isRecording ? (
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  disabled={uploadingAudio}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50"
-                >
-                  <Mic size={14} /> Record Microphone
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={stopRecording}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-800 text-white font-medium animate-pulse"
-                >
-                  <Square size={14} /> Stop Recording ({recordingSeconds}s)
-                </button>
-              )}
-
-              <label className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card text-heritage-green-700 dark:text-heritage-dark-muted cursor-pointer hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover transition-colors">
-                <Upload size={14} /> Upload Audio File
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleAudioFileUpload}
-                  className="hidden"
-                  disabled={uploadingAudio || isRecording}
-                />
-              </label>
-
-              {uploadingAudio && (
-                <span className="text-xs text-heritage-gold-600 dark:text-heritage-gold-400 animate-pulse">Uploading audio...</span>
-              )}
-            </div>
-
-            {audioUrl && (
-              <div className="mt-2">
-                <audio controls src={audioUrl} className="w-full h-9 rounded-lg" />
-              </div>
-            )}
-          </div>
+          <AudioRecorder
+            value={audioUrl}
+            onChange={setAudioUrl}
+            onBusyChange={setAudioBusy}
+            label={audioLabel(entryType)}
+          />
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-3.5 py-2 text-sm rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">Cancel</button>
-            <button type="submit" disabled={uploadingAudio || isRecording} className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50">Add to Heritage Vault</button>
+            <button type="submit" disabled={audioBusy} className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50">Add to Heritage Vault</button>
           </div>
         </form>
       )}
@@ -397,15 +282,17 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                       className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2"
                     />
                   )}
-                  <input
-                    value={editAudioUrl} onChange={e => setEditAudioUrl(e.target.value)} placeholder="Audio recording URL (optional)"
-                    className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2"
+                  <AudioRecorder
+                    value={editAudioUrl}
+                    onChange={setEditAudioUrl}
+                    onBusyChange={setAudioBusy}
+                    label={audioLabel(entry.entryType)}
                   />
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(null)} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">
                       <X size={13} /> Cancel
                     </button>
-                    <button onClick={() => saveEdit(entry.id, entry.entryType === 'riddle')} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium">
+                    <button onClick={() => saveEdit(entry.id, entry.entryType === 'riddle')} disabled={audioBusy} className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50">
                       <Check size={13} /> Save correction
                     </button>
                   </div>
@@ -426,6 +313,42 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                       <Volume2 size={18} className="text-heritage-gold-600 shrink-0" />
                       <audio controls src={entry.audioUrl} className="w-full h-8 rounded-sm" />
                     </div>
+                  )}
+
+                  {canAdd && (
+                    audioEditId === entry.id ? (
+                      <div className="mt-3 space-y-2">
+                        <AudioRecorder
+                          value={pendingAudio}
+                          onChange={setPendingAudio}
+                          onBusyChange={setAudioBusy}
+                          label={audioLabel(entry.entryType)}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => setAudioEditId(null)}
+                            disabled={audioBusy}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted disabled:opacity-50"
+                          >
+                            <X size={13} /> Cancel
+                          </button>
+                          <button
+                            onClick={() => saveAudioEdit(entry.id)}
+                            disabled={audioBusy || pendingAudio === (entry.audioUrl ?? '')}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50"
+                          >
+                            <Check size={13} /> Save audio
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startAudioEdit(entry.id, entry.audioUrl)}
+                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-heritage-green-700 dark:text-heritage-gold-400 hover:underline"
+                      >
+                        <Mic size={14} /> {entry.audioUrl ? 'Replace or remove audio' : audioLabel(entry.entryType)}
+                      </button>
+                    )
                   )}
                 </>
               )}

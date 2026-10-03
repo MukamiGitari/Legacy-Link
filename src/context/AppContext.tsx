@@ -142,7 +142,8 @@ interface AppContextValue {
 
   // language dictionary
   addLanguageEntry: (entry: { entryType: LanguageEntryType; term: string; meaning: string; answer?: string; audioUrl?: string; saidByMemberId?: string }) => void;
-  updateLanguageEntry: (id: string, patch: { term: string; meaning: string; answer?: string; audioUrl?: string; saidByMemberId?: string }) => void;
+  /** `audioUrl: ''` removes the entry's recording. */
+  updateLanguageEntry: (id: string, patch: Partial<{ term: string; meaning: string; answer: string; audioUrl: string; saidByMemberId: string }>) => void;
   removeLanguageEntry: (id: string) => void;
 
   // trivia & leaderboard

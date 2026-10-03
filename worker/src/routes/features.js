@@ -477,7 +477,8 @@ features.put('/language/:id', async (c) => {
          term = COALESCE($1, term),
          meaning = COALESCE($2, meaning),
          answer = COALESCE($3, answer),
-         audio_url = COALESCE($4, audio_url),
+         -- NULL keeps the current clip; an empty string removes it
+         audio_url = CASE WHEN $4::text IS NULL THEN audio_url WHEN $4::text = '' THEN NULL ELSE $4::text END,
          said_by_member_id = COALESCE($5, said_by_member_id)
        WHERE id = $6 AND family_id = $7 RETURNING *`,
       [d.term ?? null, d.meaning ?? null, d.answer ?? null, d.audioUrl ?? null, d.saidByMemberId ?? null, id, profile.family_id]
