@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile – Timeline</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E0A458}a:hover{color:#F2C47E}
+</style>
+</helmet>
+<div style="width: 100%; max-width: 1280px; box-sizing: border-box; background: #14171C; color: #F1EEE8; font-family: 'Public Sans', sans-serif; padding: 32px 56px 56px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px">
+<a href="#" style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 22px; text-decoration: none; color: #F1EEE8">[SITE NAME]</a>
+<a href="#" style="font-size: 14px; min-height: 44px; display: flex; align-items: center">View on tree</a>
+</div>
+<div style="display: flex; gap: 40px; align-items: center; flex-wrap: wrap">
+<div style="width: 180px; height: 180px; border-radius: 90px; background: #2A3039; display: flex; align-items: center; justify-content: center; color: #A9B0BA; font-size: 13px; flex: 0 0 auto">[PHOTO]</div>
+<div style="display: flex; flex-direction: column; gap: 10px; flex: 1 1 360px">
+<h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 64px; line-height: 1">[Full Name]</h1>
+<div style="font-size: 18px; color: #A9B0BA">[Born year] – [Died year] · [Place]</div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px">
+<span style="padding: 6px 14px; border-radius: 16px; background: #2A3039; font-size: 14px">[Occupation]</span>
+<span style="padding: 6px 14px; border-radius: 16px; background: #2A3039; font-size: 14px">[Branch]</span>
+</div>
+</div>
+<button style="min-height: 44px; padding: 0 22px; background: #E0A458; color: #14171C; border: 0; border-radius: 4px; font: 600 15px 'Public Sans', sans-serif">Suggest an edit</button>
+</div>
+<div style="display: flex; gap: 48px; flex-wrap: wrap">
+<div style="flex: 2 1 480px; display: flex; flex-direction: column; gap: 24px">
+<h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 500">Life timeline</h2>
+<div style="display: flex; flex-direction: column; gap: 22px; border-left: 2px solid #3A424D; padding-left: 28px">
+<div><div style="color: #E0A458; font-weight: 600">[Year]</div><div style="font-size: 17px; margin-top: 4px; line-height: 1.5">[Birth: place, parents]</div></div>
+<div><div style="color: #E0A458; font-weight: 600">[Year]</div><div style="font-size: 17px; margin-top: 4px; line-height: 1.5">[Education or first job]</div></div>
+<div><div style="color: #E0A458; font-weight: 600">[Year]</div><div style="font-size: 17px; margin-top: 4px; line-height: 1.5">[Marriage: spouse, place]</div></div>
+<div><div style="color: #E0A458; font-weight: 600">[Year]</div><div style="font-size: 17px; margin-top: 4px; line-height: 1.5">[Milestone or move]</div></div>
+</div>
+</div>
+<div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 500">Family</h2>
+<a href="#" style="min-height: 44px; display: flex; gap: 14px; align-items: center; padding: 12px; background: #1E232A; border-radius: 6px; text-decoration: none; color: #F1EEE8"><span style="width: 44px; height: 44px; border-radius: 22px; background: #2A3039; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></span><span>[Parent name]<br><span style="font-size: 13px; color: #A9B0BA">Father</span></span></a>
+<a href="#" style="min-height: 44px; display: flex; gap: 14px; align-items: center; padding: 12px; background: #1E232A; border-radius: 6px; text-decoration: none; color: #F1EEE8"><span style="width: 44px; height: 44px; border-radius: 22px; background: #2A3039; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></span><span>[Parent name]<br><span style="font-size: 13px; color: #A9B0BA">Mother</span></span></a>
+<a href="#" style="min-height: 44px; display: flex; gap: 14px; align-items: center; padding: 12px; background: #1E232A; border-radius: 6px; text-decoration: none; color: #F1EEE8"><span style="width: 44px; height: 44px; border-radius: 22px; background: #2A3039; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></span><span>[Spouse name]<br><span style="font-size: 13px; color: #A9B0BA">Spouse</span></span></a>
+<a href="#" style="min-height: 44px; display: flex; gap: 14px; align-items: center; padding: 12px; background: #1E232A; border-radius: 6px; text-decoration: none; color: #F1EEE8"><span style="width: 44px; height: 44px; border-radius: 22px; background: #2A3039; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"/></svg></span><span>[Child name]<br><span style="font-size: 13px; color: #A9B0BA">Child</span></span></a>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:500">Photos &amp; Documents</h2><a href="#" style="min-height:44px;display:flex;align-items:center;font-size:14px">View all</a></div><div style="display:flex;gap:16px;flex-wrap:wrap"><a href="#" style="flex:1 1 200px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#F1EEE8;font-size:14px"><span style="height:130px;background:#2A3039;border-radius:4px;display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></span>Portrait (c. 1955)<span style="align-self:flex-start;padding:2px 10px;border-radius:10px;background:#2A3039;font-size:12px;color:#F1EEE8">Photo</span></a><a href="#" style="flex:1 1 200px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#F1EEE8;font-size:14px"><span style="height:130px;background:#2A3039;border-radius:4px;display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></span>Birth Certificate<span style="align-self:flex-start;padding:2px 10px;border-radius:10px;background:#2A3039;font-size:12px;color:#F1EEE8">Document</span></a><a href="#" style="flex:1 1 200px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#F1EEE8;font-size:14px"><span style="height:130px;background:#2A3039;border-radius:4px;display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></span>Family Photo (1968)<span style="align-self:flex-start;padding:2px 10px;border-radius:10px;background:#2A3039;font-size:12px;color:#F1EEE8">Photo</span></a><a href="#" style="flex:1 1 200px;display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#F1EEE8;font-size:14px"><span style="height:130px;background:#2A3039;border-radius:4px;display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#A9B0BA" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></span>Census Record (1960)<span style="align-self:flex-start;padding:2px 10px;border-radius:10px;background:#2A3039;font-size:12px;color:#F1EEE8">Document</span></a></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1140}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

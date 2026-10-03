@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile – Gallery</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5D50;text-decoration:none}a:hover{text-decoration:underline}
+.c{background:#FBF9F4;border:1px solid #E1D9C8;border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.h{margin:0;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:26px}
+.hr{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.av{width:52px;height:52px;border-radius:26px;background:#D9D0BF;flex:0 0 auto}
+.t{display:flex;flex-direction:column;gap:2px;font-size:13px;color:#5C554A;flex:1 1 110px;min-width:110px}
+.t b{font-size:14px;color:#23201B}
+.l{font-size:12px;color:#5C554A}
+.dot{width:36px;height:36px;border-radius:18px;background:#2F5D50;flex:0 0 auto}
+.tl{display:flex;gap:14px;font-size:13px;color:#5C554A}.tl b{display:block;font-size:14px;color:#23201B}
+.ph{display:flex;flex-direction:column;gap:6px;flex:1 1 150px;font-size:13px}
+.ph div{display:flex;align-items:center;justify-content:center;height:110px;background:#D9D0BF;border-radius:4px}
+.tag{align-self:flex-start;padding:2px 10px;border-radius:10px;background:#E8DFC9;font-size:12px}
+@media(max-width:1000px){.ls{display:none}}
+</style>
+</helmet>
+<div style="width:100%;max-width:1280px;box-sizing:border-box;background:#F6F2EA;color:#23201B;font-family:'Public Sans',sans-serif">
+<div style="background:#1F3A31;color:#FFFFFF;padding:0 40px;min-height:64px;display:flex;align-items:center;gap:32px;flex-wrap:wrap">
+<span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:28px">Our Family Tree</span>
+<nav style="display:flex;gap:24px;flex:1 1 auto;flex-wrap:wrap">
+<a href="#" style="color:#FFFFFF;min-height:44px;display:flex;align-items:center">Home</a>
+<a href="#" style="color:#FFFFFF;min-height:44px;display:flex;align-items:center">Family Tree</a>
+<a href="#" style="color:#FFFFFF;min-height:44px;display:flex;align-items:center;border-bottom:3px solid #8FC1AE;font-weight:600">People</a>
+<a href="#" style="color:#FFFFFF;min-height:44px;display:flex;align-items:center">Memories</a>
+<a href="#" style="color:#FFFFFF;min-height:44px;display:flex;align-items:center">Research</a>
+</nav>
+<input aria-label="Search people" placeholder="Search people..." style="min-height:44px;box-sizing:border-box;border-radius:22px;border:1px solid #8FA79D;padding:0 18px;background:#1F3A31;color:#FFFFFF;width:240px">
+<div class="av" style="width:36px;height:36px;background:#8FA79D"></div>
+</div>
+<div style="background:#D8CDB0;padding:32px 40px;display:flex;gap:32px;align-items:center;flex-wrap:wrap;position:relative;overflow:hidden"><div class="ls" style="position:absolute;right:0;top:0;bottom:0;width:40%;background:#E4D8B8;overflow:hidden;z-index:0"><div style="position:absolute;right:22%;top:14%;width:56px;height:56px;border-radius:28px;background:#F3E7C2"></div><div style="position:absolute;left:-15%;bottom:-45%;width:95%;height:75%;border-radius:50%;background:#A3B58F"></div><div style="position:absolute;right:-25%;bottom:-50%;width:100%;height:80%;border-radius:50%;background:#6E8B67"></div><div style="position:absolute;right:26%;bottom:12%;width:10px;height:70px;background:#5A4A38"></div><div style="position:absolute;right:16%;bottom:46%;width:120px;height:80px;border-radius:50%;background:#4F6F4B"></div><span style="position:absolute;left:12px;bottom:8px;font-size:11px;color:#3A3A2E">[LANDSCAPE PHOTO]</span></div>
+<div style="position:relative;z-index:1;width:190px;height:190px;border-radius:95px;background:#B9AE95;border:5px solid #FBF9F4;display:flex;align-items:center;justify-content:center;font-size:13px;color:#4A443A">[PORTRAIT]</div>
+<div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;flex:1 1 380px">
+<h1 style="margin:0;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:54px;line-height:1">James Kamau Njoroge</h1>
+<div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px">(Kamau)</div>
+<span style="align-self:flex-start;padding:4px 14px;border-radius:16px;background:#E6EFE9;border:1px solid #2F5D50;font-size:14px">Your Paternal Great-Grandfather</span>
+<div style="font-size:15px">Born: 12 Mar 1924 · Kiharu, Murang'a, Kenya</div>
+<div style="font-size:15px">Died: 8 Nov 2010 (aged 86) · Nairobi, Kenya</div>
+<div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px">"A devoted father, a hard worker, and a pillar of his community."</div>
+</div>
+<button style="position:relative;z-index:1;align-self:flex-start;min-height:44px;padding:0 18px;background:#FBF9F4;border:1px solid #CFC5B1;border-radius:6px;font:600 14px 'Public Sans',sans-serif">Edit Profile</button>
+</div>
+<div style="background:#FBF9F4;border-bottom:1px solid #E1D9C8;padding:0 40px;display:flex;gap:28px;flex-wrap:wrap">
+<a href="#" style="min-height:48px;display:flex;align-items:center;color:#5C554A">Overview</a>
+<a href="#" style="min-height:48px;display:flex;align-items:center;color:#5C554A">Timeline</a>
+<a href="#" style="min-height:48px;display:flex;align-items:center;font-weight:600;border-bottom:3px solid #2F5D50">Gallery</a>
+<a href="#" style="min-height:48px;display:flex;align-items:center;color:#5C554A">Family Tree</a>
+<a href="#" style="min-height:48px;display:flex;align-items:center;color:#5C554A">Sources &amp; Citations</a>
+</div>
+<div style="padding:24px 40px 48px;display:flex;flex-direction:column;gap:20px"><section class="c"><div class="hr"><h2 class="h">Gallery</h2><button style="min-height:44px;padding:0 18px;background:#1F3A31;color:#FFFFFF;border:0;border-radius:6px;font:600 14px Public Sans,sans-serif">Add Photo / Document</button></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button style="min-height:44px;padding:0 18px;border-radius:22px;border:1px solid #2F5D50;background:#2F5D50;color:#FFFFFF;font:600 14px Public Sans,sans-serif">All</button><button style="min-height:44px;padding:0 18px;border-radius:22px;border:1px solid #2F5D50;background:#FBF9F4;color:#23201B;font:600 14px Public Sans,sans-serif">Photos</button><button style="min-height:44px;padding:0 18px;border-radius:22px;border:1px solid #2F5D50;background:#FBF9F4;color:#23201B;font:600 14px Public Sans,sans-serif">Documents</button><button style="min-height:44px;padding:0 18px;border-radius:22px;border:1px solid #2F5D50;background:#FBF9F4;color:#23201B;font:600 14px Public Sans,sans-serif">Memories</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px"><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></div><b>Portrait (c. 1955)</b><span class="tag">Photo</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></div><b>Birth Certificate</b><span class="tag">Document</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></div><b>Family Photo (1968)</b><span class="tag">Photo</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></div><b>Census Record (1960)</b><span class="tag">Document</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></div><b>Family Home</b><span class="tag">Photo</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg></div><b>Council Appointment</b><span class="tag">Document</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></svg></div><b>[Memory title]</b><span class="tag">Memory</span></a><a href="#" class="ph"><div style="height:170px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4A443A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 16l5-5 5 5 3-3 5 5"/></svg></div><b>[Photo title]</b><span class="tag">Photo</span></a></div></section></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
