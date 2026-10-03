@@ -83,7 +83,7 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-heritage-cream-400 bg-heritage-cream-100/90 backdrop-blur px-4 md:px-8 py-4 dark:bg-heritage-dark-card/90">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-heritage-cream-400 bg-heritage-cream-100/90 backdrop-blur-sm px-4 md:px-8 py-4 dark:bg-heritage-dark-card/90">
       <button onClick={onOpenMobileSidebar} className="md:hidden text-heritage-green-800 dark:text-heritage-dark-text">
         <Menu size={22} />
       </button>
@@ -190,7 +190,7 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
                       <div className="flex items-center gap-1">
                         <input
                           autoFocus
-                          className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-transparent border-b border-heritage-gold-400 focus:outline-none w-full min-w-0"
+                          className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-transparent border-b border-heritage-gold-400 focus:outline-hidden w-full min-w-0"
                           value={nameDraft}
                           onChange={e => setNameDraft(e.target.value)}
                           onKeyDown={e => {

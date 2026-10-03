@@ -89,7 +89,7 @@ export const Canasta: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <input
                 value={team === 'A' ? teamAName : teamBName}
                 onChange={e => (team === 'A' ? setTeamAName(e.target.value) : setTeamBName(e.target.value))}
-                className="w-full text-center text-sm font-medium bg-transparent border-b border-heritage-cream-400 dark:border-heritage-dark-border focus:outline-none focus:border-heritage-gold-400 text-heritage-green-900 dark:text-heritage-dark-text mb-2"
+                className="w-full text-center text-sm font-medium bg-transparent border-b border-heritage-cream-400 dark:border-heritage-dark-border focus:outline-hidden focus:border-heritage-gold-400 text-heritage-green-900 dark:text-heritage-dark-text mb-2"
               />
               <p className="font-serif text-3xl text-heritage-green-900 dark:text-heritage-dark-text">
                 {(team === 'A' ? totalA : totalB).toLocaleString()}

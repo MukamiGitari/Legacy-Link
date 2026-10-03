@@ -120,7 +120,7 @@ export const ScrabbleTiles: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <p className="text-base text-heritage-green-800 dark:text-heritage-dark-text mb-5">{current.clue}</p>
 
             {/* Rack of placed tiles */}
-            <div className="flex flex-wrap justify-center gap-2 min-h-[3rem] mb-4">
+            <div className="flex flex-wrap justify-center gap-2 min-h-12 mb-4">
               {placed.length === 0 && (
                 <span className="text-xs text-heritage-green-400 italic self-center">Tap tiles below to spell it out</span>
               )}

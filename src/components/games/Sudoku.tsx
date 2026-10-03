@@ -97,7 +97,7 @@ export const Sudoku: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <button
                 key={d.key}
                 onClick={() => start(d.key)}
-                className="text-left rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border p-4 hover:border-heritage-gold-400 hover:shadow-sm transition-all"
+                className="text-left rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border p-4 hover:border-heritage-gold-400 hover:shadow-xs transition-all"
               >
                 <p className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">{d.label}</p>
                 <p className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted mt-1">{d.blurb}</p>

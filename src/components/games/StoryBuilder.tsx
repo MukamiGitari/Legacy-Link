@@ -113,7 +113,7 @@ export const StoryBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div>
               <label className="text-xs font-medium text-heritage-green-600 dark:text-heritage-dark-muted">Story title</label>
               <input
-                className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. The Reunion Story"
@@ -123,7 +123,7 @@ export const StoryBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div>
               <label className="text-xs font-medium text-heritage-green-600 dark:text-heritage-dark-muted">Seed prompt</label>
               <select
-                className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
               >
@@ -224,7 +224,7 @@ export const StoryBuilder: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             Add your line
           </label>
           <textarea
-            className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            className="w-full mt-1 rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
             rows={4}
             value={draftText}
             onChange={e => setDraftText(e.target.value)}

@@ -233,7 +233,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
       onPointerLeave={endPointer}
       onClickCapture={handleClickCapture}
       onKeyDown={handleKeyDown}
-      className={`relative h-[62vh] min-h-[420px] max-h-[720px] w-full overflow-hidden rounded-2xl touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-heritage-gold-500 ${className}`}
+      className={`relative h-[62vh] min-h-[420px] max-h-[720px] w-full overflow-hidden rounded-2xl touch-none select-none focus:outline-hidden focus-visible:ring-2 focus-visible:ring-heritage-gold-500 ${className}`}
       style={{ cursor: dragState.current ? 'grabbing' : 'grab' }}
     >
       <div
@@ -245,7 +245,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
       </div>
 
       {/* Zoom / reset controls */}
-      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white/95 dark:bg-heritage-dark-card/95 backdrop-blur p-1.5 shadow-soft-lg">
+      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white/95 dark:bg-heritage-dark-card/95 backdrop-blur-sm p-1.5 shadow-soft-lg">
         <button
           type="button"
           onClick={() => zoomBy(0.2)}
@@ -272,7 +272,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
         </button>
       </div>
 
-      <div className="absolute bottom-3 left-3 z-20 rounded-full bg-white/90 dark:bg-heritage-dark-card/90 backdrop-blur px-2.5 py-1 text-[11px] font-medium text-heritage-green-700 dark:text-heritage-dark-muted border border-heritage-cream-400 dark:border-heritage-dark-border">
+      <div className="absolute bottom-3 left-3 z-20 rounded-full bg-white/90 dark:bg-heritage-dark-card/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-medium text-heritage-green-700 dark:text-heritage-dark-muted border border-heritage-cream-400 dark:border-heritage-dark-border">
         {Math.round(scale * 100)}%
       </div>
     </div>

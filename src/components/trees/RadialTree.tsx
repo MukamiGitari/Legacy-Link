@@ -73,7 +73,7 @@ export const RadialTree: React.FC<Props> = ({ onSelect }) => {
                   ${r.gen === rings[0].gen ? 'w-16 h-16 border-heritage-gold-500' : 'w-11 h-11 border-white dark:border-heritage-dark-border'}`}
                 alt=""
               />
-              <p className="mt-1 text-[10px] font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-heritage-cream-50/90 dark:bg-heritage-dark-card/90 rounded px-1 whitespace-nowrap">
+              <p className="mt-1 text-[10px] font-medium text-heritage-green-900 dark:text-heritage-dark-text bg-heritage-cream-50/90 dark:bg-heritage-dark-card/90 rounded-sm px-1 whitespace-nowrap">
                 {fullName(pt.member)}
               </p>
             </button>

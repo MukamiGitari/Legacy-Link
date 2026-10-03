@@ -181,7 +181,7 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                       >
                         {recipe.isVegetarian && (
                           <span
-                            className="absolute top-2 left-2 z-10 bg-heritage-gold-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm"
+                            className="absolute top-2 left-2 z-10 bg-heritage-gold-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs"
                             title="Vegetarian"
                           >
                             <Star size={10} fill="currentColor" /> Veg
@@ -287,7 +287,7 @@ const RecipeDetail: React.FC<{
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-thin bg-heritage-cream-50 dark:bg-heritage-dark-card rounded-2xl shadow-soft-lg border border-heritage-cream-300 dark:border-heritage-dark-border">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50/95 dark:bg-heritage-dark-card/95 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50/95 dark:bg-heritage-dark-card/95 backdrop-blur-xs">
           <div className="flex items-center gap-2">
             <span className="text-[11px] uppercase tracking-wider font-semibold px-2.5 py-0.5 rounded-full bg-heritage-gold-100 dark:bg-heritage-gold-950 text-heritage-gold-700 dark:text-heritage-gold-300">
               {CATEGORY_LABEL[recipe.category]}
@@ -313,7 +313,7 @@ const RecipeDetail: React.FC<{
         {/* Content */}
         <div className="md:grid md:grid-cols-2">
           {/* Photo */}
-          <div className="relative md:min-h-[26rem] md:border-r md:border-heritage-cream-300 dark:md:border-heritage-dark-border bg-heritage-cream-200">
+          <div className="relative md:min-h-104 md:border-r md:border-heritage-cream-300 dark:md:border-heritage-dark-border bg-heritage-cream-200">
             {recipe.photoUrl ? (
               <img src={recipe.photoUrl} className="w-full h-64 md:h-full object-cover" alt={recipe.title} />
             ) : (

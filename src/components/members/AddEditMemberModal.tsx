@@ -136,7 +136,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
     }
   };
 
-  const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400";
+  const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400";
   const labelCls = "block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1";
 
   return (
@@ -256,7 +256,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
             </div>
             <div className="col-span-2">
               <label className="flex items-center gap-2 text-sm text-heritage-green-800 dark:text-heritage-dark-text">
-                <input type="checkbox" checked={hasPet} onChange={e => setHasPet(e.target.checked)} className="rounded border-heritage-cream-400" />
+                <input type="checkbox" checked={hasPet} onChange={e => setHasPet(e.target.checked)} className="rounded-sm border-heritage-cream-400" />
                 Has a pet
               </label>
               {hasPet && (

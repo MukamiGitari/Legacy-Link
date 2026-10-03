@@ -55,7 +55,7 @@ export const Directory: React.FC<Props> = ({ onSelectMember }) => {
             value={query}
             onChange={e => { setQuery(e.target.value); setPage(1); }}
             placeholder="Search members..."
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
           />
         </div>
         <div className="flex items-center gap-1 bg-heritage-cream-200 dark:bg-heritage-dark-hover rounded-lg p-1">

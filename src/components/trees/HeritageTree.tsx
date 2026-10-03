@@ -23,7 +23,7 @@ export const HeritageTree: React.FC<Props> = ({ onSelect }) => {
           alt=""
         />
         {!m.isLiving && (
-          <span className="absolute -bottom-1 -right-1 text-[9px] bg-heritage-bark-700 text-heritage-cream-50 px-1 rounded">
+          <span className="absolute -bottom-1 -right-1 text-[9px] bg-heritage-bark-700 text-heritage-cream-50 px-1 rounded-sm">
             ✝
           </span>
         )}

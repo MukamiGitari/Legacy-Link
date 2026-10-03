@@ -58,7 +58,7 @@ export const LegacyContributions: React.FC<Props> = ({ memberId }) => {
             Add your own memory or tribute
           </label>
           <textarea
-            className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400 resize-y"
+            className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400 resize-y"
             rows={3}
             placeholder="Share a memory, a phrase they always said, or what they meant to you…"
             value={body}

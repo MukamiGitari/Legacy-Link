@@ -85,7 +85,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
       </div>
 
       {!openAlbum ? (
-        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:_balance]">
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 [column-fill:balance]">
           {albums.map((album, i) => {
             const count = data.photos.filter(p => p.albumId === album.id).length;
             const featured = album.featuredMemberId ? data.members.find(m => m.id === album.featuredMemberId) : undefined;
@@ -150,7 +150,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
               <>
                 <input
                   autoFocus
-                  className="font-serif text-xl bg-transparent border-b border-heritage-gold-400 focus:outline-none text-heritage-green-900 dark:text-heritage-dark-text"
+                  className="font-serif text-xl bg-transparent border-b border-heritage-gold-400 focus:outline-hidden text-heritage-green-900 dark:text-heritage-dark-text"
                   value={titleDraft}
                   onChange={e => setTitleDraft(e.target.value)}
                   onKeyDown={e => {
@@ -189,7 +189,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             {editingFeatured ? (
               <select
                 autoFocus
-                className="text-xs rounded-md border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                className="text-xs rounded-md border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1 focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
                 value={openAlbum.featuredMemberId ?? ''}
                 onChange={e => { updateAlbum(openAlbum.id, { featuredMemberId: e.target.value || undefined }); setEditingFeatured(false); }}
                 onBlur={() => setEditingFeatured(false)}

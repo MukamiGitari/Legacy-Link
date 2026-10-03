@@ -81,7 +81,7 @@ export const BirthdayBingo: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </div>
 
           {/* Your ordered picks */}
-          <div className="space-y-1.5 mb-5 min-h-[3rem]">
+          <div className="space-y-1.5 mb-5 min-h-12">
             {picks.length === 0 && (
               <p className="text-sm text-heritage-green-400 dark:text-heritage-dark-muted italic">
                 Tap a name below to start — the first tap is your "oldest" guess.

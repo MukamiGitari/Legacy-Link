@@ -50,7 +50,7 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
       </button>
 
       <div className="rounded-2xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card overflow-hidden">
-        <div className="h-24 bg-gradient-to-r from-heritage-green-700 to-heritage-green-900" />
+        <div className="h-24 bg-linear-to-r from-heritage-green-700 to-heritage-green-900" />
         <div className="px-6 pb-6 -mt-12">
           <div className="flex items-end justify-between flex-wrap gap-3">
             <img src={member.avatarUrl} className="w-24 h-24 rounded-full ring-4 ring-white dark:ring-heritage-dark-card bg-heritage-gold-100 shadow-soft" alt="" />

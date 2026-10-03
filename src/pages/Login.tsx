@@ -23,28 +23,28 @@ interface WallPhoto {
 // wash so the whole wall reads as one cohesive, museum-lit gallery rather than a scattered collage.
 const WALL_PHOTOS: WallPhoto[] = [
   // Left side, column A (outer)
-  { id: 'la-1', column: 'left-a', caption: 'The Whole Family', kind: 'baked', rotation: '-rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/framed_ornate_reunion.jpg' },
+  { id: 'la-1', column: 'left-a', caption: 'The Whole Family', kind: 'baked', rotation: '-rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/framed_ornate_reunion.jpg' },
   { id: 'la-2', column: 'left-a', caption: 'Held Up by Family', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-square', imgUrl: '/photos/scene_hands_circle.jpg' },
-  { id: 'la-3', column: 'left-a', caption: 'Sunday at the Farm', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_farm_family.jpg' },
-  { id: 'la-4', column: 'left-a', caption: 'Grandma\u2019s Kitchen', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_kitchen.jpg' },
+  { id: 'la-3', column: 'left-a', caption: 'Sunday at the Farm', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_farm_family.jpg' },
+  { id: 'la-4', column: 'left-a', caption: 'Grandma\u2019s Kitchen', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_kitchen.jpg' },
 
   // Left side, column B (inner, next to the card)
-  { id: 'lb-1', column: 'left-b', caption: 'Dinner Table Selfie', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-[3/4]', imgUrl: '/photos/scene_dinner_selfie.jpg' },
-  { id: 'lb-2', column: 'left-b', caption: 'Close Family Circle', kind: 'baked', rotation: '-rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/framed_wood_reunion_small.jpg' },
-  { id: 'lb-3', column: 'left-b', caption: 'Tending the Garden', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_grandmas_garden.jpg' },
+  { id: 'lb-1', column: 'left-b', caption: 'Dinner Table Selfie', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-3/4', imgUrl: '/photos/scene_dinner_selfie.jpg' },
+  { id: 'lb-2', column: 'left-b', caption: 'Close Family Circle', kind: 'baked', rotation: '-rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/framed_wood_reunion_small.jpg' },
+  { id: 'lb-3', column: 'left-b', caption: 'Tending the Garden', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_grandmas_garden.jpg' },
   { id: 'lb-4', column: 'left-b', caption: 'Newest Arrival', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-square', imgUrl: '/photos/scene_newborn.jpg' },
 
   // Right side, column A (inner, next to the card)
-  { id: 'ra-1', column: 'right-a', caption: 'Reunion Portrait', kind: 'baked', rotation: 'rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/framed_wood_reunion_large.jpg' },
-  { id: 'ra-2', column: 'right-a', caption: 'Harvest with Grandpa', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-[3/4]', imgUrl: '/photos/scene_grandfather_tomatoes.jpg' },
-  { id: 'ra-3', column: 'right-a', caption: 'Little Hands Helping', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_kids_garden.jpg' },
+  { id: 'ra-1', column: 'right-a', caption: 'Reunion Portrait', kind: 'baked', rotation: 'rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/framed_wood_reunion_large.jpg' },
+  { id: 'ra-2', column: 'right-a', caption: 'Harvest with Grandpa', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-3/4', imgUrl: '/photos/scene_grandfather_tomatoes.jpg' },
+  { id: 'ra-3', column: 'right-a', caption: 'Little Hands Helping', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_kids_garden.jpg' },
   { id: 'ra-4', column: 'right-a', caption: 'Create Your Memories', kind: 'placeholder', rotation: '-rotate-1', aspect: 'aspect-square' },
 
   // Right side, column B (outer)
-  { id: 'rb-1', column: 'right-b', caption: 'Family Photo Wall', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_living_room.jpg' },
-  { id: 'rb-2', column: 'right-b', caption: 'The Elders', kind: 'baked', rotation: 'rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/framed_wood_elders.jpg' },
-  { id: 'rb-3', column: 'right-b', caption: 'Garden Days', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-[4/3]', imgUrl: '/photos/scene_mother_daughter_garden.jpg' },
-  { id: 'rb-4', column: 'right-b', caption: 'Family Reunion', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-[16/10]', imgUrl: '/photos/scene_farm_gathering.jpg' },
+  { id: 'rb-1', column: 'right-b', caption: 'Family Photo Wall', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_living_room.jpg' },
+  { id: 'rb-2', column: 'right-b', caption: 'The Elders', kind: 'baked', rotation: 'rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/framed_wood_elders.jpg' },
+  { id: 'rb-3', column: 'right-b', caption: 'Garden Days', kind: 'wood', rotation: '-rotate-1', aspect: 'aspect-4/3', imgUrl: '/photos/scene_mother_daughter_garden.jpg' },
+  { id: 'rb-4', column: 'right-b', caption: 'Family Reunion', kind: 'wood', rotation: 'rotate-1', aspect: 'aspect-16/10', imgUrl: '/photos/scene_farm_gathering.jpg' },
 ];
 
 // Gold Head Logo SVG matching user's reference image emblem
@@ -221,7 +221,7 @@ export const Login: React.FC = () => {
                       aria-label={clickable ? `View photo: ${photo.caption}` : undefined}
                       className={`pointer-events-auto ${clickable ? 'cursor-pointer' : ''} w-full ${photo.aspect} transition-all duration-300 ease-out ${
                         isActive
-                          ? 'z-50 scale-125 rotate-0 shadow-[0_30px_60px_-10px_rgba(0,0,0,0.9)] ring-4 ring-[#dfc270] rounded-lg'
+                          ? 'z-50 scale-125 rotate-0 shadow-[0_30px_60px_-10px_rgba(0,0,0,0.9)] ring-4 ring-heritage-gold-300 rounded-lg'
                           : `${photo.rotation} z-10 shadow-[0_14px_28px_-8px_rgba(0,0,0,0.7)] ${
                               clickable ? 'hover:-translate-y-1.5 hover:scale-[1.06] hover:z-40 hover:rotate-0 hover:shadow-[0_22px_40px_-10px_rgba(0,0,0,0.85)]' : ''
                             }`
@@ -231,23 +231,23 @@ export const Login: React.FC = () => {
                       {photo.kind === 'baked' && (
                         <div className="w-full h-full rounded-md overflow-hidden bg-stone-900 relative">
                           <img src={photo.imgUrl} alt={photo.caption} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/25 via-transparent to-amber-400/10 mix-blend-overlay pointer-events-none" />
+                          <div className="absolute inset-0 bg-linear-to-br from-emerald-950/25 via-transparent to-amber-400/10 mix-blend-overlay pointer-events-none" />
                         </div>
                       )}
 
                       {/* Single consistent gold-trimmed wood frame for full-bleed scene photos */}
                       {photo.kind === 'wood' && (
-                        <div className="w-full h-full p-[6px] rounded-sm bg-gradient-to-br from-[#c8a35a] via-[#8c6b32] to-[#4a3617] border border-[#f7e5b5]/40 relative">
+                        <div className="w-full h-full p-[6px] rounded-xs bg-linear-to-br from-[#c8a35a] via-[#8c6b32] to-[#4a3617] border border-[#f7e5b5]/40 relative">
                           <div className="w-full h-full overflow-hidden border border-black/40 bg-stone-900 relative">
                             <img src={photo.imgUrl} alt={photo.caption} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/25 via-transparent to-amber-400/10 mix-blend-overlay pointer-events-none" />
+                            <div className="absolute inset-0 bg-linear-to-br from-emerald-950/25 via-transparent to-amber-400/10 mix-blend-overlay pointer-events-none" />
                           </div>
                         </div>
                       )}
 
                       {/* Empty slot inviting the family to add their own photo */}
                       {photo.kind === 'placeholder' && (
-                        <div className="w-full h-full p-[6px] rounded-sm bg-gradient-to-br from-[#c8a35a] via-[#8c6b32] to-[#4a3617] border border-[#f7e5b5]/40 border-dashed relative">
+                        <div className="w-full h-full p-[6px] rounded-xs bg-linear-to-br from-[#c8a35a] via-[#8c6b32] to-[#4a3617] border border-[#f7e5b5]/40 border-dashed relative">
                           <div className="w-full h-full flex flex-col items-center justify-center text-center gap-1 bg-[#f7f1e3] px-2">
                             <PlusCircle size={16} className="text-[#8c6b32]" />
                             <p className="font-serif italic text-[9px] leading-tight text-stone-700">
@@ -259,7 +259,7 @@ export const Login: React.FC = () => {
 
                       {/* Tapped Active Badge Tooltip */}
                       {isActive && (
-                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#102319]/95 text-amber-100 border border-[#dfc270] px-2.5 py-1 rounded-md text-[10px] font-serif whitespace-nowrap shadow-2xl flex items-center gap-1.5 z-50">
+                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#102319]/95 text-amber-100 border border-heritage-gold-300 px-2.5 py-1 rounded-md text-[10px] font-serif whitespace-nowrap shadow-2xl flex items-center gap-1.5 z-50">
                           <span className="font-bold text-amber-200">{photo.caption}</span>
                           <X size={12} className="text-amber-300 ml-1 hover:text-white" />
                         </div>
@@ -279,7 +279,7 @@ export const Login: React.FC = () => {
       <main className="relative z-30 w-full max-w-[370px] sm:max-w-[390px] p-3 sm:p-4 my-auto">
         {/* Outer Heavy Metallic Brass/Bronze Frame */}
         <div
-          className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-[#d4af37] via-[#8c6b32] to-[#4a3617] border-2 border-[#f7e5b5] shadow-2xl relative"
+          className="p-3 sm:p-3.5 rounded-2xl bg-linear-to-b from-heritage-gold-400 via-[#8c6b32] to-[#4a3617] border-2 border-[#f7e5b5] shadow-2xl relative"
           style={{
             boxShadow: `
               0 30px 60px -12px rgba(0, 0, 0, 0.95),
@@ -289,7 +289,7 @@ export const Login: React.FC = () => {
           }}
         >
           {/* Inner Metallic Bevel Ring */}
-          <div className="p-1 rounded-xl bg-gradient-to-b from-[#3a2c14] via-[#5c4620] to-[#241a0b] border border-[#a8863c]">
+          <div className="p-1 rounded-xl bg-linear-to-b from-[#3a2c14] via-[#5c4620] to-[#241a0b] border border-[#a8863c]">
             {/* Inner Glass Plate — translucent so the emerald wall glow shows through */}
             <div
               className="backdrop-blur-md text-[#f4efe6] rounded-lg p-5 sm:p-6 border border-[#6e5527] relative shadow-inner"
@@ -303,22 +303,22 @@ export const Login: React.FC = () => {
               {/* Top Gold Interlocking Emblem Logo */}
               <div className="text-center mb-3">
                 <LegacyRingEmblem size={52} />
-                <h1 className="font-serif text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[#f7e5b5] via-[#d4af37] to-[#c5a059] mt-1 uppercase">
+                <h1 className="font-serif text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-linear-to-r from-[#f7e5b5] via-heritage-gold-400 to-heritage-gold-500 mt-1 uppercase">
                   LEGACY LINK
                 </h1>
-                <p className="font-serif italic text-xs text-[#dfc270]/90 tracking-wide mt-0.5">
+                <p className="font-serif italic text-xs text-heritage-gold-300/90 tracking-wide mt-0.5">
                   Welcome Back to Your Heritage
                 </p>
               </div>
 
               {/* Mode Switcher Tabs (Log In, Join Family, Register) */}
-              <div className="flex bg-[#120f09] p-1 rounded-lg mb-4 border border-[#584422] text-xs font-semibold text-[#c5a059]">
+              <div className="flex bg-[#120f09] p-1 rounded-lg mb-4 border border-[#584422] text-xs font-semibold text-heritage-gold-500">
                 <button
                   type="button"
                   onClick={() => switchMode('signin')}
                   className={`flex-1 py-1.5 rounded-md transition-all ${
                     mode === 'signin'
-                      ? 'bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
+                      ? 'bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
                       : 'hover:text-[#f7e5b5]'
                   }`}
                 >
@@ -329,7 +329,7 @@ export const Login: React.FC = () => {
                   onClick={() => switchMode('join')}
                   className={`flex-1 py-1.5 rounded-md transition-all ${
                     mode === 'join'
-                      ? 'bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
+                      ? 'bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
                       : 'hover:text-[#f7e5b5]'
                   }`}
                 >
@@ -340,7 +340,7 @@ export const Login: React.FC = () => {
                   onClick={() => switchMode('register')}
                   className={`flex-1 py-1.5 rounded-md transition-all ${
                     mode === 'register'
-                      ? 'bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
+                      ? 'bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] text-[#1f1608] shadow-md'
                       : 'hover:text-[#f7e5b5]'
                   }`}
                 >
@@ -360,7 +360,7 @@ export const Login: React.FC = () => {
                 {(mode === 'join' || mode === 'register') && (
                   <div>
                     <div className="relative">
-                      <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                      <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                       <input
                         type="text"
                         required
@@ -368,7 +368,7 @@ export const Login: React.FC = () => {
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="Full Name"
                         autoComplete="name"
-                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                       />
                     </div>
                   </div>
@@ -384,7 +384,7 @@ export const Login: React.FC = () => {
                         value={familyName}
                         onChange={(e) => setFamilyName(e.target.value)}
                         placeholder="Family Tree Name"
-                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                       />
                     </div>
                   </div>
@@ -392,7 +392,7 @@ export const Login: React.FC = () => {
 
                 <div>
                   <div className="relative">
-                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                     <input
                       type="text"
                       required
@@ -400,14 +400,14 @@ export const Login: React.FC = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Username / Email Address"
                       autoComplete="username"
-                      className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                      className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="relative">
-                    <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                    <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
@@ -415,7 +415,7 @@ export const Login: React.FC = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
                       autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                      className="w-full pl-9 pr-9 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                      className="w-full pl-9 pr-9 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                     />
                     <button
                       type="button"
@@ -431,14 +431,14 @@ export const Login: React.FC = () => {
                 {mode === 'join' && (
                   <div>
                     <div className="relative">
-                      <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                      <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                       <input
                         type="text"
                         required
                         value={inviteCode}
                         onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                         placeholder="Invite Code (e.g. 7F3K9Q)"
-                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all tracking-wider"
+                        className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all tracking-wider"
                       />
                     </div>
                   </div>
@@ -449,7 +449,7 @@ export const Login: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowRestore(true)}
-                      className="text-[11px] text-[#c5a059] hover:text-[#f7e5b5] hover:underline"
+                      className="text-[11px] text-heritage-gold-500 hover:text-[#f7e5b5] hover:underline"
                     >
                       Forgot Password?
                     </button>
@@ -460,7 +460,7 @@ export const Login: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading || googleLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60 transition-all duration-200 disabled:opacity-60 cursor-pointer mt-2"
+                  className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60 transition-all duration-200 disabled:opacity-60 cursor-pointer mt-2"
                 >
                   {loading ? (
                     <Loader2 size={16} className="animate-spin text-[#1f1608]" />
@@ -483,10 +483,10 @@ export const Login: React.FC = () => {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={loading || googleLoading}
-                  className="w-full flex items-center justify-center gap-2.5 bg-[#17130c] hover:bg-[#231c12] text-[#f7e5b5] font-sans font-medium text-xs sm:text-sm py-2 rounded-lg border border-[#5e4926] hover:border-[#d4af37] shadow-md transition-all duration-200 disabled:opacity-60 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2.5 bg-[#17130c] hover:bg-[#231c12] text-[#f7e5b5] font-sans font-medium text-xs sm:text-sm py-2 rounded-lg border border-[#5e4926] hover:border-heritage-gold-400 shadow-md transition-all duration-200 disabled:opacity-60 cursor-pointer"
                 >
                   {googleLoading ? (
-                    <Loader2 size={15} className="animate-spin text-[#d4af37]" />
+                    <Loader2 size={15} className="animate-spin text-heritage-gold-400" />
                   ) : (
                     <>
                       <GoogleIcon size={15} />
@@ -516,7 +516,7 @@ export const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={continueAsDemo}
-                  className="text-xs text-[#dfc270] hover:text-[#f7e5b5] hover:underline font-medium transition-colors"
+                  className="text-xs text-heritage-gold-300 hover:text-[#f7e5b5] hover:underline font-medium transition-colors"
                 >
                   Explore Live Demo as Guest →
                 </button>
@@ -524,7 +524,7 @@ export const Login: React.FC = () => {
 
               {/* Tagline inside central frame matching uploaded picture */}
               <div className="mt-4 pt-3 border-t border-[#3e3019] text-center">
-                <p className="text-[10px] font-serif italic text-[#c5a059]/80 tracking-wider">
+                <p className="text-[10px] font-serif italic text-heritage-gold-500/80 tracking-wider">
                   Securely Connecting Generations
                 </p>
               </div>
@@ -553,15 +553,15 @@ export const Login: React.FC = () => {
 
             {restoreSuccess ? (
               <div className="text-center py-4">
-                <KeyRound size={28} className="mx-auto text-[#d4af37] mb-3" />
+                <KeyRound size={28} className="mx-auto text-heritage-gold-400 mb-3" />
                 <p className="text-sm text-[#f7e5b5] font-medium">Password updated</p>
-                <p className="text-xs text-[#c5a059] mt-2 leading-relaxed">
+                <p className="text-xs text-heritage-gold-500 mt-2 leading-relaxed">
                   You can now sign in with your email and your new password.
                 </p>
                 <button
                   type="button"
                   onClick={closeRestore}
-                  className="mt-4 w-full bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60"
+                  className="mt-4 w-full bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60"
                 >
                   Back to sign in
                 </button>
@@ -569,7 +569,7 @@ export const Login: React.FC = () => {
             ) : (
               <form onSubmit={handleRestoreSubmit} className="space-y-3">
                 <div className="text-center mb-1">
-                  <KeyRound size={22} className="mx-auto text-[#d4af37] mb-2" />
+                  <KeyRound size={22} className="mx-auto text-heritage-gold-400 mb-2" />
                   <p className="font-serif text-base text-[#f7e5b5]">Have a restoration code?</p>
                   <p className="text-[11px] text-[#8c7447] mt-1 leading-relaxed">
                     Ask your family admin for a one-time restoration code, then set a new password below.
@@ -581,36 +581,36 @@ export const Login: React.FC = () => {
                 )}
 
                 <div className="relative">
-                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                   <input
                     type="email" required value={restoreEmail} onChange={(e) => setRestoreEmail(e.target.value)}
                     placeholder="Your account email" autoComplete="email"
-                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                   />
                 </div>
 
                 <div className="relative">
-                  <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                  <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                   <input
                     type="text" required value={restoreCode} onChange={(e) => setRestoreCode(e.target.value.toUpperCase())}
                     placeholder="Restoration Code (e.g. 7F3K9Q)"
-                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all tracking-wider"
+                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all tracking-wider"
                   />
                 </div>
 
                 <div className="relative">
-                  <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c5a059]" />
+                  <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                   <input
                     type="password" required value={restoreNewPassword} onChange={(e) => setRestoreNewPassword(e.target.value)}
                     placeholder="New password" autoComplete="new-password"
-                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-[#d4af37] focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={restoreLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60 transition-all duration-200 disabled:opacity-60 mt-1"
+                  className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-[#b8862e] via-[#e0b04a] to-[#b8862e] hover:brightness-110 text-[#1f1608] font-serif font-bold text-xs sm:text-sm py-2.5 rounded-lg shadow-lg border border-[#f7e5b5]/60 transition-all duration-200 disabled:opacity-60 mt-1"
                 >
                   {restoreLoading ? <Loader2 size={16} className="animate-spin" /> : <span>Set new password</span>}
                 </button>

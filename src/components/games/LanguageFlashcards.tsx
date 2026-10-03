@@ -88,7 +88,7 @@ export const LanguageFlashcards: React.FC<{ onBack: () => void }> = ({ onBack })
 
           <button
             onClick={() => setRevealed(r => !r)}
-            className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-8 text-center min-h-[10rem] flex flex-col items-center justify-center gap-3"
+            className="w-full rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-8 text-center min-h-40 flex flex-col items-center justify-center gap-3"
           >
             <span className="text-[10px] uppercase tracking-wide text-heritage-gold-600 font-medium">
               {TYPE_LABEL[current.entryType]}

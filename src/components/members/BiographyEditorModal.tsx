@@ -64,7 +64,7 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
 
   const labelCls = "block text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text mb-1";
   const hintCls = "text-xs text-heritage-green-500 dark:text-heritage-dark-muted mb-1.5";
-  const textareaCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-heritage-gold-400 resize-y";
+  const textareaCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm leading-relaxed focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400 resize-y";
 
   const update = (key: SectionField['key'], value: string) => setFields(prev => ({ ...prev, [key]: value }));
 

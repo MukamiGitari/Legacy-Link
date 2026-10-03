@@ -226,7 +226,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 ? 'The phrase or sentence, in your family\'s language'
                 : 'The word, in your family\'s language'
             }
-            className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
           />
 
           <textarea
@@ -238,7 +238,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 ? 'What it means, and the story or context behind it...'
                 : 'What it means in English, and any context worth adding...'
             }
-            className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+            className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
           />
 
           {entryType === 'riddle' && (
@@ -385,11 +385,11 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                   <input
                     autoFocus
                     value={editTerm} onChange={e => setEditTerm(e.target.value)}
-                    className="w-full font-serif text-lg rounded-lg border border-heritage-gold-400 dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-1.5 focus:outline-none"
+                    className="w-full font-serif text-lg rounded-lg border border-heritage-gold-400 dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-1.5 focus:outline-hidden"
                   />
                   <textarea
                     value={editMeaning} onChange={e => setEditMeaning(e.target.value)} rows={3}
-                    className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+                    className="w-full text-sm rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
                   />
                   {entry.entryType === 'riddle' && (
                     <input
@@ -424,7 +424,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                   {entry.audioUrl && (
                     <div className="mt-3 bg-heritage-cream-100/70 dark:bg-heritage-dark-hover/70 rounded-lg p-2.5 flex items-center gap-3 border border-heritage-cream-300 dark:border-heritage-dark-border">
                       <Volume2 size={18} className="text-heritage-gold-600 shrink-0" />
-                      <audio controls src={entry.audioUrl} className="w-full h-8 rounded" />
+                      <audio controls src={entry.audioUrl} className="w-full h-8 rounded-sm" />
                     </div>
                   )}
                 </>

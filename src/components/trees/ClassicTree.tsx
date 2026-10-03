@@ -16,7 +16,7 @@ export const ClassicTree: React.FC<Props> = ({ onSelect }) => {
   const renderCard = (m: Member) => (
     <div className="group flex flex-col items-center w-24">
       <div className={`relative w-16 h-16 rounded-full p-[3px] shadow-gold transition-transform group-hover:scale-105
-        ${m.isLiving ? 'bg-gradient-to-br from-heritage-gold-300 to-heritage-gold-600' : 'bg-gradient-to-br from-heritage-bark-300 to-heritage-bark-600'}`}>
+        ${m.isLiving ? 'bg-linear-to-br from-heritage-gold-300 to-heritage-gold-600' : 'bg-linear-to-br from-heritage-bark-300 to-heritage-bark-600'}`}>
         <img src={m.avatarUrl} className="w-full h-full rounded-full object-cover bg-heritage-cream-100 border-2 border-white" alt="" />
       </div>
       <p className="mt-1.5 text-xs font-medium text-heritage-green-900 dark:text-heritage-dark-text leading-tight">{fullName(m)}</p>
@@ -34,7 +34,7 @@ export const ClassicTree: React.FC<Props> = ({ onSelect }) => {
     <div className="relative rounded-2xl border border-heritage-cream-400 dark:border-heritage-dark-border">
       <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
         {/* illustrated oak backdrop */}
-        <div className="absolute inset-0 bg-gradient-to-b from-heritage-cream-100 via-heritage-cream-200 to-heritage-green-100 dark:from-heritage-dark-bg dark:via-heritage-dark-bg dark:to-heritage-dark-hover" />
+        <div className="absolute inset-0 bg-linear-to-b from-heritage-cream-100 via-heritage-cream-200 to-heritage-green-100 dark:from-heritage-dark-bg dark:via-heritage-dark-bg dark:to-heritage-dark-hover" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.14] dark:opacity-[0.08]" preserveAspectRatio="xMidYMax slice" viewBox="0 0 800 500">
           <path d="M400 500 L400 320 Q400 260 340 240 Q280 220 260 160 M400 320 Q400 260 460 240 Q520 220 540 160 M400 380 Q400 340 340 320 Q260 300 220 260 M400 380 Q400 340 460 320 Q540 300 580 260"
             fill="none" stroke="#386b57" strokeWidth="10" strokeLinecap="round" />

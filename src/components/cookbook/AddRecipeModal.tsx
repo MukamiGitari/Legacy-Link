@@ -31,7 +31,7 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCateg
   const [familyStory, setFamilyStory] = useState('');
   const [contributedByMemberId, setContributedByMemberId] = useState('');
 
-  const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400";
+  const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400";
   const labelCls = "block text-xs font-medium text-heritage-green-700 dark:text-heritage-dark-muted mb-1";
 
   const handlePhotoFile = (file: File | undefined) => {

@@ -80,7 +80,7 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative w-full max-w-sm h-full bg-white dark:bg-heritage-dark-card shadow-soft-lg overflow-y-auto scrollbar-thin">
-        <div className="relative h-28 bg-gradient-to-br from-heritage-green-700 to-heritage-green-900">
+        <div className="relative h-28 bg-linear-to-br from-heritage-green-700 to-heritage-green-900">
           <button onClick={onClose} className="absolute top-3 right-3 text-white/80 hover:text-white">
             <X size={20} />
           </button>

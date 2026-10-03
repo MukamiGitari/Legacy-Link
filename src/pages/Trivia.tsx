@@ -93,7 +93,7 @@ export const Trivia: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => startRound(cat)}
-                className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 hover:border-heritage-gold-400 hover:shadow-sm transition-all"
+                className="text-left rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 hover:border-heritage-gold-400 hover:shadow-xs transition-all"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Brain size={16} className="text-heritage-gold-500" />

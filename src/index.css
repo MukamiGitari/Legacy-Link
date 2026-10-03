@@ -1,6 +1,105 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-heritage-green-50: #f2f7f4;
+  --color-heritage-green-100: #e1ede6;
+  --color-heritage-green-200: #c5dcd0;
+  --color-heritage-green-300: #9bc2b0;
+  --color-heritage-green-400: #6ea38c;
+  --color-heritage-green-500: #4c866f;
+  --color-heritage-green-600: #386b57;
+  --color-heritage-green-700: #2c5445;
+  --color-heritage-green-800: #1b382b;
+  --color-heritage-green-900: #132a20;
+  --color-heritage-green-950: #0a1711;
+
+  --color-heritage-cream-50: #ffffff;
+  --color-heritage-cream-100: #fdfbf7;
+  --color-heritage-cream-200: #fbf8f2;
+  --color-heritage-cream-300: #f5efe4;
+  --color-heritage-cream-400: #ece3d2;
+  --color-heritage-cream-500: #dfd2bc;
+  --color-heritage-cream-600: #c5b499;
+  --color-heritage-cream-700: #9e8c72;
+  --color-heritage-cream-800: #756652;
+  --color-heritage-cream-900: #4e4335;
+
+  --color-heritage-gold-50: #fbf8ee;
+  --color-heritage-gold-100: #f5edd2;
+  --color-heritage-gold-200: #ebd9a3;
+  --color-heritage-gold-300: #dfc270;
+  --color-heritage-gold-400: #d4af37;
+  --color-heritage-gold-500: #c5a059;
+  --color-heritage-gold-600: #a68241;
+  --color-heritage-gold-700: #846332;
+  --color-heritage-gold-800: #6b4f2c;
+  --color-heritage-gold-900: #584027;
+
+  --color-heritage-bark-50: #faf7f5;
+  --color-heritage-bark-100: #f3ece6;
+  --color-heritage-bark-200: #e5d7cb;
+  --color-heritage-bark-300: #d3bca9;
+  --color-heritage-bark-400: #be9d85;
+  --color-heritage-bark-500: #a68066;
+  --color-heritage-bark-600: #8b654e;
+  --color-heritage-bark-700: #6f4f3e;
+  --color-heritage-bark-800: #553d32;
+  --color-heritage-bark-900: #3e2e27;
+
+  --color-heritage-dark-bg: #0c1511;
+  --color-heritage-dark-card: #14201a;
+  --color-heritage-dark-border: #22352b;
+  --color-heritage-dark-hover: #1b2d24;
+  --color-heritage-dark-text: #e8f0eb;
+  --color-heritage-dark-muted: #95ab9e;
+
+  --font-serif: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+  --font-sans: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
+  --font-cinzel: Cinzel, serif;
+
+  --shadow-soft:
+    0 4px 20px -2px rgba(27, 56, 43, 0.06),
+    0 2px 6px -1px rgba(27, 56, 43, 0.04);
+  --shadow-soft-lg:
+    0 10px 30px -4px rgba(27, 56, 43, 0.08),
+    0 4px 12px -2px rgba(27, 56, 43, 0.04);
+  --shadow-gold: 0 0 15px rgba(197, 160, 89, 0.25);
+  --shadow-vintage:
+    inset 0 0 30px rgba(111, 79, 62, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-heritage-green-300) transparent;
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-heritage-green-300);
+    border-radius: 999px;
+  }
+}
 
 @layer base {
   * {
@@ -14,24 +113,9 @@
   }
 }
 
-@layer components {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.heritage.green.300') transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: theme('colors.heritage.green.300');
-    border-radius: 999px;
-  }
-}
-
 .dark body {
-  background-color: theme('colors.heritage.dark.bg');
-  color: theme('colors.heritage.dark.text');
+  background-color: var(--color-heritage-dark-bg);
+  color: var(--color-heritage-dark-text);
 }
 
 /* ---- Cookbook: page-turn transition between the category slider and a chapter ----

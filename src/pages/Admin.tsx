@@ -261,7 +261,7 @@ export const Admin: React.FC = () => {
               required
               value={familyName}
               onChange={e => setFamilyName(e.target.value)}
-              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
             />
           </div>
           <div>
@@ -270,7 +270,7 @@ export const Admin: React.FC = () => {
               value={familyMotto}
               onChange={e => setFamilyMotto(e.target.value)}
               placeholder="A short line shown under the family name"
-              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
             />
           </div>
           <div>
@@ -280,7 +280,7 @@ export const Admin: React.FC = () => {
               value={familyOrigin}
               onChange={e => setFamilyOrigin(e.target.value)}
               placeholder="A few sentences about where the family comes from"
-              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-heritage-gold-400"
+              className="w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
             />
           </div>
           <div className="flex items-center gap-3">
