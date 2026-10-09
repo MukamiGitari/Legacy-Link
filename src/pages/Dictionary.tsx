@@ -142,26 +142,51 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
     }
   };
 
+  // One category shows at a time and slides in from the side the new tab lies on.
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [slideDir, setSlideDir] = useState<'left' | 'right'>('left');
+  const touchStartX = useRef<number | null>(null);
+
+  const goToCategory = (next: number) => {
+    if (next < 0 || next >= CATEGORIES.length || next === activeIndex) return;
+    setSlideDir(next > activeIndex ? 'left' : 'right');
+    setActiveIndex(next);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(dx) < 70) return;
+    goToCategory(activeIndex + (dx < 0 ? 1 : -1));
+  };
+
   return (
     <div className="space-y-0">
       <>
       <div className="flex flex-wrap items-center gap-2 mb-6 bg-white dark:bg-heritage-dark-card p-3 rounded-2xl shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.key as string}
-            onClick={() => {
-              const el = document.getElementById(`vault-section-${cat.key as string}`);
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors border border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-card ${cat.iconColor}`}
-          >
-            {cat.icon}
-            <span className="text-heritage-green-800 dark:text-heritage-dark-text">{cat.label}</span>
-          </button>
-        ))}
+        {CATEGORIES.map((cat, i) => {
+          const active = i === activeIndex;
+          return (
+            <button
+              key={cat.key as string}
+              onClick={() => goToCategory(i)}
+              aria-pressed={active}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors border ${cat.iconColor} ${
+                active
+                  ? 'border-heritage-green-800 bg-heritage-green-800/10 dark:bg-heritage-dark-card dark:border-heritage-gold-400 ring-1 ring-heritage-green-800/30'
+                  : 'border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-card'
+              }`}
+            >
+              {cat.icon}
+              <span className="text-heritage-green-800 dark:text-heritage-dark-text">{cat.label}</span>
+            </button>
+          );
+        })}
         {canAdd && (
           <button
-            onClick={() => openAddForm(CATEGORIES[0])}
+            onClick={() => openAddForm(CATEGORIES[activeIndex])}
             className="ml-auto flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-soft transition-colors shrink-0"
           >
             <Plus size={14} /> Add Wisdom
@@ -169,27 +194,29 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
         )}
       </div>
 
-      {/* ── Category Sections ── */}
-      <div className="space-y-10">
-        {CATEGORIES.map(cat => {
+      {/* ── Active category (slides in; swipe left/right on phones) ── */}
+      <div className="overflow-x-clip" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {(() => {
+          const cat = CATEGORIES[activeIndex];
           const entries = data.languageEntries.filter(e => cat.filterTypes.includes(e.entryType));
           return (
-            <CategorySection
-              key={cat.key as string}
-              sectionId={`vault-section-${cat.key as string}`}
-              cat={cat}
-              entries={entries}
-              members={data.members}
-              likes={likes}
-              canAdd={canAdd}
-              canRemove={canRemove}
-              onAdd={() => openAddForm(cat)}
-              onView={setSelectedEntry}
-              onToggleLike={toggleLike}
-              onDelete={handleDelete}
-            />
+            <div key={cat.key as string} className={slideDir === 'left' ? 'vault-slide-left' : 'vault-slide-right'}>
+              <CategorySection
+                sectionId={`vault-section-${cat.key as string}`}
+                cat={cat}
+                entries={entries}
+                members={data.members}
+                likes={likes}
+                canAdd={canAdd}
+                canRemove={canRemove}
+                onAdd={() => openAddForm(cat)}
+                onView={setSelectedEntry}
+                onToggleLike={toggleLike}
+                onDelete={handleDelete}
+              />
+            </div>
           );
-        })}
+        })()}
       </div>
       </>
 

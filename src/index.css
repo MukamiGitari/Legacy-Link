@@ -220,3 +220,18 @@
   width: 0;
   height: 28px;
 }
+
+/* Heritage Vault: category panels slide in from the side of the tab that was picked. */
+@keyframes vault-slide-left {
+  from { opacity: 0; transform: translateX(56px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes vault-slide-right {
+  from { opacity: 0; transform: translateX(-56px); }
+  to   { opacity: 1; transform: none; }
+}
+.vault-slide-left  { animation: vault-slide-left 0.35s ease-out both; }
+.vault-slide-right { animation: vault-slide-right 0.35s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .vault-slide-left, .vault-slide-right { animation: none; }
+}
