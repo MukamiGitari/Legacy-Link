@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Users, Image, TreePine, ArrowRight, CalendarDays, Megaphone, ChefHat, Brain, Cake, Pin } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { Page } from '../App';
-import { fullName, getRoots, getChildren, getAllDescendants } from '../lib/lineage';
+import { fullName } from '../lib/lineage';
 import { buildTriviaRound } from '../lib/trivia';
 
 interface Props {
@@ -60,26 +60,6 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onSelectMember }) => {
     m => Date.now() - new Date(m.createdAt).getTime() <= 7 * 86400000,
   ).length;
 
-  // Tree highlight: follow the branch with the most descendants from the founding member.
-  const treeBranch = useMemo(() => {
-    const root = getRoots(data.members, data.relationships)[0];
-    if (!root) return [] as string[];
-    const names = [root.firstName];
-    let current = root.id;
-    for (let depth = 0; depth < 2; depth++) {
-      const kids = getChildren(current, data.relationships);
-      if (kids.length === 0) break;
-      const best = kids
-        .map(id => ({ id, size: getAllDescendants(id, data.members, data.relationships).length }))
-        .sort((x, y) => y.size - x.size)[0];
-      const member = data.members.find(m => m.id === best.id);
-      if (!member) break;
-      names.push(member.firstName);
-      current = member.id;
-    }
-    return names;
-  }, [data.members, data.relationships]);
-
   // Featured recipe rotates daily.
   const featuredRecipe = data.recipes.length
     ? data.recipes[Math.floor(Date.now() / 86400000) % data.recipes.length]
@@ -135,21 +115,7 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onSelectMember }) => {
       </button>
 
       {/* Highlights */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 shadow-soft">
-          <div className="flex items-center gap-2 mb-3">
-            <TreePine size={18} className="text-heritage-gold-600 dark:text-heritage-gold-400" />
-            <h3 className="font-serif text-heritage-green-900 dark:text-heritage-dark-text font-medium uppercase text-sm tracking-wide">Tree highlight</h3>
-          </div>
-          <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">Lineage branch</p>
-          <p className="mt-1 text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text">
-            {treeBranch.length > 0 ? treeBranch.join(' → ') : 'Add members to grow your tree'}
-          </p>
-          <button onClick={() => onNavigate('tree')} className="mt-4 text-xs text-heritage-gold-600 hover:underline flex items-center gap-1">
-            Open the tree <ArrowRight size={12} />
-          </button>
-        </div>
-
+      <div className="grid md:grid-cols-2 gap-6">
         <div className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 shadow-soft">
           <div className="flex items-center gap-2 mb-3">
             <ChefHat size={18} className="text-heritage-gold-600 dark:text-heritage-gold-400" />
