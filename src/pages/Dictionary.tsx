@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, X, Mic, Heart, ArrowRight,
   BookOpen, MessageSquare, Quote, Leaf, Users, BookMarked,
-  Feather, Search,
+  Feather, Search, Volume2, Pause,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -446,6 +446,52 @@ function CategorySection({
   );
 }
 
+// ── SpeakButton ───────────────────────────────────────────────────────────────
+
+// Only one clip plays at a time across the whole vault.
+let activeClip: HTMLAudioElement | null = null;
+
+/** Small speaker button that plays/pauses one clip — sits next to the word. */
+function SpeakButton({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) {
+      const a = new Audio(src);
+      a.onended = () => setPlaying(false);
+      a.onpause = () => setPlaying(false);
+      a.onplay = () => setPlaying(true);
+      audioRef.current = a;
+    }
+    const a = audioRef.current;
+    if (a.paused) {
+      if (activeClip && activeClip !== a) activeClip.pause();
+      activeClip = a;
+      a.play().catch(() => setPlaying(false));
+    } else {
+      a.pause();
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={playing ? 'Pause pronunciation' : 'Play pronunciation'}
+      title={playing ? 'Pause' : 'Listen'}
+      className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+        playing
+          ? 'bg-heritage-green-800 text-heritage-gold-200'
+          : 'bg-heritage-gold-100 text-heritage-gold-700 hover:bg-heritage-gold-200 dark:bg-heritage-dark-card dark:text-heritage-gold-400'
+      }`}
+    >
+      {playing ? <Pause size={15} /> : <Volume2 size={15} />}
+    </button>
+  );
+}
+
 // ── WisdomCard ────────────────────────────────────────────────────────────────
 
 interface WisdomCardProps {
@@ -461,6 +507,9 @@ interface WisdomCardProps {
 
 function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onDelete }: WisdomCardProps) {
   const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
+  const { currentProfile, updateLanguageEntry, pushToast } = useApp();
+  const canAddVoice = canAddContent(currentProfile?.role);
+  const [recording, setRecording] = useState(false);
 
   return (
     <div
@@ -485,9 +534,12 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
         </div>
 
         {/* Title */}
-        <h4 className="font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text text-lg group-hover:text-heritage-bark-600 dark:group-hover:text-heritage-bark-400 transition-colors line-clamp-2">
-          {entry.term}
-        </h4>
+        <div className="flex items-start gap-2">
+          <h4 className="flex-1 min-w-0 font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text text-lg group-hover:text-heritage-bark-600 dark:group-hover:text-heritage-bark-400 transition-colors line-clamp-2">
+            {entry.term}
+          </h4>
+          {entry.audioUrl && <SpeakButton src={entry.audioUrl} />}
+        </div>
 
         {/* Original text (language field) */}
         {entry.language && (
@@ -501,15 +553,38 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
           {entry.meaning}
         </p>
 
-        {/* Inline audio player — visible on the card face, no tap needed */}
-        {entry.audioUrl && (
+        {/* Voice: playback is the speaker next to the word; cards without a clip get a record option here */}
+        {!entry.audioUrl && canAddVoice && (
           <div onClick={(e) => e.stopPropagation()}>
-            <audio
-              controls
-              src={entry.audioUrl}
-              className="w-full h-8 mt-1"
-              style={{ colorScheme: 'light' }}
-            />
+            {recording ? (
+              <div className="space-y-2">
+                <AudioRecorder
+                  label="Record the pronunciation"
+                  maxSeconds={60}
+                  onChange={(url) => {
+                    if (!url) return;
+                    updateLanguageEntry(entry.id, { audioUrl: url });
+                    pushToast('Voice recording saved');
+                    setRecording(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRecording(false)}
+                  className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRecording(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-dashed border-heritage-bark-400 text-heritage-bark-600 dark:text-heritage-bark-400 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-card transition-colors"
+              >
+                <Mic size={13} /> Add voice
+              </button>
+            )}
           </div>
         )}
       </div>
