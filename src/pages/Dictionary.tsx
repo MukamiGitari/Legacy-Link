@@ -565,7 +565,23 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
           <h4 className="flex-1 min-w-0 font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text text-lg group-hover:text-heritage-bark-600 dark:group-hover:text-heritage-bark-400 transition-colors line-clamp-2">
             {entry.term}
           </h4>
-          {entry.audioUrl && <SpeakButton src={entry.audioUrl} />}
+          {entry.audioUrl ? (
+            <SpeakButton src={entry.audioUrl} />
+          ) : canAddVoice ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setRecording(r => !r); }}
+              aria-label="Record pronunciation"
+              title="Record pronunciation"
+              className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-full border transition-colors ${
+                recording
+                  ? 'bg-red-600 border-red-600 text-white'
+                  : 'border-dashed border-heritage-bark-400 text-heritage-bark-600 hover:bg-heritage-cream-100 dark:text-heritage-bark-400 dark:hover:bg-heritage-dark-card'
+              }`}
+            >
+              <Mic size={15} />
+            </button>
+          ) : null}
         </div>
 
         {/* Original text (language field) */}
@@ -580,38 +596,26 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
           {entry.meaning}
         </p>
 
-        {/* Voice: playback is the speaker next to the word; cards without a clip get a record option here */}
-        {!entry.audioUrl && canAddVoice && (
-          <div onClick={(e) => e.stopPropagation()}>
-            {recording ? (
-              <div className="space-y-2">
-                <AudioRecorder
-                  label="Record the pronunciation"
-                  maxSeconds={60}
-                  onChange={(url) => {
-                    if (!url) return;
-                    updateLanguageEntry(entry.id, { audioUrl: url });
-                    pushToast('Voice recording saved');
-                    setRecording(false);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setRecording(false)}
-                  className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:underline"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setRecording(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-dashed border-heritage-bark-400 text-heritage-bark-600 dark:text-heritage-bark-400 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-card transition-colors"
-              >
-                <Mic size={13} /> Add voice
-              </button>
-            )}
+        {/* Tapping the mic next to the word opens the recorder here, under the meaning */}
+        {!entry.audioUrl && canAddVoice && recording && (
+          <div onClick={(e) => e.stopPropagation()} className="space-y-2">
+            <AudioRecorder
+              label="Record the pronunciation"
+              maxSeconds={60}
+              onChange={(url) => {
+                if (!url) return;
+                updateLanguageEntry(entry.id, { audioUrl: url });
+                pushToast('Voice recording saved');
+                setRecording(false);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setRecording(false)}
+              className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:underline"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>
