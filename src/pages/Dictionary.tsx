@@ -2,13 +2,12 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, X, Mic, Heart, ArrowRight,
   BookOpen, MessageSquare, Quote, Leaf, Users, BookMarked,
-  Feather, Search, Music2,
+  Feather, Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { canAddContent, canDelete } from '../lib/permissions';
 import { AudioRecorder } from '../components/vault/AudioRecorder';
-import { FamilySong } from './FamilySong';
 import type { LanguageEntry, LanguageEntryType } from '../types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -143,39 +142,9 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
     }
   };
 
-  const [activeTab, setActiveTab] = useState<'song' | 'vault'>('song');
-
   return (
     <div className="space-y-0">
-      {/* ── Tab bar ── */}
-      <div className="flex gap-1 mb-6 bg-white dark:bg-heritage-dark-card p-1.5 rounded-2xl shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border">
-        <button
-          onClick={() => setActiveTab('song')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-            activeTab === 'song'
-              ? 'bg-heritage-green-800 text-heritage-gold-200 shadow'
-              : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-50 dark:hover:bg-heritage-dark-hover'
-          }`}
-        >
-          <Music2 size={16} /> Family Songs
-        </button>
-        <button
-          onClick={() => setActiveTab('vault')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-            activeTab === 'vault'
-              ? 'bg-heritage-green-800 text-heritage-gold-200 shadow'
-              : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-50 dark:hover:bg-heritage-dark-hover'
-          }`}
-        >
-          <BookOpen size={16} /> Words &amp; Wisdom
-        </button>
-      </div>
-
-      {/* ── Family Song tab ── */}
-      {activeTab === 'song' && <FamilySong />}
-
-      {/* ── Vault tab ── */}
-      {activeTab === 'vault' && <>
+      <>
       <div className="flex flex-wrap items-center gap-2 mb-6 bg-white dark:bg-heritage-dark-card p-3 rounded-2xl shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border">
         {CATEGORIES.map(cat => (
           <button
@@ -222,7 +191,7 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
           );
         })}
       </div>
-      </>}
+      </>
 
       {/* ── Add Wisdom Modal ── */}
       {showForm && (

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, BookHeart } from 'lucide-react';
+import { Plus, BookHeart, Music2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
 import { AudioRecorder } from '../components/vault/AudioRecorder';
+import { FamilySong } from './FamilySong';
 
 interface Props {
   onSelectMember: (id: string) => void;
@@ -12,6 +13,7 @@ interface Props {
 export const Memories: React.FC<Props> = ({ onSelectMember }) => {
   const { data, addMemory, currentProfile } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
+  const [view, setView] = useState<'stories' | 'songs'>('stories');
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -27,7 +29,27 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
     setTitle(''); setBody(''); setEra(''); setAuthorMemberId(''); setAudioUrl(''); setShowForm(false);
   };
 
+  const tabCls = (active: boolean) =>
+    `flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+      active
+        ? 'bg-heritage-green-800 text-heritage-gold-200 shadow'
+        : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-50 dark:hover:bg-heritage-dark-hover'
+    }`;
+
   return (
+    <div className="space-y-6">
+      <div className="flex gap-1 bg-white dark:bg-heritage-dark-card p-1.5 rounded-2xl shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border">
+        <button onClick={() => setView('stories')} className={tabCls(view === 'stories')}>
+          <BookHeart size={16} /> Stories
+        </button>
+        <button onClick={() => setView('songs')} className={tabCls(view === 'songs')}>
+          <Music2 size={16} /> Family Songs
+        </button>
+      </div>
+
+      {view === 'songs' && <FamilySong />}
+
+      {view === 'stories' && (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted max-w-md">
@@ -104,6 +126,8 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
           );
         })}
       </div>
+    </div>
+      )}
     </div>
   );
 };
