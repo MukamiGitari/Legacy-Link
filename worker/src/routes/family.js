@@ -114,6 +114,7 @@ function mapMemory(r, env) {
     id: r.id, familyId: r.family_id, title: r.title, body: r.body,
     era: r.era ?? undefined, authorMemberId: r.author_member_id ?? undefined,
     coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
+    audioUrl: r.audio_url ?? undefined,
     relatedMemberIds: Array.isArray(r.related_member_ids) ? r.related_member_ids : [],
     createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
   };

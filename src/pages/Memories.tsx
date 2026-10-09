@@ -3,6 +3,7 @@ import { Plus, BookHeart } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { canAddContent } from '../lib/permissions';
+import { AudioRecorder } from '../components/vault/AudioRecorder';
 
 interface Props {
   onSelectMember: (id: string) => void;
@@ -16,12 +17,14 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
   const [body, setBody] = useState('');
   const [era, setEra] = useState('');
   const [authorMemberId, setAuthorMemberId] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
+  const [audioBusy, setAudioBusy] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !body.trim()) return;
-    addMemory({ title, body, era: era || undefined, authorMemberId: authorMemberId || undefined, relatedMemberIds: authorMemberId ? [authorMemberId] : [] });
-    setTitle(''); setBody(''); setEra(''); setAuthorMemberId(''); setShowForm(false);
+    if (!title.trim() || !body.trim() || audioBusy) return;
+    addMemory({ title, body, era: era || undefined, authorMemberId: authorMemberId || undefined, audioUrl: audioUrl || undefined, relatedMemberIds: authorMemberId ? [authorMemberId] : [] });
+    setTitle(''); setBody(''); setEra(''); setAuthorMemberId(''); setAudioUrl(''); setShowForm(false);
   };
 
   return (
@@ -63,9 +66,15 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
               {data.members.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
             </select>
           </div>
+          <AudioRecorder
+            value={audioUrl}
+            onChange={setAudioUrl}
+            onBusyChange={setAudioBusy}
+            label="Tell it aloud (optional)"
+          />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-3.5 py-2 text-sm rounded-lg border border-heritage-cream-400 text-heritage-green-700 dark:text-heritage-dark-muted">Cancel</button>
-            <button type="submit" className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium">Publish memory</button>
+            <button type="submit" disabled={audioBusy} className="px-3.5 py-2 text-sm rounded-lg bg-heritage-green-800 text-white font-medium disabled:opacity-50">{audioBusy ? 'Saving audio…' : 'Publish memory'}</button>
           </div>
         </form>
       )}
@@ -83,6 +92,7 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
                 </div>
                 <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text">{mem.title}</h3>
                 <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-2 leading-relaxed">{mem.body}</p>
+                {mem.audioUrl && <audio controls preload="none" src={mem.audioUrl} className="w-full h-9 mt-3" />}
                 {author && (
                   <button onClick={() => onSelectMember(author.id)} className="flex items-center gap-2 mt-4 text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900">
                     <img src={author.avatarUrl} className="w-6 h-6 rounded-full bg-heritage-cream-200" alt="" />

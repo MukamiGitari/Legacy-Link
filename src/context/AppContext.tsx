@@ -499,6 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         era: memory.era,
         authorMemberId: memory.authorMemberId,
         coverPhotoUrl: memory.coverPhotoUrl,
+        audioUrl: memory.audioUrl,
         relatedMemberIds: memory.relatedMemberIds,
       }));
     }

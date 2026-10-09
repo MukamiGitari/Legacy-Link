@@ -20,6 +20,7 @@ const memorySchema = z.object({
   era: z.string().max(100).optional(),
   authorMemberId: z.string().uuid().optional(),
   coverPhotoUrl: z.string().max(1000).optional(),
+  audioUrl: z.string().max(1000).optional(),
   relatedMemberIds: z.array(z.string().uuid()).default([]),
 });
 
@@ -46,11 +47,11 @@ features.post('/memories', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { title, body, era, authorMemberId, coverPhotoUrl, relatedMemberIds } = parsed.data;
+    const { title, body, era, authorMemberId, coverPhotoUrl, audioUrl, relatedMemberIds } = parsed.data;
     const result = await client.query(
-      `INSERT INTO memories (family_id, title, body, era, author_member_id, cover_photo_url, related_member_ids)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [profile.family_id, title, body, era ?? null, authorMemberId ?? null, coverPhotoUrl ?? null, relatedMemberIds]
+      `INSERT INTO memories (family_id, title, body, era, author_member_id, cover_photo_url, audio_url, related_member_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [profile.family_id, title, body, era ?? null, authorMemberId ?? null, coverPhotoUrl ?? null, audioUrl ?? null, relatedMemberIds]
     );
     return c.json({ memory: result.rows[0] }, 201);
   });

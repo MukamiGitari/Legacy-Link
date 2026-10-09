@@ -132,6 +132,7 @@ export interface Memory {
   era?: string;
   authorMemberId?: string;
   coverPhotoUrl?: string;
+  audioUrl?: string;
   relatedMemberIds: string[];
   createdAt: string;
 }

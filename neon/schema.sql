@@ -274,6 +274,7 @@ CREATE TABLE public.memories (
     era text,
     author_member_id uuid,
     cover_photo_url text,
+    audio_url text,
     related_member_ids uuid[] DEFAULT '{}'::uuid[],
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
