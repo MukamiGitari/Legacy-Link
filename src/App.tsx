@@ -107,6 +107,8 @@ const App: React.FC = () => {
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           onAddMember={openAddModal}
           canAddMember={canAddContent(currentProfile?.role)}
+          onNavigate={navigate}
+          onSelectMember={openMemberDrawer}
         />
 
         <main className="p-4 md:p-8 max-w-7xl mx-auto">

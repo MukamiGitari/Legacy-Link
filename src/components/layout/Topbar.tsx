@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { Page } from '../../App';
 import { uploadFileToR2 } from '../../lib/api';
+import { GlobalSearch } from './GlobalSearch';
 
 const PAGE_TITLES: Record<Page, string> = {
   dashboard: 'Home',
@@ -38,9 +39,11 @@ interface TopbarProps {
   onOpenMobileSidebar: () => void;
   onAddMember: () => void;
   canAddMember: boolean;
+  onNavigate: (p: Page) => void;
+  onSelectMember: (id: string) => void;
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAddMember, canAddMember }) => {
+export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAddMember, canAddMember, onNavigate, onSelectMember }) => {
   const {
     data, currentProfile, setCurrentProfileId, isOnlineMode, logout, updateProfileAvatar, updateProfileDisplayName, pushToast,
     notificationsForCurrentProfile, markNotificationRead, markAllNotificationsRead,
@@ -83,7 +86,7 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-heritage-cream-400 bg-heritage-cream-100/90 backdrop-blur-sm px-4 md:px-8 py-4 dark:bg-heritage-dark-card/90">
+    <header className="sticky top-0 z-30 flex flex-wrap md:flex-nowrap items-center gap-3 border-b border-heritage-cream-400 bg-heritage-cream-100/90 backdrop-blur-sm px-4 md:px-8 py-4 dark:bg-heritage-dark-card/90">
       <button onClick={onOpenMobileSidebar} className="md:hidden text-heritage-green-800 dark:text-heritage-dark-text">
         <Menu size={22} />
       </button>
@@ -91,6 +94,11 @@ export const Topbar: React.FC<TopbarProps> = ({ page, onOpenMobileSidebar, onAdd
       <h1 className="font-serif text-xl md:text-2xl text-heritage-green-900 dark:text-heritage-dark-text">
         {PAGE_TITLES[page]}
       </h1>
+
+      {/* Search: its own full-width row on phones, inline from md up. */}
+      <div className="order-last w-full md:order-none md:w-auto md:flex-1 md:max-w-md md:mx-4">
+        <GlobalSearch onNavigate={onNavigate} onSelectMember={onSelectMember} />
+      </div>
 
       <div className="ml-auto flex items-center gap-2 md:gap-3">
         <span

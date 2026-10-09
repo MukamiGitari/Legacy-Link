@@ -14,19 +14,45 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { page: 'dashboard', label: 'Home', icon: Home },
-  { page: 'tree', label: 'Family Tree', icon: TreePine },
-  { page: 'gallery', label: 'Albums', icon: Image },
-  { page: 'cookbook', label: 'Family Cookbook', icon: ChefHat },
-  { page: 'memories', label: 'Memories', icon: BookHeart },
-  { page: 'myFamily', label: 'My Family', icon: UsersRound },
-  { page: 'directory', label: 'Members', icon: Users },
-  { page: 'chronicle', label: 'Chronicle', icon: ScrollText },
-  { page: 'dictionary', label: 'Heritage Vault', icon: Languages },
-  { page: 'trivia', label: 'Family Trivia', icon: Brain },
-  { page: 'games', label: 'Games', icon: Gamepad2 },
-  { page: 'admin', label: 'Admin Suite', icon: ShieldCheck, adminOnly: true },
+interface NavGroup {
+  /** Section heading shown above the items; omitted for the top-level Home link. */
+  heading?: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  { items: [{ page: 'dashboard', label: 'Home', icon: Home }] },
+  {
+    heading: 'Genealogy',
+    items: [
+      { page: 'tree', label: 'Family Tree', icon: TreePine },
+      { page: 'myFamily', label: 'My Family', icon: UsersRound },
+      { page: 'directory', label: 'Members', icon: Users },
+    ],
+  },
+  {
+    heading: 'Archives',
+    items: [
+      { page: 'dictionary', label: 'Vault', icon: Languages },
+      { page: 'gallery', label: 'Albums', icon: Image },
+    ],
+  },
+  {
+    heading: 'Culture',
+    items: [
+      { page: 'chronicle', label: 'Chronicle', icon: ScrollText },
+      { page: 'memories', label: 'Memories', icon: BookHeart },
+      { page: 'cookbook', label: 'Cookbook', icon: ChefHat },
+    ],
+  },
+  {
+    heading: 'Fun',
+    items: [
+      { page: 'games', label: 'Games', icon: Gamepad2 },
+      { page: 'trivia', label: 'Family Trivia', icon: Brain },
+    ],
+  },
+  { heading: 'Admin', items: [{ page: 'admin', label: 'Admin Suite', icon: ShieldCheck, adminOnly: true }] },
 ];
 
 interface SidebarProps {
@@ -38,7 +64,9 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, onCloseMobile }) => {
   const { data, currentProfile } = useApp();
-  const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdminRole(currentProfile.role));
+  const visibleGroups = NAV_GROUPS
+    .map(g => ({ ...g, items: g.items.filter(item => !item.adminOnly || isAdminRole(currentProfile.role)) }))
+    .filter(g => g.items.length > 0);
 
   const content = (
     <div className="flex h-full flex-col bg-heritage-green-900 text-heritage-cream-100">
@@ -53,24 +81,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobil
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin py-4 px-3 space-y-1">
-        {visibleNavItems.map(({ page, label, icon: Icon }) => {
-          const active = currentPage === page;
-          return (
-            <button
-              key={page}
-              onClick={() => { onNavigate(page); onCloseMobile(); }}
-              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors
-                ${active
-                  ? 'bg-heritage-green-800 text-heritage-gold-300 font-medium'
-                  : 'text-heritage-cream-200 hover:bg-heritage-green-800/60'
-                }`}
-            >
-              <Icon size={18} className={active ? 'text-heritage-gold-400' : 'text-heritage-cream-400'} />
-              {label}
-            </button>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-4 px-3 space-y-4">
+        {visibleGroups.map((group, gi) => (
+          <div key={group.heading ?? `g${gi}`} className="space-y-1">
+            {group.heading && (
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-heritage-gold-400/80">
+                {group.heading}
+              </p>
+            )}
+            {group.items.map(({ page, label, icon: Icon }) => {
+              const active = currentPage === page;
+              return (
+                <button
+                  key={page}
+                  onClick={() => { onNavigate(page); onCloseMobile(); }}
+                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors
+                    ${active
+                      ? 'bg-heritage-green-800 text-heritage-gold-300 font-medium'
+                      : 'text-heritage-cream-200 hover:bg-heritage-green-800/60'
+                    }`}
+                >
+                  <Icon size={18} className={active ? 'text-heritage-gold-400' : 'text-heritage-cream-400'} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div className="px-6 py-4 border-t border-heritage-green-800 text-[11px] text-heritage-green-400">
