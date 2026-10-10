@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Expand, Shrink } from 'lucide-react';
 
 interface ZoomPanViewportProps {
   children: React.ReactNode;
@@ -20,13 +20,14 @@ const CLICK_DRAG_THRESHOLD = 6; // px of movement before a pointer-down counts a
 export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
   children,
   resetKey,
-  minZoom = 0.4,
+  minZoom = 0.08,
   maxZoom = 2.5,
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [expanded, setExpanded] = useState(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   // The scale at which the *entire* tree fits inside the viewport with no
   // cropping. Recomputed whenever the container or the tree's own natural
@@ -109,18 +110,29 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
     userAdjustedRef.current = false;
   }, [resetKey]);
 
-  const zoomBy = (delta: number, centerX?: number, centerY?: number) => {
+  // Zoom is multiplicative so each step feels the same at 10% as at 200%.
+  const zoomBy = (factor: number) => {
     userAdjustedRef.current = true;
-    setScale((prev) => clampUserScale(prev + delta));
-    void centerX;
-    void centerY;
+    setScale((prev) => clampUserScale(prev * factor));
   };
+
+  const toggleExpanded = () => {
+    userAdjustedRef.current = false; // re-fit the whole tree to the new frame size
+    setExpanded((v) => !v);
+  };
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     userAdjustedRef.current = true;
-    const delta = -e.deltaY * 0.0015;
-    setScale((prev) => clampUserScale(prev + delta));
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    setScale((prev) => clampUserScale(prev * factor));
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -183,12 +195,12 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
       case '+':
       case '=':
         e.preventDefault();
-        zoomBy(0.15);
+        zoomBy(1.2);
         break;
       case '-':
       case '_':
         e.preventDefault();
-        zoomBy(-0.15);
+        zoomBy(1 / 1.2);
         break;
       case '0':
         e.preventDefault();
@@ -233,7 +245,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
       onPointerLeave={endPointer}
       onClickCapture={handleClickCapture}
       onKeyDown={handleKeyDown}
-      className={`relative h-[62vh] min-h-[420px] max-h-[720px] w-full overflow-hidden rounded-2xl touch-none select-none focus:outline-hidden focus-visible:ring-2 focus-visible:ring-heritage-gold-500 ${className}`}
+      className={`${expanded ? 'fixed inset-0 z-[60] h-screen w-screen rounded-none' : 'relative h-[62vh] min-h-[420px] max-h-[720px] w-full rounded-2xl'} overflow-hidden touch-none select-none focus:outline-hidden focus-visible:ring-2 focus-visible:ring-heritage-gold-500 ${className}`}
       style={{ cursor: dragState.current ? 'grabbing' : 'grab' }}
     >
       <div
@@ -248,7 +260,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
       <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white/95 dark:bg-heritage-dark-card/95 backdrop-blur-sm p-1.5 shadow-soft-lg">
         <button
           type="button"
-          onClick={() => zoomBy(0.2)}
+          onClick={() => zoomBy(1.25)}
           aria-label="Zoom in"
           className="w-8 h-8 flex items-center justify-center rounded-lg text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover"
         >
@@ -256,7 +268,7 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => zoomBy(-0.2)}
+          onClick={() => zoomBy(0.8)}
           aria-label="Zoom out"
           className="w-8 h-8 flex items-center justify-center rounded-lg text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover"
         >
@@ -269,6 +281,15 @@ export const ZoomPanViewport: React.FC<ZoomPanViewportProps> = ({
           className="w-8 h-8 flex items-center justify-center rounded-lg text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover"
         >
           <Maximize2 size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={toggleExpanded}
+          aria-label={expanded ? 'Exit full screen' : 'Full screen'}
+          title={expanded ? 'Exit full screen (Esc)' : 'Full screen'}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-heritage-green-800 dark:text-heritage-dark-text hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-hover"
+        >
+          {expanded ? <Shrink size={15} /> : <Expand size={15} />}
         </button>
       </div>
 
