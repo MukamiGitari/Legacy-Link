@@ -40,6 +40,7 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const [contactLinks, setContactLinks] = useState(existing?.contactLinks ?? '');
   const [hasPet, setHasPet] = useState(existing?.hasPet ?? false);
   const [petName, setPetName] = useState(existing?.petName ?? '');
+  const [isFounder, setIsFounder] = useState(existing?.isFounder ?? false);
   const [avatarUrl, setAvatarUrl] = useState(existing?.avatarUrl ?? AVATAR_PRESETS[0]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
@@ -96,6 +97,8 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
       professionalTitle: professionalTitle || undefined, currentOrganization: currentOrganization || undefined,
       location: location || undefined, contactLinks: contactLinks || undefined,
       hasPet, petName: hasPet ? (petName || undefined) : undefined,
+      // Only sent when it matters, so ordinary saves never touch the founder column.
+      ...(isFounder !== (existing?.isFounder ?? false) || (!existing && isFounder) ? { isFounder } : {}),
     };
 
     let savedId: string;
@@ -282,6 +285,17 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
                   placeholder="Pet's name"
                 />
               )}
+            </div>
+            <div className="col-span-2">
+              <label className="flex items-start gap-2 text-sm text-heritage-green-800 dark:text-heritage-dark-text">
+                <input type="checkbox" checked={isFounder} onChange={e => setIsFounder(e.target.checked)} className="mt-0.5 rounded-sm border-heritage-cream-400" />
+                <span>
+                  Founding ancestor
+                  <span className="block text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
+                    The family tree starts from this person. Tick it for the founder (and a founding spouse if you like) so earlier-generation in-laws don't take over the top of the tree.
+                  </span>
+                </span>
+              </label>
             </div>
             <div className="col-span-2">
               <label className={labelCls}>Biography</label>

@@ -159,9 +159,21 @@ export function getHalfSiblings(memberId: string, rels: Relationship[]): string[
   return Array.from(allSiblings).filter(id => !fullSiblings.has(id));
 }
 
-export function getRoots(members: Member[], rels: Relationship[]): Member[] {
+/**
+ * The people the tree starts from. Members flagged as founders win; if nobody is flagged
+ * (older data) it falls back to the lowest generation number, as before. The flag matters
+ * when in-laws are entered a generation "before" the founder — without it they'd become the roots.
+ */
+export function getFoundingAncestors(members: Member[]): Member[] {
+  if (members.length === 0) return [];
+  const flagged = members.filter(m => m.isFounder);
+  if (flagged.length > 0) return flagged;
   const minGen = Math.min(...members.map(m => m.generation));
   return members.filter(m => m.generation === minGen);
+}
+
+export function getRoots(members: Member[], _rels: Relationship[]): Member[] {
+  return getFoundingAncestors(members);
 }
 
 export function membersByGeneration(members: Member[]): Map<number, Member[]> {
@@ -218,9 +230,7 @@ export interface DerivedInLaw {
  */
 export function isBloodlineMember(memberId: string, members: Member[], rels: Relationship[]): boolean {
   if (members.length === 0) return false;
-  const minGen = Math.min(...members.map(m => m.generation));
-  const roots = members.filter(m => m.generation === minGen);
-  const rootIds = new Set(roots.map(r => r.id));
+  const rootIds = new Set(getFoundingAncestors(members).map(r => r.id));
   if (rootIds.has(memberId)) return true;
 
   const visited = new Set<string>();

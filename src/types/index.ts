@@ -38,6 +38,8 @@ export interface Member {
   hasPet?: boolean;
   /** Only used when `hasPet` is true — the pet's name. */
   petName?: string;
+  /** Marks a founding ancestor — the family tree starts from the people flagged here. */
+  isFounder?: boolean;
 }
 
 export type RelationshipType =

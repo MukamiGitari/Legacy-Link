@@ -1,5 +1,5 @@
 import type { Member, Relationship } from '../types';
-import { getChildren, getSpouses, WIFE_COLORS, getWifeLabel, getSpouseFamily, isBloodlineMember } from './lineage';
+import { getChildren, getSpouses, WIFE_COLORS, getWifeLabel, getSpouseFamily, getFoundingAncestors } from './lineage';
 
 export interface WifeLine {
   spouse: Member;
@@ -36,7 +36,7 @@ export function buildForest(
 ): TreeUnit[] {
   if (members.length === 0) return [];
   const filter = options?.filter ?? 'bloodline';
-  const minGen = Math.min(...members.map(m => m.generation));
+  const foundingIds = new Set(getFoundingAncestors(members).map(m => m.id));
   const visited = new Set<string>();
   const byId = new Map(members.map(m => [m.id, m]));
 
@@ -121,12 +121,7 @@ export function buildForest(
 
   // Founding roots
   members
-    .filter(m => {
-      if (filter === 'bloodline') {
-        return m.generation === minGen && isBloodlineMember(m.id, members, relationships);
-      }
-      return m.generation === minGen;
-    })
+    .filter(m => foundingIds.has(m.id))
     .forEach(m => {
       const unit = buildUnit(m.id);
       if (unit) roots.push(unit);

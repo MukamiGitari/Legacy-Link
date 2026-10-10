@@ -227,6 +227,7 @@ CREATE TABLE public.members (
     contact_links text,
     has_pet boolean DEFAULT false NOT NULL,
     pet_name text,
+    is_founder boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT members_gender_check CHECK ((gender = ANY (ARRAY['male'::text, 'female'::text, 'other'::text])))

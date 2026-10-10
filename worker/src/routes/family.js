@@ -22,6 +22,7 @@ function mapMember(r, env) {
     professionalTitle: r.professional_title ?? undefined, currentOrganization: r.current_organization ?? undefined,
     location: r.location ?? undefined, contactLinks: r.contact_links ?? undefined,
     hasPet: r.has_pet ?? undefined, petName: r.pet_name ?? undefined,
+    isFounder: r.is_founder === true ? true : undefined,
   };
 }
 
@@ -347,6 +348,7 @@ const memberSchema = z.object({
   professionalTitle: z.string().nullish(), currentOrganization: z.string().nullish(),
   location: z.string().nullish(), contactLinks: z.string().nullish(),
   hasPet: z.boolean().nullish(), petName: z.string().nullish(),
+  isFounder: z.boolean().nullish(),
 });
 
 family.post('/members', async (c) => {
@@ -373,6 +375,10 @@ family.post('/members', async (c) => {
         m.hasPet ?? false, m.hasPet ? (m.petName ?? null) : null,
       ]
     );
+    // Kept out of the INSERT above so adding ordinary members never depends on the is_founder column.
+    if (m.isFounder) {
+      await client.query(`UPDATE members SET is_founder = true WHERE id = $1 AND family_id = $2`, [m.id, profile.family_id]);
+    }
     return c.json({ ok: true, id: m.id }, 201);
   });
 });
@@ -391,7 +397,7 @@ family.put('/members/:id', async (c) => {
       dateOfPassing: 'date_of_passing', birthPlace: 'birth_place', restingPlace: 'resting_place',
       occupation: 'occupation', bio: 'bio', professionalTitle: 'professional_title',
       currentOrganization: 'current_organization', location: 'location', contactLinks: 'contact_links',
-      hasPet: 'has_pet', petName: 'pet_name',
+      hasPet: 'has_pet', petName: 'pet_name', isFounder: 'is_founder',
     };
     const sets = [];
     const values = [];
