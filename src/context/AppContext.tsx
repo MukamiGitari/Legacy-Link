@@ -272,7 +272,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const persist = useCallback((label: string, fn: () => Promise<unknown>) => {
     fn().catch(err => {
       console.error(`[legacy-link] failed to sync "${label}":`, err);
-      pushToast(`Couldn't save "${label}" to the server. It's showing locally, but try again or refresh to confirm it synced.`);
+      const reason = err instanceof Error && err.message ? ` (${err.message})` : '';
+      pushToast(`Couldn't save "${label}" to the server${reason}. It's showing here only — it will disappear when you refresh, so try again.`);
     });
   }, [pushToast]);
 
