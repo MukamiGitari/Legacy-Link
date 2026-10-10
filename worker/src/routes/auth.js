@@ -206,4 +206,43 @@ function setRefreshCookie(c, token, expiresAt) {
   });
 }
 
+/**
+ * Redeem a one-time restoration code to set a new password. Public on purpose: the person is
+ * locked out, so there is no access token. It sits behind AUTH_RATE_LIMITER (see below) and
+ * only works for a code issued for that exact email's profile that hasn't been used.
+ */
+export async function redeemRestorationCode(c) {
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = z.object({
+    email: z.string().email(),
+    code: z.string().min(1),
+    newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  }).safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
+
+  const { email, code, newPassword } = parsed.data;
+
+  return withClient(c.env, async (client) => {
+    const profRes = await client.query(`SELECT id, family_id FROM profiles WHERE LOWER(email) = LOWER($1)`, [email.toLowerCase().trim()]);
+    if (profRes.rowCount === 0) return c.json({ error: "That email doesn't match an account" }, 404);
+    const targetProfile = profRes.rows[0];
+
+    const codeRes = await client.query(
+      `SELECT id FROM restoration_codes WHERE profile_id = $1 AND UPPER(code) = UPPER($2) AND redeemed_at IS NULL`,
+      [targetProfile.id, code.toUpperCase().trim()]
+    );
+    if (codeRes.rowCount === 0) {
+      return c.json({ error: 'That restoration code is invalid, expired, or already used.' }, 400);
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await client.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, targetProfile.id]);
+    await client.query(`UPDATE restoration_codes SET redeemed_at = now() WHERE id = $1`, [codeRes.rows[0].id]);
+
+    return c.json({ ok: true });
+  });
+}
+
+auth.post('/restoration/redeem', redeemRestorationCode);
+
 export default auth;

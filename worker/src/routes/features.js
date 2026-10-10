@@ -601,37 +601,7 @@ features.post('/restoration', async (c) => {
   });
 });
 
-features.post('/restoration/redeem', async (c) => {
-  const body = await c.req.json();
-  const parsed = z.object({
-    email: z.string().email(),
-    code: z.string().min(1),
-    newPassword: z.string().min(6),
-  }).safeParse(body);
-  if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
-
-  const { email, code, newPassword } = parsed.data;
-
-  return withClient(c.env, async (client) => {
-    const profRes = await client.query(`SELECT id, family_id FROM profiles WHERE LOWER(email) = LOWER($1)`, [email.toLowerCase().trim()]);
-    if (profRes.rowCount === 0) return c.json({ error: "That email doesn't match an account" }, 404);
-    const targetProfile = profRes.rows[0];
-
-    const codeRes = await client.query(
-      `SELECT id FROM restoration_codes WHERE profile_id = $1 AND UPPER(code) = UPPER($2) AND redeemed_at IS NULL`,
-      [targetProfile.id, code.toUpperCase().trim()]
-    );
-    if (codeRes.rowCount === 0) {
-      return c.json({ error: 'That restoration code is invalid, expired, or already used.' }, 400);
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await client.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, targetProfile.id]);
-    await client.query(`UPDATE restoration_codes SET redeemed_at = now() WHERE id = $1`, [codeRes.rows[0].id]);
-
-    return c.json({ ok: true });
-  });
-});
+// NOTE: POST /restoration/redeem is public (the person is locked out) and lives in routes/auth.js.
 
 // ===========================================================================
 // 10. Audit Log

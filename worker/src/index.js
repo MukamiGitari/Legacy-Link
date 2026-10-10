@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 
-import authRoutes from './routes/auth.js';
+import authRoutes, { redeemRestorationCode } from './routes/auth.js';
 import recipeRoutes from './routes/recipes.js';
 import familyRoutes from './routes/family.js';
 import albumRoutes from './routes/albums.js';
@@ -48,6 +48,9 @@ app.use('/api/songs/*', rateLimit('API_RATE_LIMITER'));
 app.get('/api/health', (c) => c.json({ ok: true }));
 
 app.route('/api/auth', authRoutes);
+// Legacy path the current frontend calls. Public (no login needed) and rate-limited like auth. Must be
+// registered before the /api/features router, whose routes all require an access token.
+app.post('/api/features/restoration/redeem', rateLimit('AUTH_RATE_LIMITER'), redeemRestorationCode);
 app.route('/api/recipes', recipeRoutes);
 app.route('/api/family', familyRoutes);
 app.route('/api/albums', albumRoutes);
