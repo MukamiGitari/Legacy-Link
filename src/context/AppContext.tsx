@@ -95,7 +95,6 @@ interface AppContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
-  signInWithGoogle: (inviteCode?: string) => Promise<AuthResult>;
   logout: () => void;
   continueAsDemo: () => void;
 
@@ -1051,10 +1050,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async () => {
-    return { ok: false, error: 'Google sign-in is disabled after Cloudflare Worker cutover.' };
-  };
-
   const logout = () => {
     setIsAuthenticated(false);
     setAccessToken(null);
@@ -1076,7 +1071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentProfile,
     setCurrentProfileId,
     toasts, pushToast, dismissToast,
-    isAuthenticated, login, signup, signInWithGoogle, logout, continueAsDemo,
+    isAuthenticated, login, signup, logout, continueAsDemo,
     addMember, updateMember, removeMember,
     addRelationship, removeRelationshipsForMember,
     setActiveTreeTemplate,
