@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { withClient, getOrCreateProfile } from '../db.js';
 import { signAccessToken, generateRefreshToken, hashToken, verifyAccessToken } from '../services/tokens.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { verifyGoogleIdToken } from '../services/google.js';
 
 const auth = new Hono();
 auth.use('*', rateLimit('AUTH_RATE_LIMITER'));
@@ -122,6 +123,118 @@ auth.post('/login', async (c) => {
     const accessToken = await issueSessionWithClient(c, client, user);
     return c.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, profile, accessToken });
   });
+});
+
+// Public client config the login screen needs (the Google client ID is public by design).
+auth.get('/config', (c) => c.json({ googleClientId: c.env.GOOGLE_CLIENT_ID || null }));
+
+const googleSchema = z.object({
+  credential: z.string().min(20),
+  mode: z.enum(['signin', 'join', 'register']).default('signin'),
+  inviteCode: z.string().optional(),
+});
+
+/**
+ * Sign in / join / register with a Google ID token.
+ *  - An existing account (matched by Google id, else by the verified Google email) just signs in.
+ *  - signin  + no account  -> refused (nobody is added to a family by accident)
+ *  - join    + no account  -> needs a valid family invitation code, like email sign-up
+ *  - register + no account -> creates a new family with the person as its admin, like email sign-up
+ */
+auth.post('/google', async (c) => {
+  const parsed = googleSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ error: 'Google sign-in failed. Please try again.' }, 400);
+  const { credential, mode, inviteCode } = parsed.data;
+
+  let g;
+  try {
+    g = await verifyGoogleIdToken(c.env, credential);
+  } catch (err) {
+    return c.json({ error: err.message || 'Google sign-in failed.' }, 401);
+  }
+
+  try {
+    return await withClient(c.env, async (client) => {
+      const found = await client.query(
+        `SELECT id, email, name, role, google_sub FROM users
+         WHERE google_sub = $1 OR LOWER(email) = $2
+         ORDER BY (google_sub = $1) DESC NULLS LAST LIMIT 1`,
+        [g.sub, g.email]
+      );
+      let user = found.rows[0];
+
+      if (user) {
+        if (!user.google_sub) {
+          await client.query(`UPDATE users SET google_sub = $1 WHERE id = $2`, [g.sub, user.id]);
+        }
+        const profile = await getOrCreateProfile(client, user.id);
+        const accessToken = await issueSessionWithClient(c, client, user);
+        return c.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, profile, accessToken });
+      }
+
+      if (mode === 'signin') {
+        return c.json({
+          error: `No account uses ${g.email}. Choose "Join" with an invitation code, or "Register" to start a new family.`,
+        }, 404);
+      }
+
+      let familyInvite = null;
+      if (mode === 'join') {
+        const code = (inviteCode || '').trim();
+        if (!code) return c.json({ error: 'Enter your family invitation code first, then continue with Google.' }, 400);
+        const inviteResult = await client.query(
+          `SELECT id, family_id, role, member_id FROM invitation_codes
+           WHERE code = $1 AND redeemed_by IS NULL
+             AND (expires_at IS NULL OR expires_at > now())`,
+          [code.toUpperCase()]
+        );
+        familyInvite = inviteResult.rows[0];
+        if (!familyInvite) return c.json({ error: 'That family invitation code is invalid or already used.' }, 400);
+      }
+
+      const created = await client.query(
+        `INSERT INTO users (email, password_hash, name, google_sub) VALUES ($1, NULL, $2, $3)
+         RETURNING id, email, name, role`,
+        [g.email, g.name, g.sub]
+      );
+      user = created.rows[0];
+
+      let familyId, profileRole;
+      if (familyInvite) {
+        familyId = familyInvite.family_id;
+        profileRole = familyInvite.role;
+        await client.query(
+          `INSERT INTO profiles (id, family_id, member_id, display_name, email, avatar_url, role)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [user.id, familyId, familyInvite.member_id, g.name, g.email, g.picture ?? null, profileRole]
+        );
+        await client.query(
+          `UPDATE invitation_codes SET redeemed_by = $1, redeemed_at = now() WHERE id = $2`,
+          [user.id, familyInvite.id]
+        );
+      } else {
+        profileRole = 'family_admin';
+        const familyResult = await client.query(`INSERT INTO families (name) VALUES ($1) RETURNING id`, [`${g.name}'s Family`]);
+        familyId = familyResult.rows[0].id;
+        await client.query(
+          `INSERT INTO profiles (id, family_id, display_name, email, avatar_url, role)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [user.id, familyId, g.name, g.email, g.picture ?? null, profileRole]
+        );
+      }
+
+      const accessToken = await issueSessionWithClient(c, client, user);
+      return c.json({ user, profile: { id: user.id, familyId, role: profileRole }, accessToken }, 201);
+    });
+  } catch (err) {
+    if (err.code === '42703') {
+      console.error('Google sign-in needs neon/033_google_auth.sql to be run', err);
+      return c.json({ error: 'Google sign-in is not finished being set up on the server (database update pending).' }, 500);
+    }
+    if (err.code === '23505') return c.json({ error: 'An account with that email already exists. Please try again.' }, 409);
+    console.error(err);
+    return c.json({ error: 'Could not sign in with Google' }, 500);
+  }
 });
 
 auth.post('/refresh', async (c) => {

@@ -38,6 +38,10 @@ R2_ENDPOINT     = "https://6db9d44c4bc1b0f7fd80969dd52fb4af.r2.cloudflarestorage
 # The bucket's PUBLIC, browser-viewable base URL
 R2_PUBLIC_URL   = "https://pub-3ebe5c982f5440fa8aea08a0e35d53c4.r2.dev"
 
+# Google sign-in. Paste your OAuth "Web application" Client ID here (it is public, not a secret).
+# Leave it empty to keep Google sign-in switched off.
+GOOGLE_CLIENT_ID = ""
+
 # Set these with `wrangler secret put <NAME>` — never commit real values:
 #   JWT_ACCESS_SECRET
 #   FAMILY_INVITE_CODE

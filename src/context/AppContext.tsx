@@ -95,7 +95,7 @@ interface AppContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (displayName: string, email: string, password: string, inviteCode?: string) => Promise<AuthResult>;
-  signInWithGoogle: (inviteCode?: string) => Promise<AuthResult>;
+  signInWithGoogle: (credential: string, mode: 'signin' | 'join' | 'register', inviteCode?: string) => Promise<AuthResult>;
   logout: () => void;
   continueAsDemo: () => void;
 
@@ -1051,8 +1051,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async () => {
-    return { ok: false, error: 'Google sign-in is disabled after Cloudflare Worker cutover.' };
+  const signInWithGoogle: AppContextValue['signInWithGoogle'] = async (credential, mode, inviteCode) => {
+    try {
+      const res = await api.post<{ user: any; profile: any; accessToken: string }>('/auth/google', {
+        credential,
+        mode,
+        inviteCode: inviteCode?.trim() || undefined,
+      });
+      if (!res?.accessToken) return { ok: false, error: 'Google sign-in failed. Please try again.' };
+      setAccessToken(res.accessToken);
+      const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
+      setData(assembleDataset(datasetRes));
+      setCurrentProfileId(res.user.id);
+      setIsDemoOrLocal(false);
+      setIsAuthenticated(true);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message || 'Google sign-in failed. Please try again.' };
+    }
   };
 
   const logout = () => {
