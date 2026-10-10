@@ -507,14 +507,31 @@ family.get('/profiles/me', async (c) => {
   });
 });
 
+const VALID_ROLES = ['super_admin', 'family_admin', 'family_member', 'guest'];
+
+// Only the Super Admin can change anyone's role. Everyone else keeps the role their
+// invitation code (or registration) gave them when they joined.
 family.put('/profiles/:id/role', async (c) => {
-  const { role } = await c.req.json();
+  const { role } = await c.req.json().catch(() => ({}));
   const targetId = c.req.param('id');
+  if (!VALID_ROLES.includes(role)) return c.json({ error: 'Unknown role' }, 400);
   return withClient(c.env, async (client) => {
     const profile = await loadProfile(client, c.get('userId'));
-    if (!profile || (profile.role !== 'family_admin' && profile.role !== 'super_admin')) {
-      return c.json({ error: 'Not authorized' }, 403);
+    if (!profile || profile.role !== 'super_admin') {
+      return c.json({ error: 'Only the Super Admin can change roles.' }, 403);
     }
+    const targetRes = await client.query(`SELECT id, role FROM profiles WHERE id = $1 AND family_id = $2`, [targetId, profile.family_id]);
+    const target = targetRes.rows[0];
+    if (!target) return c.json({ error: 'That person was not found in your family.' }, 404);
+
+    // Never leave the family without a Super Admin (nobody could change roles afterwards).
+    if (target.role === 'super_admin' && role !== 'super_admin') {
+      const count = await client.query(`SELECT count(*)::int AS n FROM profiles WHERE family_id = $1 AND role = 'super_admin'`, [profile.family_id]);
+      if (count.rows[0].n <= 1) {
+        return c.json({ error: 'There must always be at least one Super Admin. Make someone else Super Admin first.' }, 400);
+      }
+    }
+
     await client.query(`UPDATE profiles SET role = $1 WHERE id = $2 AND family_id = $3`, [role, targetId, profile.family_id]);
     return c.json({ ok: true });
   });
@@ -561,6 +578,11 @@ family.post('/invitations', async (c) => {
     const profile = await loadProfile(client, c.get('userId'));
     if (!profile || (profile.role !== 'family_admin' && profile.role !== 'super_admin')) {
       return c.json({ error: 'Not authorized' }, 403);
+    }
+    if (!VALID_ROLES.includes(role)) return c.json({ error: 'Unknown role' }, 400);
+    // An invitation sets the role someone joins with, so only a Super Admin may mint Super Admins.
+    if (role === 'super_admin' && profile.role !== 'super_admin') {
+      return c.json({ error: 'Only the Super Admin can invite another Super Admin.' }, 403);
     }
     const code = (providedCode || Math.random().toString(36).slice(2, 8)).toUpperCase();
     await client.query(

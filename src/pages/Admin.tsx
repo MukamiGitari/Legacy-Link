@@ -3,6 +3,7 @@ import { Users, TreePine, Wand2, History, Copy, Check, ShieldAlert, KeyRound, Sc
 import { useApp } from '../context/AppContext';
 import { TreeTemplateSwitcher } from '../components/trees/TreeTemplateSwitcher';
 import type { Role, TreeTemplate } from '../types';
+import { canManageRoles } from '../lib/permissions';
 
 type AdminTab = 'users' | 'family' | 'templates' | 'onboarding' | 'audit';
 
@@ -25,7 +26,7 @@ const ONBOARDING_STEPS = [
 ];
 
 export const Admin: React.FC = () => {
-  const { data, setActiveTreeTemplate, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode, generateRestorationCode, resetToSeed } = useApp();
+  const { data, currentProfile, setActiveTreeTemplate, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode, generateRestorationCode, resetToSeed } = useApp();
   const [tab, setTab] = useState<AdminTab>('users');
   const [pendingTemplate, setPendingTemplate] = useState<TreeTemplate | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
@@ -192,13 +193,22 @@ export const Admin: React.FC = () => {
                       </select>
                     </td>
                     <td className="px-4 py-2.5">
-                      <select
-                        value={p.role}
-                        onChange={e => updateProfileRole(p.id, e.target.value as Role)}
-                        className="text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1"
-                      >
-                        {(Object.keys(ROLE_LABEL) as Role[]).map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                      </select>
+                      {canManageRoles(currentProfile?.role) ? (
+                        <select
+                          value={p.role}
+                          onChange={e => updateProfileRole(p.id, e.target.value as Role)}
+                          className="text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-2 py-1"
+                        >
+                          {(Object.keys(ROLE_LABEL) as Role[]).map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                        </select>
+                      ) : (
+                        <span
+                          title="Only the Super Admin can change roles"
+                          className="inline-block text-xs rounded-lg bg-heritage-cream-100 dark:bg-heritage-dark-hover text-heritage-green-800 dark:text-heritage-dark-text px-2.5 py-1"
+                        >
+                          {ROLE_LABEL[p.role]}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <button

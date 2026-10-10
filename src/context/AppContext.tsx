@@ -879,6 +879,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfileRole: AppContextValue['updateProfileRole'] = (id, role) => {
+    if (currentProfile?.role !== 'super_admin') {
+      pushToast('Only the Super Admin can change roles.');
+      return;
+    }
     setData(prev => ({ ...prev, profiles: prev.profiles.map(p => (p.id === id ? { ...p, role } : p)) }));
     if (isOnlineMode) {
       persist('update role', () => api.put(`/family/profiles/${id}/role`, { role }));

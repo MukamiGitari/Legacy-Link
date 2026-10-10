@@ -7,6 +7,9 @@ import type { Role } from '../types';
 export const isAdminRole = (role: Role | undefined): boolean =>
   role === 'family_admin' || role === 'super_admin';
 
+/** Only the Super Admin can change other members' roles; everyone else keeps the role they joined with. */
+export const canManageRoles = (role: Role | undefined): boolean => role === 'super_admin';
+
 /** Everyone except Guests can add content (members, photos, memories, events, announcements, chronicle eras). */
 export const canAddContent = (role: Role | undefined): boolean => role != null && role !== 'guest';
 
