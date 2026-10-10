@@ -266,7 +266,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pushToast = useCallback((message: string, tone: Toast['tone'] = 'error') => {
     const id = newId();
     setToasts(prev => [...prev, { id, message, tone }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000);
+    // Errors carry a reason people need time to read (or screenshot); the X on the toast closes it sooner.
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), tone === 'error' ? 30000 : 6000);
   }, []);
 
   const persist = useCallback((label: string, fn: () => Promise<unknown>) => {
