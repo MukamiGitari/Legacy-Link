@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import {
   Plus, Trash2, X, Mic, Heart, ArrowRight,
   BookOpen, MessageSquare, Quote, Leaf, Users, BookMarked,
-  Feather, Search, Volume2, Pause,
+  Feather, Search, Volume2, Pause, Pencil,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -90,6 +90,8 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
 
   // Detail modal
   const [selectedEntry, setSelectedEntry] = useState<LanguageEntry | null>(null);
+  // true when the detail modal should open straight into edit mode (pencil on a card)
+  const [editOnOpen, setEditOnOpen] = useState(false);
 
   // Add wisdom modal
   const [showForm, setShowForm] = useState(false);
@@ -210,7 +212,8 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 canAdd={canAdd}
                 canRemove={canRemove}
                 onAdd={() => openAddForm(cat)}
-                onView={setSelectedEntry}
+                onView={entry => { setEditOnOpen(false); setSelectedEntry(entry); }}
+                onEdit={entry => { setEditOnOpen(true); setSelectedEntry(entry); }}
                 onToggleLike={toggleLike}
                 onDelete={handleDelete}
               />
@@ -371,6 +374,12 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
           likes={likes[selectedEntry.id] ?? 0}
           canRemove={canRemove}
           canAdd={canAdd}
+          startInEdit={editOnOpen}
+          onSave={(patch) => {
+            updateLanguageEntry(selectedEntry.id, patch);
+            setSelectedEntry(prev => prev ? { ...prev, ...patch } : null);
+            pushToast('Entry updated');
+          }}
           onClose={() => setSelectedEntry(null)}
           onDelete={() => handleDelete(selectedEntry.id)}
           onLike={() => toggleLike(selectedEntry.id)}
@@ -398,13 +407,14 @@ interface CategorySectionProps {
   canRemove: boolean;
   onAdd: () => void;
   onView: (entry: LanguageEntry) => void;
+  onEdit: (entry: LanguageEntry) => void;
   onToggleLike: (id: string, e?: React.MouseEvent) => void;
   onDelete: (id: string) => void;
 }
 
 function CategorySection({
   sectionId, cat, entries, members, likes, canAdd, canRemove,
-  onAdd, onView, onToggleLike, onDelete,
+  onAdd, onView, onEdit, onToggleLike, onDelete,
 }: CategorySectionProps) {
   return (
     <div id={sectionId} className="bg-white dark:bg-heritage-dark-card rounded-2xl p-6 sm:p-8 shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border space-y-6 scroll-mt-4">
@@ -463,6 +473,7 @@ function CategorySection({
               cat={cat}
               canRemove={canRemove}
               onView={() => onView(entry)}
+              onEdit={() => onEdit(entry)}
               onLike={e => onToggleLike(entry.id, e)}
               onDelete={e => { e.stopPropagation(); onDelete(entry.id); }}
             />
@@ -528,11 +539,12 @@ interface WisdomCardProps {
   cat: CategoryDef;
   canRemove: boolean;
   onView: () => void;
+  onEdit: () => void;
   onLike: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
 }
 
-function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onDelete }: WisdomCardProps) {
+function WisdomCard({ entry, members, likes, cat, canRemove, onView, onEdit, onLike, onDelete }: WisdomCardProps) {
   const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
   const { currentProfile, updateLanguageEntry, pushToast } = useApp();
   const canAddVoice = canAddContent(currentProfile?.role);
@@ -550,6 +562,17 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onLike, onD
             {cat.label}
           </span>
           <div className="flex items-center gap-2">
+            {canAddVoice && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                aria-label="Edit this entry"
+                title="Edit the word or meaning"
+                className="text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-bark-600 transition-colors"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
             {/* Likes */}
             <button
               onClick={onLike}
@@ -655,17 +678,35 @@ interface WisdomDetailModalProps {
   onLike: () => void;
   onSelectMember: (id: string) => void;
   onAudioSaved: (url: string) => void;
+  startInEdit?: boolean;
+  onSave: (patch: { term: string; meaning: string }) => void;
 }
 
 function WisdomDetailModal({
   entry, members, likes, canRemove, canAdd,
-  onClose, onDelete, onLike, onSelectMember, onAudioSaved,
+  onClose, onDelete, onLike, onSelectMember, onAudioSaved, startInEdit = false, onSave,
 }: WisdomDetailModalProps) {
   const cat = categoryDef(entry);
   const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
   const [showAudioEdit, setShowAudioEdit] = useState(false);
   const [pendingAudio, setPendingAudio] = useState(entry.audioUrl ?? '');
   const [audioBusy, setAudioBusy] = useState(false);
+
+  // Correcting the word or its meaning
+  const [editing, setEditing] = useState(startInEdit && canAdd);
+  const [draftTerm, setDraftTerm] = useState(entry.term);
+  const [draftMeaning, setDraftMeaning] = useState(entry.meaning);
+  const draftValid = draftTerm.trim().length > 0 && draftMeaning.trim().length > 0;
+  const draftChanged = draftTerm.trim() !== entry.term || draftMeaning.trim() !== entry.meaning;
+
+  const startEdit = () => { setDraftTerm(entry.term); setDraftMeaning(entry.meaning); setEditing(true); };
+  const saveEdit = () => {
+    if (!draftValid) return;
+    if (draftChanged) onSave({ term: draftTerm.trim(), meaning: draftMeaning.trim() });
+    setEditing(false);
+  };
+
+  const fieldCls = 'w-full px-4 py-2.5 bg-heritage-cream-50 dark:bg-heritage-dark-hover border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-heritage-green-500 dark:text-heritage-dark-text';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -686,10 +727,29 @@ function WisdomDetailModal({
               }`}>
                 {cat.label}
               </span>
-              <h3 className="text-2xl font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">
-                {entry.term}
-              </h3>
+              {editing ? (
+                <input
+                  value={draftTerm}
+                  onChange={e => setDraftTerm(e.target.value)}
+                  aria-label="Word or phrase"
+                  maxLength={200}
+                  autoFocus
+                  className={`${fieldCls} text-lg font-serif font-bold`}
+                />
+              ) : (
+                <h3 className="text-2xl font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">
+                  {entry.term}
+                </h3>
+              )}
             </div>
+            {canAdd && !editing && (
+              <button
+                onClick={startEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-muted border border-heritage-cream-200 dark:border-heritage-dark-border shrink-0"
+              >
+                <Pencil size={13} /> Edit
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-heritage-green-500 hover:text-heritage-green-900 p-2 rounded-full hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover shrink-0"
@@ -711,9 +771,40 @@ function WisdomDetailModal({
             <h4 className="text-xs font-semibold uppercase tracking-wider text-heritage-green-600 dark:text-heritage-dark-muted">
               Meaning & Translation
             </h4>
-            <p className="text-heritage-green-800 dark:text-heritage-dark-text text-sm leading-relaxed bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
-              {entry.meaning}
-            </p>
+            {editing ? (
+              <div className="space-y-3">
+                <textarea
+                  value={draftMeaning}
+                  onChange={e => setDraftMeaning(e.target.value)}
+                  aria-label="Meaning and translation"
+                  rows={4}
+                  maxLength={2000}
+                  className={`${fieldCls} leading-relaxed`}
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={saveEdit}
+                    disabled={!draftValid}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-heritage-green-800 text-white hover:bg-heritage-green-900 disabled:opacity-50"
+                  >
+                    Save changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDraftTerm(entry.term); setDraftMeaning(entry.meaning); setEditing(false); }}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover"
+                  >
+                    Cancel
+                  </button>
+                  {!draftValid && <span className="text-xs text-red-600">The word and the meaning can't be empty.</span>}
+                </div>
+              </div>
+            ) : (
+              <p className="text-heritage-green-800 dark:text-heritage-dark-text text-sm leading-relaxed bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
+                {entry.meaning}
+              </p>
+            )}
           </div>
 
           {/* Context / Story */}
