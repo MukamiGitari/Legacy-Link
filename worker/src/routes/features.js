@@ -418,6 +418,8 @@ features.delete('/legacy/:id', async (c) => {
 // 7. Language Entries (Dictionary / Sayings / Riddles)
 // ===========================================================================
 const languageSchema = z.object({
+  // Optional: lets the app keep the same id it showed on screen, so an immediate edit/recording finds the row.
+  id: z.string().uuid().optional(),
   entryType: z.enum(['word', 'phrase', 'proverb', 'riddle', 'saying', 'recording']),
   term: z.string().min(1).max(200),
   meaning: z.string().min(1).max(2000),
@@ -450,13 +452,20 @@ features.post('/language', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { entryType, term, meaning, answer, audioUrl, saidByMemberId, contributedByName } = parsed.data;
+    const { id, entryType, term, meaning, answer, audioUrl, saidByMemberId, contributedByName } = parsed.data;
     const contributor = contributedByName || profile.display_name || 'A family member';
-    const result = await client.query(
-      `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [profile.family_id, entryType, term, meaning, answer ?? null, audioUrl ?? null, saidByMemberId ?? null, user.id, contributor]
-    );
+    const values = [profile.family_id, entryType, term, meaning, answer ?? null, audioUrl ?? null, saidByMemberId ?? null, user.id, contributor];
+    const result = id
+      ? await client.query(
+          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name, id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          [...values, id]
+        )
+      : await client.query(
+          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+          values
+        );
     return c.json({ entry: result.rows[0] }, 201);
   });
 });

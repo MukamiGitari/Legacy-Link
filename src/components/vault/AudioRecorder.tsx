@@ -132,15 +132,13 @@ export const AudioRecorder: React.FC<Props> = ({
         onChange(res.url || res.key);
         pushToast('Audio saved.', 'success');
       } catch (err: any) {
-        console.warn('R2 upload failed, falling back to local audio storage:', err);
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (mountedRef.current) {
-            onChange(reader.result as string);
-            pushToast('Audio saved locally.', 'success');
-          }
-        };
-        reader.readAsDataURL(file);
+        // Don't quietly keep a huge inline copy: the server can't store it, so the person would see
+        // "saved" and then lose the clip on refresh. Say so now instead.
+        console.warn('Audio upload failed:', err);
+        pushToast(
+          `Couldn't upload the recording (${err?.message || 'unknown error'}). It was not saved — check your connection and try again.`,
+          'error',
+        );
       } finally {
         if (mountedRef.current) setWorking(false);
       }

@@ -698,6 +698,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isOnlineMode) {
       persist('language entry', () => api.post('/features/language', {
         ...entryData,
+        id: entry.id,
         contributedByName: entry.contributedByName,
       }));
     }
