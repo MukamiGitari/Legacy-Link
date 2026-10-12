@@ -463,6 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       persist('add photo', async () => {
         try {
           return await api.post('/albums/photos', {
+            id: photo.id,
             albumId: photo.albumId,
             url: photo.url,
             caption: photo.caption,
@@ -486,6 +487,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
               // Retry saving the photo now that the album exists
               return await api.post('/albums/photos', {
+                id: photo.id,
                 albumId: photo.albumId,
                 url: photo.url,
                 caption: photo.caption,

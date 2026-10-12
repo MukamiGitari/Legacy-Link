@@ -47,11 +47,12 @@ const albumCreateSchema = z.object({
 const albumUpdateSchema = albumCreateSchema.partial();
 
 const photoCreateSchema = z.object({
+  id: z.string().uuid().optional(),
   albumId: z.string().uuid(),
-  url: z.string().min(1).max(1000),   // R2 key or presigned URL
+  url: z.string().min(1),   // R2 key, public URL, or fallback
   caption: z.string().max(500).optional(),
   takenAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  taggedMemberIds: z.array(z.string().uuid()).max(20).default([]),
+  taggedMemberIds: z.array(z.string()).max(20).default([]),
 });
 
 const presignSchema = z.object({
@@ -270,37 +271,41 @@ albums.post('/photos', async (c) => {
   const body = await c.req.json();
   const parsed = photoCreateSchema.safeParse(body);
   if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
-  const { albumId, url, caption, takenAt, taggedMemberIds } = parsed.data;
-  const user = c.get('user');
+    const { id, albumId, url, caption, takenAt, taggedMemberIds } = parsed.data;
+    const user = c.get('user');
 
-  return withClient(c.env, async (client) => {
-    const profile = await getProfile(client, user.id);
-    if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
-      return c.json({ error: 'Guests cannot add photos' }, 403);
-    }
+    return withClient(c.env, async (client) => {
+      const profile = await getProfile(client, user.id);
+      if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
+      if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
+        return c.json({ error: 'Guests cannot add photos' }, 403);
+      }
 
-    // Confirm album belongs to this family, or auto-create if missing to protect uploaded photos
-    let albumRes = await client.query(
-      `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
-      [albumId, profile.family_id],
-    );
-    if (albumRes.rowCount === 0) {
-      await client.query(
-        `INSERT INTO albums (id, family_id, title, category)
-         VALUES ($1, $2, 'Family Album', 'childhood')
-         ON CONFLICT (id) DO NOTHING`,
+      // Confirm album belongs to this family, or auto-create if missing to protect uploaded photos
+      let albumRes = await client.query(
+        `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
         [albumId, profile.family_id],
       );
-    }
+      if (albumRes.rowCount === 0) {
+        await client.query(
+          `INSERT INTO albums (id, family_id, title, category)
+           VALUES ($1, $2, 'Family Album', 'childhood')
+           ON CONFLICT (id) DO NOTHING`,
+          [albumId, profile.family_id],
+        );
+      }
 
-    // Insert photo
-    const photoRes = await client.query(
-      `INSERT INTO photos (album_id, family_id, url, caption, taken_at, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [albumId, profile.family_id, url, caption ?? null, takenAt ?? null, user.id],
-    );
+      // Insert photo (use profile.id to strictly satisfy foreign key constraint)
+      const photoRes = await client.query(
+        `INSERT INTO photos (id, album_id, family_id, url, caption, taken_at, uploaded_by)
+         VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET
+           url = EXCLUDED.url,
+           caption = EXCLUDED.caption,
+           taken_at = EXCLUDED.taken_at
+         RETURNING *`,
+        [id ?? null, albumId, profile.family_id, url, caption ?? null, takenAt ?? null, profile.id],
+      );
     const photo = photoRes.rows[0];
 
     // Insert member tags (if any)
