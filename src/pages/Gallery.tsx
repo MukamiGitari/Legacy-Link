@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X, Plus, ImagePlus, Trash2, Tag,
   Heart, ArrowRight, ArrowLeft, Camera,
   Smile, Cake, GraduationCap, Users2, BookOpen, Images, FolderOpen,
+  ChevronLeft, ChevronRight, Maximize2, Minimize2, Play, Pause, LayoutGrid, Film,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -59,12 +60,17 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   // Category filter on the album list view
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
 
+  // Album view mode: 'slide' (default full-screen slideshow) or 'grid'
+  const [albumViewMode, setAlbumViewMode] = useState<'slide' | 'grid'>('slide');
+  // Current photo index inside the active album slideshow
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  // Fullscreen overlay mode for the slide viewer
+  const [isSlideFullscreen, setIsSlideFullscreen] = useState(false);
+  // Slideshow autoplay
+  const [isPlayingSlideshow, setIsPlayingSlideshow] = useState(false);
+
   // Which album we are adding photos to (opens AddPhotosModal)
   const [addPhotosAlbumId, setAddPhotosAlbumId] = useState<string | null>(null);
-
-  // Lightbox state
-  const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
-  const [lightboxAlbum, setLightboxAlbum]  = useState<Album | null>(null);
 
   // Add album modal
   const [showAddAlbum, setShowAddAlbum] = useState(false);
@@ -87,19 +93,20 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
     window.history.replaceState({}, '', url.toString());
   }, [selectedAlbumId]);
 
+  // Reset slide index when opening a different album
+  useEffect(() => {
+    setActiveSlideIndex(0);
+    setAlbumViewMode('slide');
+    setIsSlideFullscreen(false);
+    setIsPlayingSlideshow(false);
+  }, [selectedAlbumId]);
+
   // If currently selected album is deleted, reset view
   useEffect(() => {
     if (selectedAlbumId && !data.albums.some(a => a.id === selectedAlbumId)) {
       setSelectedAlbumId(null);
     }
   }, [data.albums, selectedAlbumId]);
-
-  // Keep lightboxPhoto in sync if photo is deleted
-  useEffect(() => {
-    if (lightboxPhoto && !data.photos.some(p => p.id === lightboxPhoto.id)) {
-      setLightboxPhoto(null);
-    }
-  }, [data.photos, lightboxPhoto]);
 
   const handleDeleteAlbum = (albumId: string, title: string) => {
     if (window.confirm(`Delete the album "${title}" and all of its photos? This can't be undone.`)) {
@@ -113,14 +120,8 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   const handleDeletePhoto = (photoId: string) => {
     if (window.confirm("Delete this photo? This can't be undone.")) {
       removePhoto(photoId);
-      setLightboxPhoto(null);
+      setActiveSlideIndex(prev => Math.max(0, prev - 1));
     }
-  };
-
-  const openLightbox = (photo: Photo) => {
-    const album = data.albums.find(a => a.id === photo.albumId) ?? null;
-    setLightboxPhoto(photo);
-    setLightboxAlbum(album);
   };
 
   const toggleLike = (photoId: string) => {
@@ -135,17 +136,47 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
     <div className="space-y-6">
 
       {/* ────────────────────────────────────────────────────────────────────── */}
-      {/* VIEW 1: ALBUM DETAIL VIEW (When an album is tapped)                    */}
+      {/* VIEW 1: ALBUM DETAIL VIEW (When an album is opened)                   */}
       {/* ────────────────────────────────────────────────────────────────────── */}
       {selectedAlbum ? (
         <div className="space-y-6">
-          {/* Back button */}
-          <button
-            onClick={() => setSelectedAlbumId(null)}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 dark:hover:text-heritage-dark-text transition-colors"
-          >
-            <ArrowLeft size={16} /> Back to All Albums
-          </button>
+          {/* Top navigation row */}
+          <div className="flex items-center justify-between gap-4">
+            <button
+              onClick={() => setSelectedAlbumId(null)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900 dark:hover:text-heritage-dark-text transition-colors"
+            >
+              <ArrowLeft size={16} /> Back to All Albums
+            </button>
+
+            {/* View Mode Toggle: Slide vs Grid */}
+            {selectedAlbumPhotos.length > 0 && (
+              <div className="flex items-center gap-1 bg-heritage-cream-100 dark:bg-heritage-dark-hover p-1 rounded-xl border border-heritage-cream-200 dark:border-heritage-dark-border">
+                <button
+                  onClick={() => setAlbumViewMode('slide')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    albumViewMode === 'slide'
+                      ? 'bg-heritage-green-800 text-white shadow-soft'
+                      : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900'
+                  }`}
+                  title="Full Screen Slide Viewer"
+                >
+                  <Film size={14} /> Slide View
+                </button>
+                <button
+                  onClick={() => setAlbumViewMode('grid')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    albumViewMode === 'grid'
+                      ? 'bg-heritage-green-800 text-white shadow-soft'
+                      : 'text-heritage-green-700 dark:text-heritage-dark-muted hover:text-heritage-green-900'
+                  }`}
+                  title="Grid Thumbnails"
+                >
+                  <LayoutGrid size={14} /> Grid View
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Album Header Banner */}
           {(() => {
@@ -210,7 +241,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             );
           })()}
 
-          {/* Photos inside this specific album */}
+          {/* Empty state when album has no photos */}
           {selectedAlbumPhotos.length === 0 ? (
             <div className="border-2 border-dashed border-heritage-cream-200 dark:border-heritage-dark-border rounded-2xl p-12 text-center bg-white dark:bg-heritage-dark-card space-y-4">
               <div className="w-16 h-16 rounded-full bg-heritage-cream-100 dark:bg-heritage-dark-hover mx-auto flex items-center justify-center text-heritage-green-600 dark:text-heritage-dark-muted">
@@ -233,18 +264,55 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                 </button>
               )}
             </div>
+          ) : albumViewMode === 'slide' ? (
+
+            /* ── FULL SCREEN SLIDE VIEWER ── */
+            <AlbumSlideViewer
+              photos={selectedAlbumPhotos}
+              members={data.members}
+              currentIndex={activeSlideIndex}
+              onIndexChange={setActiveSlideIndex}
+              isFullscreen={isSlideFullscreen}
+              onToggleFullscreen={() => setIsSlideFullscreen(prev => !prev)}
+              isPlaying={isPlayingSlideshow}
+              onTogglePlay={() => setIsPlayingSlideshow(prev => !prev)}
+              canRemove={canRemove}
+              likes={likes}
+              onLike={toggleLike}
+              onDeletePhoto={handleDeletePhoto}
+              onSelectMember={onSelectMember}
+            />
+
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {selectedAlbumPhotos.map(photo => (
-                <PhotoCard
+
+            /* ── GRID VIEW (Clean photo thumbnails without "View" button) ── */
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {selectedAlbumPhotos.map((photo, index) => (
+                <div
                   key={photo.id}
-                  photo={photo}
-                  likes={likes[photo.id] ?? 0}
-                  canRemove={canRemove}
-                  onView={() => openLightbox(photo)}
-                  onDelete={() => handleDeletePhoto(photo.id)}
-                  onLike={() => toggleLike(photo.id)}
-                />
+                  onClick={() => {
+                    setActiveSlideIndex(index);
+                    setAlbumViewMode('slide');
+                  }}
+                  className="group relative aspect-square rounded-2xl overflow-hidden bg-heritage-cream-200 dark:bg-heritage-dark-card cursor-pointer shadow-soft hover:shadow-soft-xl transition-all duration-300 border border-heritage-cream-200 dark:border-heritage-dark-border"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption ?? ''}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 text-white">
+                    {photo.caption && (
+                      <p className="font-serif text-xs font-semibold line-clamp-1">{photo.caption}</p>
+                    )}
+                    <div className="flex items-center justify-between text-[11px] opacity-80 mt-1">
+                      <span>{photo.takenAt ? new Date(photo.takenAt).getFullYear() : ''}</span>
+                      <span className="flex items-center gap-1">
+                        <Heart size={11} className="text-rose-400 fill-rose-400" /> {likes[photo.id] ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -260,7 +328,7 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             <div>
               <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
                 <span className="font-bold text-heritage-green-900 dark:text-heritage-dark-text">{totalAlbums}</span> albums with{' '}
-                <span className="font-bold text-heritage-green-900 dark:text-heritage-dark-text">{totalPhotos}</span> photos. Tap any album to view all photos inside.
+                <span className="font-bold text-heritage-green-900 dark:text-heritage-dark-text">{totalPhotos}</span> photos. Tap any album to view in full screen slideshow.
               </p>
             </div>
             {canAdd && (
@@ -461,24 +529,259 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
           onClose={() => setAddPhotosAlbumId(null)}
         />
       )}
-
-      {/* ── Lightbox ── */}
-      {lightboxPhoto && (
-        <PhotoLightbox
-          photo={lightboxPhoto}
-          album={lightboxAlbum}
-          members={data.members}
-          likes={likes[lightboxPhoto.id] ?? 0}
-          canRemove={canRemove}
-          onClose={() => setLightboxPhoto(null)}
-          onDelete={() => handleDeletePhoto(lightboxPhoto.id)}
-          onLike={() => toggleLike(lightboxPhoto.id)}
-          onSelectMember={onSelectMember}
-        />
-      )}
     </div>
   );
 };
+
+// ── AlbumSlideViewer ──────────────────────────────────────────────────────────
+
+interface AlbumSlideViewerProps {
+  photos: Photo[];
+  members: ReturnType<typeof useApp>['data']['members'];
+  currentIndex: number;
+  onIndexChange: (index: number) => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+  canRemove: boolean;
+  likes: Record<string, number>;
+  onLike: (photoId: string) => void;
+  onDeletePhoto: (photoId: string) => void;
+  onSelectMember: (id: string) => void;
+}
+
+function AlbumSlideViewer({
+  photos, members, currentIndex, onIndexChange,
+  isFullscreen, onToggleFullscreen, isPlaying, onTogglePlay,
+  canRemove, likes, onLike, onDeletePhoto, onSelectMember,
+}: AlbumSlideViewerProps) {
+  const currentPhoto = photos[currentIndex] || photos[0];
+  const touchStartX = useRef<number | null>(null);
+
+  // Next / Prev slide handlers
+  const nextSlide = () => {
+    onIndexChange((currentIndex + 1) % photos.length);
+  };
+
+  const prevSlide = () => {
+    onIndexChange((currentIndex - 1 + photos.length) % photos.length);
+  };
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === ' ' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault();
+        onTogglePlay();
+      }
+      if (e.key === 'Escape' && isFullscreen) {
+        onToggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, isFullscreen, photos.length]);
+
+  // Slideshow auto-advance
+  useEffect(() => {
+    if (!isPlaying || photos.length <= 1) return;
+    const interval = setInterval(() => {
+      onIndexChange((currentIndex + 1) % photos.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentIndex, photos.length]);
+
+  // Mobile swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (diff > 45) {
+      nextSlide();
+    } else if (diff < -45) {
+      prevSlide();
+    }
+    touchStartX.current = null;
+  };
+
+  const containerClasses = isFullscreen
+    ? "fixed inset-0 z-50 bg-black flex flex-col justify-between p-4 sm:p-6 select-none"
+    : "relative bg-black dark:bg-black rounded-2xl overflow-hidden shadow-2xl flex flex-col select-none border border-black/20";
+
+  return (
+    <div className={containerClasses}>
+      {/* ── Top controls bar ── */}
+      <div className="flex items-center justify-between p-4 z-20 bg-gradient-to-b from-black/80 to-transparent text-white">
+        {/* Slide Counter */}
+        <span className="text-xs sm:text-sm font-semibold tracking-wide bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">
+          {currentIndex + 1} / {photos.length}
+        </span>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2">
+          {/* Autoplay Slideshow */}
+          <button
+            onClick={onTogglePlay}
+            className={`p-2 rounded-xl backdrop-blur-md transition-all ${
+              isPlaying
+                ? 'bg-heritage-gold-400 text-heritage-green-950 font-bold'
+                : 'bg-white/20 hover:bg-white/30 text-white'
+            }`}
+            title={isPlaying ? 'Pause Slideshow' : 'Play Slideshow'}
+            aria-label={isPlaying ? 'Pause Slideshow' : 'Play Slideshow'}
+          >
+            {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={onToggleFullscreen}
+            className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-all"
+            title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+
+          {/* Exit Fullscreen Close button */}
+          {isFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-all"
+              title="Close"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main Photo Canvas with slide controls ── */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`relative flex items-center justify-center overflow-hidden flex-grow ${
+          isFullscreen ? 'h-[75vh]' : 'h-[55vh] sm:h-[65vh] md:h-[70vh]'
+        }`}
+      >
+        {/* Photo Image */}
+        <img
+          key={currentPhoto.id}
+          src={currentPhoto.url}
+          alt={currentPhoto.caption ?? ''}
+          className="w-full h-full object-contain transition-opacity duration-300 animate-fadeIn"
+        />
+
+        {/* Previous Slide Chevron */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all transform hover:scale-110 z-20"
+          aria-label="Previous photo"
+        >
+          <ChevronLeft size={24} />
+        </button>
+
+        {/* Next Slide Chevron */}
+        <button
+          onClick={nextSlide}
+          className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md transition-all transform hover:scale-110 z-20"
+          aria-label="Next photo"
+        >
+          <ChevronRight size={24} />
+        </button>
+      </div>
+
+      {/* ── Photo Details & Actions Bar ── */}
+      <div className="p-4 sm:p-5 bg-gradient-to-t from-black/90 via-black/80 to-transparent text-white space-y-3 z-20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1 max-w-2xl">
+            {currentPhoto.caption && (
+              <h3 className="font-serif text-lg sm:text-xl font-bold leading-snug">
+                {currentPhoto.caption}
+              </h3>
+            )}
+            <div className="flex items-center gap-3 text-xs text-white/70 flex-wrap">
+              {currentPhoto.takenAt && (
+                <span>{new Date(currentPhoto.takenAt).toLocaleDateString('en-KE', { year: 'numeric', month: 'long' })}</span>
+              )}
+              {currentPhoto.taggedMemberIds?.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <Tag size={11} /> {currentPhoto.taggedMemberIds.length} tagged
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Like & Admin Actions */}
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <button
+              onClick={() => onLike(currentPhoto.id)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-semibold text-xs transition-all flex items-center gap-1.5"
+            >
+              <Heart size={14} className="text-rose-400 fill-rose-400" />
+              <span>{likes[currentPhoto.id] ?? 0}</span>
+            </button>
+
+            {canRemove && (
+              <button
+                onClick={() => onDeletePhoto(currentPhoto.id)}
+                className="p-2 rounded-xl bg-red-600/70 hover:bg-red-600 backdrop-blur-md text-white text-xs transition-all"
+                title="Delete photo"
+                aria-label="Delete photo"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tagged family members */}
+        {currentPhoto.taggedMemberIds?.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+            <span className="text-[11px] text-white/60 font-medium">In this photo:</span>
+            {currentPhoto.taggedMemberIds.map(id => {
+              const member = members.find(m => m.id === id);
+              if (!member) return null;
+              return (
+                <button
+                  key={id}
+                  onClick={() => onSelectMember(id)}
+                  className="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-0.5 rounded-full transition-colors"
+                >
+                  {fullName(member)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Slide Thumbnail Filmstrip ── */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2 pb-1 scrollbar-none">
+          {photos.map((photo, index) => (
+            <button
+              key={photo.id}
+              onClick={() => onIndexChange(index)}
+              className={`relative shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden transition-all ${
+                index === currentIndex
+                  ? 'ring-2 ring-heritage-gold-400 scale-105 opacity-100'
+                  : 'opacity-40 hover:opacity-80'
+              }`}
+            >
+              <img src={photo.url} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── AlbumCard ─────────────────────────────────────────────────────────────────
 
@@ -563,218 +866,6 @@ function AlbumCard({ album, photos, members, canRemove, onSelect, onDelete }: Al
               <Trash2 size={13} />
             </button>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── PhotoCard ─────────────────────────────────────────────────────────────────
-
-interface PhotoCardProps {
-  photo: Photo;
-  likes: number;
-  canRemove: boolean;
-  onView: () => void;
-  onDelete: () => void;
-  onLike: () => void;
-}
-
-function PhotoCard({ photo, likes, canRemove, onView, onDelete, onLike }: PhotoCardProps) {
-  return (
-    <div
-      onClick={onView}
-      className="group bg-heritage-cream-50 dark:bg-heritage-dark-hover rounded-2xl overflow-hidden border border-heritage-cream-200 dark:border-heritage-dark-border hover:border-heritage-bark-400 dark:hover:border-heritage-bark-600 transition-all duration-300 shadow-soft hover:shadow-soft-lg cursor-pointer flex flex-col"
-    >
-      {/* Photo cover */}
-      <div className="relative h-52 w-full overflow-hidden bg-heritage-cream-200 dark:bg-heritage-dark-card shrink-0">
-        {photo.url ? (
-          <img
-            src={photo.url}
-            alt={photo.caption ?? ''}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl">📷</div>
-        )}
-        {/* Date badge — top left */}
-        {photo.takenAt && (
-          <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-            {new Date(photo.takenAt).getFullYear()}
-          </span>
-        )}
-        {/* Likes badge — top right */}
-        <span
-          onClick={e => { e.stopPropagation(); onLike(); }}
-          className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer hover:bg-black/80 transition-colors"
-        >
-          <Heart size={10} className="text-rose-400 fill-rose-400" /> {likes}
-        </span>
-      </div>
-
-      {/* Card body */}
-      <div className="p-5 flex flex-col flex-grow justify-between space-y-3">
-        <div>
-          {photo.caption && (
-            <h4 className="font-serif font-bold text-heritage-green-900 dark:text-heritage-dark-text text-base group-hover:text-heritage-bark-600 transition-colors line-clamp-1">
-              {photo.caption}
-            </h4>
-          )}
-          {photo.taggedMemberIds?.length > 0 && (
-            <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted mt-1 flex items-center gap-1">
-              <Tag size={10} /> {photo.taggedMemberIds.length} tagged
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-between pt-3 border-t border-heritage-cream-200 dark:border-heritage-dark-border text-xs">
-          <span className="text-heritage-bark-600 dark:text-heritage-bark-400 font-semibold group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
-            View <ArrowRight size={11} />
-          </span>
-          {canRemove && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-1 text-heritage-green-400 hover:text-red-600 transition-colors"
-              title="Delete photo"
-            >
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── PhotoLightbox ─────────────────────────────────────────────────────────────
-
-interface PhotoLightboxProps {
-  photo: Photo;
-  album: Album | null;
-  members: ReturnType<typeof useApp>['data']['members'];
-  likes: number;
-  canRemove: boolean;
-  onClose: () => void;
-  onDelete: () => void;
-  onLike: () => void;
-  onSelectMember: (id: string) => void;
-}
-
-function PhotoLightbox({
-  photo, album, members, likes, canRemove,
-  onClose, onDelete, onLike, onSelectMember,
-}: PhotoLightboxProps) {
-  const meta = album ? getCategoryMeta(album.category as Exclude<CategoryKey, 'all'>) : null;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-3xl bg-white dark:bg-heritage-dark-card rounded-2xl shadow-2xl border border-heritage-cream-200 dark:border-heritage-dark-border my-8 overflow-hidden flex flex-col max-h-[95vh]">
-
-        {/* Photo area */}
-        <div className="relative bg-heritage-green-900 flex-shrink-0 flex items-center justify-center max-h-[60vh] overflow-hidden">
-          {photo.url ? (
-            <img
-              src={photo.url}
-              alt={photo.caption ?? ''}
-              className="w-full h-full object-contain max-h-[60vh]"
-            />
-          ) : (
-            <div className="w-full flex items-center justify-center py-20 text-7xl">📷</div>
-          )}
-          {/* Close */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all backdrop-blur-sm z-10"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Details */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-4 flex-grow">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div>
-              {meta && (
-                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-heritage-bark-600 text-white mb-2 shadow-soft">
-                  {meta.label}
-                </span>
-              )}
-              {photo.caption && (
-                <h3 className="text-2xl font-bold font-serif text-heritage-green-900 dark:text-heritage-dark-text">
-                  {photo.caption}
-                </h3>
-              )}
-            </div>
-            {photo.takenAt && (
-              <span className="text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted bg-heritage-cream-100 dark:bg-heritage-dark-hover px-3 py-1.5 rounded-xl shrink-0">
-                {new Date(photo.takenAt).toLocaleDateString('en-KE', { year: 'numeric', month: 'long' })}
-              </span>
-            )}
-          </div>
-
-          {/* Tagged members as description */}
-          {photo.taggedMemberIds?.length > 0 && (
-            <div className="bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
-              <p className="text-xs font-semibold text-heritage-green-600 dark:text-heritage-dark-muted uppercase tracking-wide mb-2">
-                People in this photo
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {photo.taggedMemberIds.map(id => {
-                  const member = members.find(m => m.id === id);
-                  if (!member) return null;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => { onClose(); onSelectMember(id); }}
-                      className="text-xs bg-heritage-green-100 dark:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text px-3 py-1 rounded-full hover:bg-heritage-green-200 dark:hover:bg-heritage-dark-hover transition-colors font-medium"
-                    >
-                      {fullName(member)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Album info */}
-          {album && (
-            <p className="text-heritage-green-600 dark:text-heritage-dark-muted text-sm leading-relaxed bg-heritage-cream-50 dark:bg-heritage-dark-hover p-4 rounded-2xl border border-heritage-cream-100 dark:border-heritage-dark-border">
-              {album.description || `From the ${album.title} album.`}
-            </p>
-          )}
-
-          {/* Like button */}
-          <div className="flex items-center justify-end text-xs pt-2 border-t border-heritage-cream-100 dark:border-heritage-dark-border">
-            <button
-              onClick={onLike}
-              className="px-3 py-1.5 rounded-xl bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text font-semibold transition-all flex items-center gap-1.5 border border-heritage-cream-200 dark:border-heritage-dark-border"
-            >
-              <Heart size={13} className="text-rose-500 fill-rose-500" />
-              <span>{likes} Like{likes !== 1 ? 's' : ''}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="p-4 bg-heritage-cream-50 dark:bg-heritage-dark-hover border-t border-heritage-cream-200 dark:border-heritage-dark-border flex justify-end gap-3 flex-shrink-0">
-          {canRemove && (
-            <button
-              onClick={onDelete}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1.5"
-            >
-              <Trash2 size={13} /> Delete
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs font-semibold bg-heritage-cream-200 dark:bg-heritage-dark-card hover:bg-heritage-cream-300 dark:hover:bg-heritage-dark-border text-heritage-green-800 dark:text-heritage-dark-muted transition-all"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
