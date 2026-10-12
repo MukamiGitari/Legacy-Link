@@ -17,6 +17,16 @@ const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean
 });
 
 export const members: Member[] = [
+  // Generation -2 & -1 — Ancestors of Nkuruu
+  m({ id: 'b0000000-0000-0000-0000-000000000005', firstName: 'Kurirua', lastName: 'Ancestor', gender: 'male', generation: -2,
+    occupation: 'Founding Ancestor',
+    bio: 'Great-grandfather of Senior Chief Gerald Kithinji M\'Ikunyua and father of M\'Mbwiria.',
+    isFounder: true, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0000-000000000004', firstName: "M'Mbwiria", lastName: 'son of Kurirua', gender: 'male', generation: -1,
+    occupation: 'Lineage Patriarch',
+    bio: 'Father of Nkuruu M\'Mbwiria and grandfather of Senior Chief Gerald Kithinji M\'Ikunyua. Son of Kurirua.',
+    isFounder: true, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
+
   // Generation 0 — Parents & Wives
   m({ id: 'b0000000-0000-0000-0000-000000000001', firstName: 'Nkuruu', lastName: "M'Mbwiria", gender: 'male', generation: 0,
     occupation: 'Farmer & WWI Veteran',
@@ -25,29 +35,29 @@ export const members: Member[] = [
   m({ id: 'b0000000-0000-0000-0000-000000000002', firstName: 'Salome Gateti', lastName: 'CioMuga', gender: 'female', generation: 0,
     occupation: 'Homesteader & Farmer',
     bio: 'Mother of Senior Chief Gerald M\'Ikunyua and first wife of Nkuruu M\'Mbwiria. Raised three sons in Kinoru, planted millet and ncabi (black beans) in Kithoka, and saved young Gerald from a childhood fire.',
-    isFounder: true, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+    isFounder: false, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
   m({ id: 'b0000000-0000-0000-0000-000000000003', firstName: 'Second Wife', lastName: "M'Mbwiria", gender: 'female', generation: 0,
     occupation: 'Homesteader & Farmer',
     bio: 'Second wife of Nkuruu M\'Mbwiria who raised three sons in Kinoru alongside Salome Gateti.',
-    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+    isFounder: false, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
 
-  // Generation 1 — Brothers of Gerald (House of Salome Gateti)
-  m({ id: 'b0000000-0000-0000-0001-000000000011', firstName: 'Eldest Brother', lastName: "M'Mbwiria", gender: 'male', generation: 1,
-    bio: 'First son of Salome Gateti and Nkuruu M\'Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+  // Generation 1 — Brothers of Gerald (House of Salome Gateti - First Wife)
+  m({ id: 'b0000000-0000-0000-0001-000000000011', firstName: 'Geoffrey', lastName: 'Baichu', gender: 'male', generation: 1,
+    bio: 'First son of Salome Gateti and Nkuruu M\'Mbwiria; elder brother of Senior Chief Gerald Kithinji M\'Ikunyua.',
     birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
-  m({ id: 'b0000000-0000-0000-0001-000000000012', firstName: 'Second Brother', lastName: "M'Mbwiria", gender: 'male', generation: 1,
-    bio: 'Second son of Salome Gateti and Nkuruu M\'Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+  m({ id: 'b0000000-0000-0000-0001-000000000012', firstName: 'Silas', lastName: 'Ruteere', gender: 'male', generation: 1,
+    bio: 'Second son of Salome Gateti and Nkuruu M\'Mbwiria; elder brother of Senior Chief Gerald Kithinji M\'Ikunyua.',
     birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
 
   // Generation 1 — Stepbrothers of Gerald (House of Second Wife)
-  m({ id: 'b0000000-0000-0000-0001-000000000021', firstName: 'Stepbrother 1', lastName: "M'Mbwiria", gender: 'male', generation: 1,
-    bio: 'First son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+  m({ id: 'b0000000-0000-0000-0001-000000000021', firstName: "M'Mwongo", lastName: 'Nkuruu', gender: 'male', generation: 1,
+    bio: 'Son of the second wife of Nkuruu M\'Mbwiria; brother of Senior Chief Gerald Kithinji M\'Ikunyua.',
     birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
-  m({ id: 'b0000000-0000-0000-0001-000000000022', firstName: 'Stepbrother 2', lastName: "M'Mbwiria", gender: 'male', generation: 1,
-    bio: 'Second son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+  m({ id: 'b0000000-0000-0000-0001-000000000022', firstName: 'John', lastName: "M'Riria", gender: 'male', generation: 1,
+    bio: 'Son of the second wife of Nkuruu M\'Mbwiria; brother of Senior Chief Gerald Kithinji M\'Ikunyua.',
     birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
-  m({ id: 'b0000000-0000-0000-0001-000000000023', firstName: 'Stepbrother 3', lastName: "M'Mbwiria", gender: 'male', generation: 1,
-    bio: 'Third son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+  m({ id: 'b0000000-0000-0000-0001-000000000023', firstName: 'Festus Ruguku', lastName: '(Mwalili)', gender: 'male', generation: 1,
+    bio: 'Son of the second wife of Nkuruu M\'Mbwiria; brother of Senior Chief Gerald Kithinji M\'Ikunyua.',
     birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
 
   // Generation 1 — M'Ikunyua Patriarch & Matriarch
@@ -149,6 +159,10 @@ const parentOf = (parentId: string, childId: string): Relationship => ({
 });
 
 export const relationships: Relationship[] = [
+  // Ancestry Lineage of Nkuruu
+  parentOf('b0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000004'), // Kurirua -> M'Mbwiria
+  parentOf('b0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'), // M'Mbwiria -> Nkuruu M'Mbwiria
+
   // Nkuruu M'Mbwiria marriages (Two Wives)
   ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', '1920-01-01'), // First Wife: Salome Gateti
   ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', '1925-01-01'), // Second Wife
@@ -208,18 +222,18 @@ export const relationships: Relationship[] = [
 ];
 
 export const albums: Album[] = [
-  { id: 'al1', familyId: FAMILY_ID, title: "Naomi & Reuben's Wedding", category: 'weddings',
-    description: 'The wedding that started it all, Nkubu 1950.' },
-  { id: 'al2', familyId: FAMILY_ID, title: '2019 Kobia-Kiogora Reunion', category: 'reunions',
-    description: 'Three generations gathered at the Nkubu homestead.' },
-  { id: 'al3', familyId: FAMILY_ID, title: 'Childhood in Nkubu', category: 'childhood',
-    description: 'Peter, Susan and James growing up on the farm.' },
-  { id: 'al4', familyId: FAMILY_ID, title: 'The Homestead, 1955–1970', category: 'historical',
-    description: 'Early photographs of the coffee terraces and original house.' },
-  { id: 'al5', familyId: FAMILY_ID, title: "Remembering Reuben & Naomi", category: 'memorials',
-    description: 'A tribute album shared at both memorial services.' },
-  { id: 'al6', familyId: FAMILY_ID, title: 'Christmas at the Homestead', category: 'reunions',
-    description: 'The annual gathering, every December since 1985.' },
+  { id: 'b0000000-0000-0003-000000000001', familyId: FAMILY_ID, title: "Gerald & Lily's Wedding & Family", category: 'weddings',
+    description: 'Celebrating love and union in Meru.' },
+  { id: 'b0000000-0000-0003-000000000002', familyId: FAMILY_ID, title: 'M\'Ikunyua Family Reunion', category: 'reunions',
+    description: 'Generations of the M\'Ikunyua family gathered together.' },
+  { id: 'b0000000-0000-0003-000000000003', familyId: FAMILY_ID, title: 'Childhood in Kinoru', category: 'childhood',
+    description: 'Growing up on the slopes of Mount Kenya in Kinoru village.' },
+  { id: 'b0000000-0000-0003-000000000004', familyId: FAMILY_ID, title: 'The Homestead & Farms, 1950s–1980s', category: 'historical',
+    description: 'Early photographs of exotic dairy cattle, coffee farms, and the homestead.' },
+  { id: 'b0000000-0000-0003-000000000005', familyId: FAMILY_ID, title: 'Remembering Senior Chief Gerald M\'Ikunyua', category: 'memorials',
+    description: 'A tribute album honoring the legacy, leadership, and public service of Senior Chief Gerald M\'Ikunyua.' },
+  { id: 'b0000000-0000-0003-000000000006', familyId: FAMILY_ID, title: 'Christmas at the Homestead', category: 'reunions',
+    description: 'Annual festive gatherings and family traditions.' },
 ];
 
 export const photos: Photo[] = [];

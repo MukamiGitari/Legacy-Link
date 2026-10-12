@@ -41,6 +41,7 @@ function mapRecipe(r, env) {
 }
 
 const cookbookCreateSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
   style: z.literal('traditional').default('traditional'),
   description: z.string().max(2000).optional(),
@@ -99,12 +100,19 @@ recipes.post('/cookbook-albums', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
-    const { title, style, description, coverPhotoUrl, featuredMemberId } = parsed.data;
+    const { id, title, style, description, coverPhotoUrl, featuredMemberId } = parsed.data;
 
     const result = await client.query(
-      `INSERT INTO cookbook_albums (family_id, title, style, description, cover_photo_url, featured_member_id)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [profile.family_id, title, style, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
+      `INSERT INTO cookbook_albums (id, family_id, title, style, description, cover_photo_url, featured_member_id)
+       VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         style = EXCLUDED.style,
+         description = EXCLUDED.description,
+         cover_photo_url = EXCLUDED.cover_photo_url,
+         featured_member_id = EXCLUDED.featured_member_id
+       RETURNING *`,
+      [id ?? null, profile.family_id, title, style, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
     );
     return c.json({ cookbookAlbum: mapCookbookAlbum(result.rows[0], c.env) }, 201);
   });

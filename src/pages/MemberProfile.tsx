@@ -287,9 +287,14 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                     {lineage.parents.length === 0 && <p className="text-sm text-heritage-green-400">None recorded</p>}
                     <div className="space-y-1.5">
                       {lineage.parents.map(p => (
-                        <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
-                          <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200" alt="" />
-                          <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text">{fullName(p)}</span>
+                        <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img src={p.avatarUrl} className="w-8 h-8 rounded-full bg-heritage-cream-200 shrink-0" alt="" />
+                            <span className="text-sm text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</span>
+                          </div>
+                          <span className="text-[10px] font-medium text-heritage-green-600 dark:text-heritage-dark-muted px-1.5 py-0.5 rounded bg-heritage-cream-200 dark:bg-heritage-dark-border shrink-0">
+                            {p.gender === 'male' ? 'Father' : p.gender === 'female' ? 'Mother' : 'Parent'}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -353,6 +358,7 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                         const otherParent = otherParentId ? data.members.find(m => m.id === otherParentId) : null;
                         const wifeIdx = otherParent ? lineage.spouse.findIndex(s => s.id === otherParent.id) : -1;
                         const wifeColor = wifeIdx >= 0 ? WIFE_COLORS[wifeIdx % WIFE_COLORS.length] : undefined;
+                        const otherParentRole = otherParent?.gender === 'female' ? 'Mother' : otherParent?.gender === 'male' ? 'Father' : 'Parent';
 
                         return (
                           <button key={p.id} onClick={() => onSelectMember(p.id)} className="w-full flex items-center justify-between gap-2.5 rounded-lg px-2 py-1.5 hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover text-left">
@@ -365,7 +371,7 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                                 className="text-[10px] font-medium px-1.5 py-0.2 rounded-full border shrink-0"
                                 style={{ backgroundColor: wifeColor.bg, color: wifeColor.text, borderColor: wifeColor.border }}
                               >
-                                Mother: {otherParent.firstName}
+                                {otherParentRole}: {otherParent.firstName}
                               </span>
                             )}
                           </button>
@@ -407,7 +413,7 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                                 </div>
                                 {otherParent && (
                                   <span className="text-[10px] text-heritage-green-500 dark:text-heritage-dark-muted shrink-0">
-                                    Parent: {otherParent.firstName}
+                                    {otherParent.gender === 'female' ? 'Mother' : otherParent.gender === 'male' ? 'Father' : 'Parent'}: {otherParent.firstName}
                                   </span>
                                 )}
                               </button>

@@ -211,7 +211,7 @@ export const OrgChartNode: React.FC<OrgChartNodeProps> = ({ unit, renderCard, on
               {unit.unassignedChildren.length > 0 && (
                 <li>
                   <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-heritage-cream-200 text-heritage-green-700 my-1.5 border border-heritage-cream-400">
-                    <span>Mother not recorded ({unit.unassignedChildren.length})</span>
+                    <span>{unit.head.gender === 'female' ? 'Father' : 'Mother'} not recorded ({unit.unassignedChildren.length})</span>
                   </div>
                   <ul>
                     {unit.unassignedChildren.map(child => (

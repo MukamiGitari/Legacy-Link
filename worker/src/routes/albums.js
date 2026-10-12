@@ -25,11 +25,22 @@ const VALID_CATEGORIES = [
 // Schemas
 // ---------------------------------------------------------------------------
 
+// Accept either a full URL (https://...) for user-uploaded covers,
+// or an app-relative path (/covers/...) for the built-in category covers.
+const coverPhotoUrlSchema = z
+  .string()
+  .max(1000)
+  .refine(
+    (val) => /^https?:\/\//i.test(val) || val.startsWith('/'),
+    { message: 'coverPhotoUrl must be an absolute URL or start with /' },
+  );
+
 const albumCreateSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
   category: z.enum(VALID_CATEGORIES),
   description: z.string().max(2000).optional(),
-  coverPhotoUrl: z.string().url().optional(),
+  coverPhotoUrl: coverPhotoUrlSchema.optional(),
   featuredMemberId: z.string().uuid().optional(),
 });
 
@@ -128,12 +139,18 @@ albums.post('/', async (c) => {
       return c.json({ error: 'Guests cannot create albums' }, 403);
     }
 
-    const { title, category, description, coverPhotoUrl, featuredMemberId } = parsed.data;
+    const { id, title, category, description, coverPhotoUrl, featuredMemberId } = parsed.data;
     const result = await client.query(
-      `INSERT INTO albums (family_id, title, category, description, cover_photo_url, featured_member_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO albums (id, family_id, title, category, description, cover_photo_url, featured_member_id)
+       VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         category = EXCLUDED.category,
+         description = EXCLUDED.description,
+         cover_photo_url = EXCLUDED.cover_photo_url,
+         featured_member_id = EXCLUDED.featured_member_id
        RETURNING *`,
-      [profile.family_id, title, category, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
+      [id ?? null, profile.family_id, title, category, description ?? null, coverPhotoUrl ?? null, featuredMemberId ?? null],
     );
     return c.json({ album: { ...result.rows[0], cover_photo_url: toPublicUrl(c.env, result.rows[0].cover_photo_url) } }, 201);
   });
@@ -256,12 +273,19 @@ albums.post('/photos', async (c) => {
       return c.json({ error: 'Guests cannot add photos' }, 403);
     }
 
-    // Confirm album belongs to this family
-    const albumRes = await client.query(
+    // Confirm album belongs to this family, or auto-create if missing to protect uploaded photos
+    let albumRes = await client.query(
       `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
       [albumId, profile.family_id],
     );
-    if (albumRes.rowCount === 0) return c.json({ error: 'Album not found' }, 404);
+    if (albumRes.rowCount === 0) {
+      await client.query(
+        `INSERT INTO albums (id, family_id, title, category)
+         VALUES ($1, $2, 'Family Album', 'childhood')
+         ON CONFLICT (id) DO NOTHING`,
+        [albumId, profile.family_id],
+      );
+    }
 
     // Insert photo
     const photoRes = await client.query(

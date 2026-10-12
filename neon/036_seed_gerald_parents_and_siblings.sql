@@ -29,7 +29,7 @@ VALUES
  'Kinoru, Meru, Kenya'),
 
 ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001',
- 'Salome Gateti', 'CioMuga', 'female', 0, true,
+ 'Salome Gateti', 'CioMuga', 'female', 0, false,
  'Homesteader & Farmer',
  'Mother of Senior Chief Gerald M''Ikunyua and first wife of Nkuruu M''Mbwiria. Raised three sons in Kinoru, planted millet and ncabi (black beans) in Kithoka, and saved young Gerald from a childhood fire.',
  'Kinoru, Meru, Kenya'),
@@ -52,31 +52,31 @@ ON CONFLICT (id) DO UPDATE SET
 -- 2. Insert Siblings (Generation 1, same generation as Gerald)
 INSERT INTO public.members (id, family_id, first_name, last_name, gender, generation, bio, birth_place)
 VALUES
--- Full brothers (House of Salome Gateti)
+-- Full brothers (House of Salome Gateti - First Wife)
 ('b0000000-0000-0000-0001-000000000011', 'a0000000-0000-0000-0000-000000000001',
- 'Eldest Brother', 'M''Mbwiria', 'male', 1,
- 'First son of Salome Gateti and Nkuruu M''Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+ 'Geoffrey', 'Baichu', 'male', 1,
+ 'First son of Salome Gateti and Nkuruu M''Mbwiria; elder brother of Senior Chief Gerald Kithinji M''Ikunyua.',
  'Kinoru, Meru, Kenya'),
 
 ('b0000000-0000-0000-0001-000000000012', 'a0000000-0000-0000-0000-000000000001',
- 'Second Brother', 'M''Mbwiria', 'male', 1,
- 'Second son of Salome Gateti and Nkuruu M''Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+ 'Silas', 'Ruteere', 'male', 1,
+ 'Second son of Salome Gateti and Nkuruu M''Mbwiria; elder brother of Senior Chief Gerald Kithinji M''Ikunyua.',
  'Kinoru, Meru, Kenya'),
 
 -- Stepbrothers (House of Second Wife)
 ('b0000000-0000-0000-0001-000000000021', 'a0000000-0000-0000-0000-000000000001',
- 'Stepbrother 1', 'M''Mbwiria', 'male', 1,
- 'First son of the second wife of Nkuruu M''Mbwiria; raised in Kinoru homestead.',
+ 'M''Mwongo', 'Nkuruu', 'male', 1,
+ 'Son of the second wife of Nkuruu M''Mbwiria; brother of Senior Chief Gerald Kithinji M''Ikunyua.',
  'Kinoru, Meru, Kenya'),
 
 ('b0000000-0000-0000-0001-000000000022', 'a0000000-0000-0000-0000-000000000001',
- 'Stepbrother 2', 'M''Mbwiria', 'male', 1,
- 'Second son of the second wife of Nkuruu M''Mbwiria; raised in Kinoru homestead.',
+ 'John', 'M''Riria', 'male', 1,
+ 'Son of the second wife of Nkuruu M''Mbwiria; brother of Senior Chief Gerald Kithinji M''Ikunyua.',
  'Kinoru, Meru, Kenya'),
 
 ('b0000000-0000-0000-0001-000000000023', 'a0000000-0000-0000-0000-000000000001',
- 'Stepbrother 3', 'M''Mbwiria', 'male', 1,
- 'Third son of the second wife of Nkuruu M''Mbwiria; raised in Kinoru homestead.',
+ 'Festus Ruguku', '(Mwalili)', 'male', 1,
+ 'Son of the second wife of Nkuruu M''Mbwiria; brother of Senior Chief Gerald Kithinji M''Ikunyua.',
  'Kinoru, Meru, Kenya')
 ON CONFLICT (id) DO UPDATE SET
  first_name = EXCLUDED.first_name,

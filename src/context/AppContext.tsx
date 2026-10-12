@@ -397,6 +397,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setData(prev => ({ ...prev, albums: [...prev.albums, album] }));
     if (isOnlineMode) {
       persist('add album', () => api.post('/albums', {
+        id: album.id,
         title: album.title,
         category: album.category,
         description: album.description,

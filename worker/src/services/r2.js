@@ -25,11 +25,11 @@ export function buildKey(category, originalFilename) {
  * Convert a stored R2 key (e.g. "photos/uuid-file.jpg") into a full public URL.
  * Already-absolute URLs are returned unchanged so existing data is never broken.
  */
-export function toPublicUrl(env, keyOrUrl) {
-  if (!keyOrUrl) return keyOrUrl;
-  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) return keyOrUrl;
-  return `${env.R2_PUBLIC_URL}/${keyOrUrl}`;
-}
+   export function toPublicUrl(env, keyOrUrl) {
+     if (!keyOrUrl) return keyOrUrl;
+     if (/^(https?:|data:|blob:)/.test(keyOrUrl) || keyOrUrl.startsWith('/')) return keyOrUrl;
+     return `${env.R2_PUBLIC_URL}/${keyOrUrl}`;
+   }
 
 // Presigning happens server-side via the S3-compatible API, using the
 // scoped R2 API token — the browser only ever sees the resulting URL,

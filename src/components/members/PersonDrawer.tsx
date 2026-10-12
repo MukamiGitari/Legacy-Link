@@ -258,7 +258,7 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-heritage-green-900 dark:text-heritage-dark-text truncate">{fullName(p)}</p>
                                 <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted">
-                                  {lifespan(p)}{otherParent ? ` · Mother/Father: ${otherParent.firstName}` : ''}
+                                  {lifespan(p)}{otherParent ? ` · ${otherParent.gender === 'female' ? 'Mother' : otherParent.gender === 'male' ? 'Father' : 'Parent'}: ${otherParent.firstName}` : ''}
                                 </p>
                               </div>
                             </button>
