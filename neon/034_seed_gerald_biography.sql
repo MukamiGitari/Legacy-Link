@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Seed Gerald Kithinji M'Ikunyua Biography & Update Member Profile
 -- Family: M'Ikunyua Family ('a0000000-0000-0000-0000-000000000001')
--- Member: Gerald Kithinji M'Ikunyua ('b0000000-0000-0001-000000000001')
+-- Member: Gerald Kithinji M'Ikunyua ('b0000000-0000-0000-0001-000000000001')
 -- ============================================================================
 
 -- 1. Ensure Member Details are Enriched
@@ -14,7 +14,7 @@ SET date_of_birth = '1937-08-14',
     professional_title = 'Senior Chief / Assistant Animal Production Officer',
     current_organization = 'Ministry of Agriculture & Livestock / Office of the President',
     location = 'Kinoru, Meru, Kenya'
-WHERE id = 'b0000000-0000-0001-000000000001';
+WHERE id = 'b0000000-0000-0000-0001-000000000001';
 
 -- 2. Insert or Update Gerald M'Ikunyua's Comprehensive Biography
 INSERT INTO public.biographies (
@@ -41,7 +41,7 @@ INSERT INTO public.biographies (
 ) VALUES (
     'd0000000-0000-0000-0001-000000000001',
     'a0000000-0000-0000-0000-000000000001',
-    'b0000000-0000-0001-000000000001',
+    'b0000000-0000-0000-0001-000000000001',
     'Gerald Kithinji M''Ikunyua is the founding patriarch of the M''Ikunyua family, an esteemed agricultural pioneer, and an influential public administrator in Meru and the wider Eastern and Rift Valley provinces of Kenya. Rising from humble beginnings as a herdsboy during the Second World War and Mau Mau emergency, he trained in animal husbandry, veterinary science, and dairy technology across Kenya, India, the United Kingdom, the United States, and Canada. He famously served as the 6th Senior Chief of Ntima Location since the colonial era, acted as District Officer for North Imenti, and served for decades as an Assistant Animal Production Officer in the Ministry of Livestock. He is widely celebrated for introducing exotic grade dairy cattle to Meru, establishing vital dairy and beekeeping cooperatives that thrive to this day, spearheading educational infrastructure (such as raising funds for the 8-4-4 system and rolling out Nyayo Milk in schools), and exemplifying unyielding integrity and resilience in the face of local political adversity.',
 
     'Born on August 14th, 1937, in Kinoru village, Meru, Gerald was the third son born to Salome Gateti CioMuga and Nkuruu M''Mbwiria. His father was a World War I veteran deployed to Dodoma, Tanzania, and had two wives, each blessed with three sons. Growing up in an environment primarily centered on grazing cows and goats with subsistence farming of bananas, yams, millet, and ncabi (black beans in Kithoka, 5 km away), Gerald’s childhood was shaped by pastoral duties and traditional communal life. At around age three, while left in his grandmother''s care, he suffered severe burns after falling into the open three-stone hearth (riiko); with no modern hospitals nearby, his life and head were saved by traditional treatments using rabbit fur provided by his aunt Ciomero. In early childhood, he herded sheep and goats wrapped only in a light blanket for warmth, foraging for bush fruits, sharing nyungu ya mwanki (warm embers pots) during cold July mornings, and trapping ndera birds using usembu concoctions.',

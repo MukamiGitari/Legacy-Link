@@ -18,11 +18,11 @@ const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean
 
 export const members: Member[] = [
   // Generation 1 — M'Ikunyua Patriarch & Matriarch
-  m({ id: 'b0000000-0000-0001-000000000001', firstName: 'Gerald Kithinji', lastName: "M'Ikunyua", gender: 'male', generation: 1,
+  m({ id: 'b0000000-0000-0000-0001-000000000001', firstName: 'Gerald Kithinji', lastName: "M'Ikunyua", gender: 'male', generation: 1,
     dateOfBirth: '1937-08-14', birthPlace: 'Kinoru Village, Meru, Kenya', occupation: 'Senior Chief, Animal Production Officer & Agricultural Pioneer',
     bio: 'Patriarch of the M\'Ikunyua family, pioneering agriculturalist, Senior Chief of Ntima location, and lifelong public servant who transformed dairy farming, cooperatives, and community development across Meru and Kenya.',
     isFounder: true, professionalTitle: 'Senior Chief / Assistant Animal Production Officer', currentOrganization: 'Ministry of Agriculture & Livestock / Office of the President', location: 'Kinoru, Meru, Kenya' }),
-  m({ id: 'b0000000-0000-0001-000000000002', firstName: 'Lily', lastName: 'Ncurubi', gender: 'female', generation: 1,
+  m({ id: 'b0000000-0000-0000-0001-000000000002', firstName: 'Lily', lastName: 'Ncurubi', gender: 'female', generation: 1,
     birthPlace: 'Meru, Kenya', occupation: 'Matriarch & Community Leader',
     bio: 'Beloved matriarch of the M\'Ikunyua family, who supported community development, local agriculture, and raised six children who carry forward the family legacy.',
     isFounder: true, location: 'Kinoru, Meru, Kenya' }),
@@ -116,7 +116,7 @@ const parentOf = (parentId: string, childId: string): Relationship => ({
 });
 
 export const relationships: Relationship[] = [
-  ...spouse('b0000000-0000-0001-000000000001', 'b0000000-0000-0001-000000000002'),
+  ...spouse('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0001-000000000002'),
   ...spouse('m1', 'm2', '1950-06-10'),
   ...spouse('m3', 'm4', '1976-08-14'),
   ...spouse('m5', 'm6', '1977-03-19'),
@@ -300,7 +300,7 @@ export const biographies: Biography[] = [
   {
     id: 'bio-gerald-ikunyua',
     familyId: FAMILY_ID,
-    memberId: 'b0000000-0000-0001-000000000001',
+    memberId: 'b0000000-0000-0000-0001-000000000001',
     professionalSummary: 'Gerald Kithinji M\'Ikunyua is the founding patriarch of the M\'Ikunyua family, an esteemed agricultural pioneer, and an influential public administrator in Meru and the wider Eastern and Rift Valley provinces of Kenya. Rising from humble beginnings as a herdsboy during the Second World War and Mau Mau emergency, he trained in animal husbandry, veterinary science, and dairy technology across Kenya, India, the United Kingdom, the United States, and Canada. He famously served as the 6th Senior Chief of Ntima Location since the colonial era, acted as District Officer for North Imenti, and served for decades as an Assistant Animal Production Officer in the Ministry of Livestock. He is widely celebrated for introducing exotic grade dairy cattle to Meru, establishing vital dairy and beekeeping cooperatives that thrive to this day, spearheading educational infrastructure (such as raising funds for the 8-4-4 system and rolling out Nyayo Milk in schools), and exemplifying unyielding integrity and resilience in the face of local political adversity.',
     earlyLifeBackground: 'Born on August 14th, 1937, in Kinoru village, Meru, Gerald was the third son born to Salome Gateti CioMuga and Nkuruu M\'Mbwiria. His father was a World War I veteran deployed to Dodoma, Tanzania, and had two wives, each blessed with three sons. Growing up in an environment primarily centered on grazing cows and goats with subsistence farming of bananas, yams, millet, and ncabi (black beans in Kithoka, 5 km away), Gerald’s childhood was shaped by pastoral duties and traditional communal life. At around age three, while left in his grandmother\'s care, he suffered severe burns after falling into the open three-stone hearth (riiko); with no modern hospitals nearby, his life and head were saved by traditional treatments using rabbit fur provided by his aunt Ciomero. In early childhood, he herded sheep and goats wrapped only in a light blanket for warmth, foraging for bush fruits, sharing nyungu ya mwanki (warm embers pots) during cold July mornings, and trapping ndera birds using usembu concoctions.',
     education: 'Gerald’s formal education began in January 1948 after persistently pleading with his father, who sold a goat for four shillings to pay his initial fees. He attended Mwirine Primary School, walking 5 km barefoot each morning with a slate and chalk, washing his single shirt and pair of shorts on Saturdays using riverside plants. In 1949, he transferred closer to home at DEB Mwithumwiru Primary School. In 1951, he sat for the Common Entrance Examination, scoring fourth in the region (behind future professor Mutuma Mugambi), qualifying for junior secondary boarding at Kaaga Boys Intermediate School (1952–1955), where he excelled in Rural Science, debate, and choir as choir master, paying his Ksh 35/year school fees by weeding coffee for Ksh 4 per month.\n\nAfter passing his Kenya African Preliminary Examination (KAPE) in 1955, he was admitted to Embu Agricultural Technical College. In 1956, he completed nursing training at Meru Hospital (appointed trainee ward in-charge). Choosing veterinary sciences over human medicine, he earned a Certificate in Animal Health at Kabete Veterinary College (1958). In 1964, sponsored through the Ministry and Indian hosts, he studied Mahatma Gandhi cottage industries (beekeeping, honey processing, cotton) in Bombay. In 1965, he was awarded a prestigious Commonwealth Senior Scholarship (earning a high student allowance of 350 Rupees per month) to study Dairy Husbandry at Punjab Agricultural University and the National Dairy Research Institute (Southern Station, Bangalore). He later pursued advanced agricultural and town planning training at the University of Guelph (Canada), Washington D.C. (USDA), and irrigation systems at the Hebrew University in Israel.',
