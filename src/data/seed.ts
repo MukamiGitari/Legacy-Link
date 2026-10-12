@@ -68,7 +68,7 @@ export const members: Member[] = [
   m({ id: 'b0000000-0000-0000-0001-000000000002', firstName: 'Lily', lastName: 'Ncurubi', gender: 'female', generation: 1,
     birthPlace: 'Meru, Kenya', occupation: 'Matriarch & Community Leader',
     bio: 'Beloved matriarch of the M\'Ikunyua family, who supported community development, local agriculture, and raised six children who carry forward the family legacy.',
-    isFounder: true, location: 'Kinoru, Meru, Kenya' }),
+    isFounder: false, location: 'Kinoru, Meru, Kenya' }),
 
   // Generation 1 — the root couple
   m({ id: 'm1', firstName: 'Reuben', lastName: 'Kobia', gender: 'male', generation: 1,

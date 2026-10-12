@@ -9,7 +9,7 @@ UPDATE public.members
 SET birth_place = 'Meru, Kenya',
     occupation = 'Matriarch, Agribusiness Entrepreneur & Community Leader',
     bio = 'Matriarch of the M''Ikunyua family, educated at Kaaga Girls Intermediate, respected agribusiness entrepreneur and community leader who anchored the family homestead and legacy.',
-    is_founder = true,
+    is_founder = false,
     professional_title = 'Matriarch & Farm Enterprise Director',
     location = 'Kinoru, Meru, Kenya'
 WHERE id = 'b0000000-0000-0000-0001-000000000002';

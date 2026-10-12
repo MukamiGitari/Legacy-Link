@@ -3,12 +3,13 @@
 -- Family: M'Ikunyua Family ('a0000000-0000-0000-0000-000000000001')
 -- ============================================================================
 
--- 1. Mark Salome Gateti CioMuga and Second Wife as married-in (is_founder = false)
+-- 1. Mark Salome Gateti CioMuga, Second Wife, and Lily Ncurubi as married-in (is_founder = false)
 UPDATE public.members
 SET is_founder = false
 WHERE id IN (
   'b0000000-0000-0000-0000-000000000002', -- Salome Gateti CioMuga
-  'b0000000-0000-0000-0000-000000000003'  -- Second Wife
+  'b0000000-0000-0000-0000-000000000003', -- Second Wife
+  'b0000000-0000-0000-0001-000000000002'  -- Lily Ncurubi (married in to Gerald Kithinji M'Ikunyua)
 );
 
 -- Ensure Nkuruu M'Mbwiria remains marked as bloodline patriarch / founder
