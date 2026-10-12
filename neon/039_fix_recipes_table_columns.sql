@@ -1,6 +1,6 @@
 -- ============================================================================
--- Migration 039: Fix Missing Columns on Recipes Table
--- Ensures public.recipes table has all required columns
+-- Migration 039: Fix Missing Columns and Types on Recipes Table
+-- Ensures public.recipes table has all required columns and compatible types
 -- ============================================================================
 
 -- 1. Ensure cookbook_albums table exists
@@ -25,7 +25,7 @@ ALTER TABLE public.recipes ADD COLUMN IF NOT EXISTS cook_time text;
 ALTER TABLE public.recipes ADD COLUMN IF NOT EXISTS family_story text;
 ALTER TABLE public.recipes ADD COLUMN IF NOT EXISTS contributed_by_member_id uuid;
 
--- 3. In case owner_id existed from an older schema and was set to NOT NULL, make it optional
+-- 3. If owner_id existed from an older schema and was set to NOT NULL, make it optional
 DO $$
 BEGIN
     IF EXISTS (
@@ -36,7 +36,47 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Ensure default cookbook album exists for M'Ikunyua family
+-- 4. Convert ingredients and instructions to text[] if they were created as json/jsonb/text
+DO $$
+BEGIN
+    -- If ingredients is JSON or JSONB, convert to text[]
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'recipes' 
+          AND column_name = 'ingredients' 
+          AND data_type IN ('json', 'jsonb')
+    ) THEN
+        ALTER TABLE public.recipes 
+          ALTER COLUMN ingredients DROP DEFAULT,
+          ALTER COLUMN ingredients TYPE text[] USING (
+            CASE 
+              WHEN ingredients IS NULL THEN '{}'::text[]
+              ELSE ARRAY(SELECT jsonb_array_elements_text(to_jsonb(ingredients)))
+            END
+          ),
+          ALTER COLUMN ingredients SET DEFAULT '{}'::text[];
+    END IF;
+
+    -- If instructions is a single text string instead of text[], convert to text[]
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'recipes' 
+          AND column_name = 'instructions' 
+          AND data_type = 'text'
+    ) THEN
+        ALTER TABLE public.recipes 
+          ALTER COLUMN instructions DROP DEFAULT,
+          ALTER COLUMN instructions TYPE text[] USING (
+            CASE 
+              WHEN instructions IS NULL THEN '{}'::text[]
+              ELSE string_to_array(instructions, E'\n')
+            END
+          ),
+          ALTER COLUMN instructions SET DEFAULT '{}'::text[];
+    END IF;
+END $$;
+
+-- 5. Ensure default cookbook album exists for M'Ikunyua family
 INSERT INTO public.cookbook_albums (
     id, family_id, title, style, description
 ) VALUES (

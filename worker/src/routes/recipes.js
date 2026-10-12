@@ -21,12 +21,22 @@ function mapCookbookAlbum(r, env) {
 }
 
 function mapRecipe(r, env) {
-  const ingredients = Array.isArray(r.ingredients)
-    ? r.ingredients
-    : (r.ingredients ? JSON.parse(r.ingredients) : []);
-  const instructions = Array.isArray(r.instructions)
-    ? r.instructions
-    : (r.instructions ? JSON.parse(r.instructions) : []);
+  let ingredients = [];
+  try {
+    ingredients = Array.isArray(r.ingredients)
+      ? r.ingredients
+      : (typeof r.ingredients === 'string' ? JSON.parse(r.ingredients) : (r.ingredients || []));
+  } catch {
+    ingredients = r.ingredients ? [String(r.ingredients)] : [];
+  }
+  let instructions = [];
+  try {
+    instructions = Array.isArray(r.instructions)
+      ? r.instructions
+      : (typeof r.instructions === 'string' ? JSON.parse(r.instructions) : (r.instructions || []));
+  } catch {
+    instructions = r.instructions ? [String(r.instructions)] : [];
+  }
   return {
     id: r.id, albumId: r.album_id, familyId: r.family_id, title: r.title, category: r.category,
     isVegetarian: r.is_vegetarian ?? false,
@@ -191,27 +201,57 @@ recipes.post('/', async (c) => {
       );
     }
 
-    const result = await client.query(
-      `INSERT INTO recipes (
-         id, album_id, family_id, title, category, is_vegetarian, photo_url,
-         ingredients, instructions, cook_time, family_story, contributed_by_member_id
-       ) VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       ON CONFLICT (id) DO UPDATE SET
-         title = EXCLUDED.title,
-         category = EXCLUDED.category,
-         is_vegetarian = EXCLUDED.is_vegetarian,
-         photo_url = EXCLUDED.photo_url,
-         ingredients = EXCLUDED.ingredients,
-         instructions = EXCLUDED.instructions,
-         cook_time = EXCLUDED.cook_time,
-         family_story = EXCLUDED.family_story,
-         contributed_by_member_id = EXCLUDED.contributed_by_member_id
-       RETURNING *`,
-      [
-        id ?? null, albumId, profile.family_id, title, category, isVegetarian, photoUrl ?? null,
-        ingredients, instructions, cookTime ?? null, familyStory ?? null, contributedByMemberId ?? null,
-      ],
-    );
+    let result;
+    try {
+      result = await client.query(
+        `INSERT INTO recipes (
+           id, album_id, family_id, title, category, is_vegetarian, photo_url,
+           ingredients, instructions, cook_time, family_story, contributed_by_member_id
+         ) VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         ON CONFLICT (id) DO UPDATE SET
+           title = EXCLUDED.title,
+           category = EXCLUDED.category,
+           is_vegetarian = EXCLUDED.is_vegetarian,
+           photo_url = EXCLUDED.photo_url,
+           ingredients = EXCLUDED.ingredients,
+           instructions = EXCLUDED.instructions,
+           cook_time = EXCLUDED.cook_time,
+           family_story = EXCLUDED.family_story,
+           contributed_by_member_id = EXCLUDED.contributed_by_member_id
+         RETURNING *`,
+        [
+          id ?? null, albumId, profile.family_id, title, category, isVegetarian, photoUrl ?? null,
+          ingredients, instructions, cookTime ?? null, familyStory ?? null, contributedByMemberId ?? null,
+        ],
+      );
+    } catch (insertErr) {
+      if (insertErr.message?.includes('type json')) {
+        // Fallback for older schemas where ingredients/instructions are json or jsonb
+        result = await client.query(
+          `INSERT INTO recipes (
+             id, album_id, family_id, title, category, is_vegetarian, photo_url,
+             ingredients, instructions, cook_time, family_story, contributed_by_member_id
+           ) VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           ON CONFLICT (id) DO UPDATE SET
+             title = EXCLUDED.title,
+             category = EXCLUDED.category,
+             is_vegetarian = EXCLUDED.is_vegetarian,
+             photo_url = EXCLUDED.photo_url,
+             ingredients = EXCLUDED.ingredients,
+             instructions = EXCLUDED.instructions,
+             cook_time = EXCLUDED.cook_time,
+             family_story = EXCLUDED.family_story,
+             contributed_by_member_id = EXCLUDED.contributed_by_member_id
+           RETURNING *`,
+          [
+            id ?? null, albumId, profile.family_id, title, category, isVegetarian, photoUrl ?? null,
+            JSON.stringify(ingredients), JSON.stringify(instructions), cookTime ?? null, familyStory ?? null, contributedByMemberId ?? null,
+          ],
+        );
+      } else {
+        throw insertErr;
+      }
+    }
     return c.json({ recipe: mapRecipe(result.rows[0], c.env) }, 201);
   });
 });
@@ -229,24 +269,52 @@ recipes.put('/:id', async (c) => {
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
     const d = parsed.data;
-    const result = await client.query(
-      `UPDATE recipes SET
-         title = COALESCE($1, title),
-         category = COALESCE($2, category),
-         is_vegetarian = COALESCE($3, is_vegetarian),
-         photo_url = COALESCE($4, photo_url),
-         ingredients = COALESCE($5, ingredients),
-         instructions = COALESCE($6, instructions),
-         cook_time = COALESCE($7, cook_time),
-         family_story = COALESCE($8, family_story),
-         contributed_by_member_id = COALESCE($9, contributed_by_member_id)
-       WHERE id = $10 AND family_id = $11 RETURNING *`,
-      [
-        d.title ?? null, d.category ?? null, d.isVegetarian ?? null, d.photoUrl ?? null,
-        d.ingredients ?? null, d.instructions ?? null, d.cookTime ?? null, d.familyStory ?? null,
-        d.contributedByMemberId ?? null, id, profile.family_id,
-      ],
-    );
+    let result;
+    try {
+      result = await client.query(
+        `UPDATE recipes SET
+           title = COALESCE($1, title),
+           category = COALESCE($2, category),
+           is_vegetarian = COALESCE($3, is_vegetarian),
+           photo_url = COALESCE($4, photo_url),
+           ingredients = COALESCE($5, ingredients),
+           instructions = COALESCE($6, instructions),
+           cook_time = COALESCE($7, cook_time),
+           family_story = COALESCE($8, family_story),
+           contributed_by_member_id = COALESCE($9, contributed_by_member_id)
+         WHERE id = $10 AND family_id = $11 RETURNING *`,
+        [
+          d.title ?? null, d.category ?? null, d.isVegetarian ?? null, d.photoUrl ?? null,
+          d.ingredients ?? null, d.instructions ?? null, d.cookTime ?? null, d.familyStory ?? null,
+          d.contributedByMemberId ?? null, id, profile.family_id,
+        ],
+      );
+    } catch (updateErr) {
+      if (updateErr.message?.includes('type json')) {
+        result = await client.query(
+          `UPDATE recipes SET
+             title = COALESCE($1, title),
+             category = COALESCE($2, category),
+             is_vegetarian = COALESCE($3, is_vegetarian),
+             photo_url = COALESCE($4, photo_url),
+             ingredients = COALESCE($5, ingredients),
+             instructions = COALESCE($6, instructions),
+             cook_time = COALESCE($7, cook_time),
+             family_story = COALESCE($8, family_story),
+             contributed_by_member_id = COALESCE($9, contributed_by_member_id)
+           WHERE id = $10 AND family_id = $11 RETURNING *`,
+          [
+            d.title ?? null, d.category ?? null, d.isVegetarian ?? null, d.photoUrl ?? null,
+            d.ingredients ? JSON.stringify(d.ingredients) : null,
+            d.instructions ? JSON.stringify(d.instructions) : null,
+            d.cookTime ?? null, d.familyStory ?? null,
+            d.contributedByMemberId ?? null, id, profile.family_id,
+          ],
+        );
+      } else {
+        throw updateErr;
+      }
+    }
     if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
     return c.json({ recipe: mapRecipe(result.rows[0], c.env) });
   });
