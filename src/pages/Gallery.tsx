@@ -265,7 +265,10 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             </div>
             {canAdd && (
               <button
-                onClick={() => { setAddAlbumCategory(undefined); setShowAddAlbum(true); }}
+                onClick={() => {
+                  setAddAlbumCategory(activeCategory !== 'all' ? activeCategory : undefined);
+                  setShowAddAlbum(true);
+                }}
                 className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-soft transition-colors self-start sm:self-auto"
               >
                 <Plus size={15} /> New Album
@@ -438,9 +441,14 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
       {/* ── Modals ── */}
       {showAddAlbum && (
         <AddAlbumModal
-          onClose={() => setShowAddAlbum(false)}
+          initialCategory={addAlbumCategory ?? (activeCategory !== 'all' ? activeCategory : ((selectedAlbum as Album | null)?.category ?? 'childhood'))}
+          onClose={() => {
+            setShowAddAlbum(false);
+            setAddAlbumCategory(undefined);
+          }}
           onCreated={(albumId) => {
             setShowAddAlbum(false);
+            setAddAlbumCategory(undefined);
             setSelectedAlbumId(albumId);
             setAddPhotosAlbumId(albumId);
           }}

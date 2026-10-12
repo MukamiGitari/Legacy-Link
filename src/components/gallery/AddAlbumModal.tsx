@@ -16,14 +16,21 @@ const CATEGORY_OPTIONS: { key: Album['category']; label: string }[] = [
 ];
 
 interface Props {
+  initialCategory?: Album['category'];
   onClose: () => void;
   onCreated: (albumId: string) => void;
 }
 
-export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
+export const AddAlbumModal: React.FC<Props> = ({ initialCategory = 'childhood', onClose, onCreated }) => {
   const { data, addAlbum, isOnlineMode } = useApp();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<Album['category']>('childhood');
+  const [category, setCategory] = useState<Album['category']>(initialCategory);
+
+  React.useEffect(() => {
+    if (initialCategory) {
+      setCategory(initialCategory);
+    }
+  }, [initialCategory]);
   const [description, setDescription] = useState('');
   const [coverPhotoUrl, setCoverPhotoUrl] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
