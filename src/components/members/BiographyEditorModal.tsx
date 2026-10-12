@@ -11,6 +11,8 @@ interface Props {
 interface SectionField {
   key:
     | 'professionalSummary' | 'earlyLifeBackground' | 'education' | 'careerJourney'
+    | 'publicServiceChieftainship' | 'agriculturalPioneering' | 'internationalTravels'
+    | 'historicalContext' | 'culturalHeritage' | 'adversityAndResilience'
     | 'professionalAchievements' | 'communityContributions' | 'personalPhilosophy'
     | 'legacy' | 'personalLife';
   label: string;
@@ -27,16 +29,28 @@ const SECTIONS: SectionField[] = [
     hint: 'Primary/secondary education, college/university, degrees, certifications, special training.' },
   { key: 'careerJourney', label: '5. Career Journey', rows: 4,
     hint: 'Usually chronological: first job, major positions, organizations worked for, promotions or career changes, current position.' },
-  { key: 'professionalAchievements', label: '6. Professional Achievements', rows: 4,
+  { key: 'publicServiceChieftainship', label: '6. Public Service & Chieftainship', rows: 4,
+    hint: 'Civic leadership, chieftainship, administrative roles, government postings, local security & school initiatives.' },
+  { key: 'agriculturalPioneering', label: '7. Agricultural Pioneering & Cooperatives', rows: 4,
+    hint: 'Farming milestones, livestock modernization, establishing or leading dairy & beekeeping cooperatives.' },
+  { key: 'internationalTravels', label: '8. International Delegations & Studies', rows: 4,
+    hint: 'Overseas training, international scholarships, bilateral study tours, conference representation abroad.' },
+  { key: 'historicalContext', label: '9. Historical Events Witnessed', rows: 4,
+    hint: 'National and historic eras experienced firsthand (e.g. Mau Mau emergency, WWII bombings, Kenyatta succession).' },
+  { key: 'culturalHeritage', label: '10. Cultural Heritage & Customs', rows: 3,
+    hint: 'Age-set circumcision, clan history, cultural practices, traditional beliefs and customs.' },
+  { key: 'adversityAndResilience', label: '11. Adversity & Resilience', rows: 4,
+    hint: 'Challenges faced, overcoming setbacks, perseverance through political or personal struggles.' },
+  { key: 'professionalAchievements', label: '12. Professional Achievements', rows: 4,
     hint: 'Major accomplishments, projects, awards, publications, innovations, important contributions.' },
-  { key: 'communityContributions', label: '8. Community & Social Contributions', rows: 3,
+  { key: 'communityContributions', label: '13. Community & Social Contributions', rows: 3,
     hint: 'Community service, mentorship, charitable work, organizations supported, contributions to society.' },
-  { key: 'personalPhilosophy', label: '9. Personal Philosophy / Values', rows: 3,
+  { key: 'personalPhilosophy', label: '14. Personal Philosophy / Values', rows: 3,
     hint: 'Principles, beliefs about their profession, leadership philosophy, life lessons.' },
-  { key: 'legacy', label: '10. Legacy', rows: 4,
-    hint: 'What they want to be remembered for, knowledge to pass to younger generations, advice to future generations, their impact. Relatives can add their own memories below this in the Legacy tab.' },
-  { key: 'personalLife', label: '11. Personal Life', rows: 4,
-    hint: 'Family, hobbies, interests, personal achievements — only what they are comfortable making public.' },
+  { key: 'legacy', label: '15. Legacy', rows: 4,
+    hint: 'What they want to be remembered for, knowledge to pass to younger generations, advice to future generations, their impact.' },
+  { key: 'personalLife', label: '16. Personal Life', rows: 4,
+    hint: 'Family, hobbies, interests, sports, personal achievements — only what they are comfortable making public.' },
 ];
 
 export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => {
@@ -49,6 +63,12 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
     earlyLifeBackground: existing?.earlyLifeBackground ?? '',
     education: existing?.education ?? '',
     careerJourney: existing?.careerJourney ?? '',
+    publicServiceChieftainship: existing?.publicServiceChieftainship ?? '',
+    agriculturalPioneering: existing?.agriculturalPioneering ?? '',
+    internationalTravels: existing?.internationalTravels ?? '',
+    historicalContext: existing?.historicalContext ?? '',
+    culturalHeritage: existing?.culturalHeritage ?? '',
+    adversityAndResilience: existing?.adversityAndResilience ?? '',
     professionalAchievements: existing?.professionalAchievements ?? '',
     communityContributions: existing?.communityContributions ?? '',
     personalPhilosophy: existing?.personalPhilosophy ?? '',
@@ -76,6 +96,12 @@ export const BiographyEditorModal: React.FC<Props> = ({ memberId, onClose }) => 
       earlyLifeBackground: fields.earlyLifeBackground.trim() || undefined,
       education: fields.education.trim() || undefined,
       careerJourney: fields.careerJourney.trim() || undefined,
+      publicServiceChieftainship: fields.publicServiceChieftainship.trim() || undefined,
+      agriculturalPioneering: fields.agriculturalPioneering.trim() || undefined,
+      internationalTravels: fields.internationalTravels.trim() || undefined,
+      historicalContext: fields.historicalContext.trim() || undefined,
+      culturalHeritage: fields.culturalHeritage.trim() || undefined,
+      adversityAndResilience: fields.adversityAndResilience.trim() || undefined,
       professionalAchievements: fields.professionalAchievements.trim() || undefined,
       areasOfExpertise: areasOfExpertise.length ? areasOfExpertise : undefined,
       communityContributions: fields.communityContributions.trim() || undefined,

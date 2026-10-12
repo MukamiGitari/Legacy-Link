@@ -189,17 +189,29 @@ export interface Biography {
   education?: string;
   /** 5. Career Journey — first job, major positions, organizations, promotions/career changes, current position. */
   careerJourney?: string;
-  /** 6. Professional Achievements — accomplishments, projects, awards, publications, innovations, contributions. */
+  /** 6. Public Service & Chieftainship — administrative leadership, chieftainship, local governance, civic mobilization. */
+  publicServiceChieftainship?: string;
+  /** 7. Agricultural Pioneering & Cooperatives — livestock modernization, dairy & beekeeping societies, farming innovations. */
+  agriculturalPioneering?: string;
+  /** 8. International Delegations & Studies — overseas scholarships, global conferences, international missions. */
+  internationalTravels?: string;
+  /** 9. Historical Events Witnessed — national and global milestones experienced firsthand (e.g. Mau Mau, WWII, transitions of state). */
+  historicalContext?: string;
+  /** 10. Cultural Heritage & Customs — clan lineage, age-sets, traditional rites, customs, and cultural beliefs. */
+  culturalHeritage?: string;
+  /** 11. Adversity & Resilience — personal, political, or professional trials overcome through perseverance. */
+  adversityAndResilience?: string;
+  /** 12. Professional Achievements — accomplishments, projects, awards, publications, innovations, contributions. */
   professionalAchievements?: string;
-  /** 7. Areas of Expertise — e.g. Leadership, Technology, Law, Business, Education, Healthcare. */
+  /** 13. Areas of Expertise — e.g. Leadership, Technology, Law, Business, Education, Healthcare. */
   areasOfExpertise?: string[];
-  /** 8. Community & Social Contributions — service, mentorship, charitable work, organizations supported. */
+  /** 14. Community & Social Contributions — service, mentorship, charitable work, organizations supported. */
   communityContributions?: string;
-  /** 9. Personal Philosophy / Values — principles, beliefs about their profession, leadership philosophy, life lessons. */
+  /** 15. Personal Philosophy / Values — principles, beliefs about their profession, leadership philosophy, life lessons. */
   personalPhilosophy?: string;
-  /** 10. Legacy — what they want to be remembered for, knowledge to pass on, advice, their impact. */
+  /** 16. Legacy — what they want to be remembered for, knowledge to pass on, advice, their impact. */
   legacy?: string;
-  /** 11. Personal Life — family, hobbies, interests, personal achievements they're comfortable making public. */
+  /** 17. Personal Life — family, hobbies, interests, personal achievements they're comfortable making public. */
   personalLife?: string;
   updatedAt: string;
   updatedByProfileId?: string;

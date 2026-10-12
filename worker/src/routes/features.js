@@ -274,6 +274,12 @@ const bioSchema = z.object({
   earlyLifeBackground: z.string().optional(),
   education: z.string().optional(),
   careerJourney: z.string().optional(),
+  publicServiceChieftainship: z.string().optional(),
+  agriculturalPioneering: z.string().optional(),
+  internationalTravels: z.string().optional(),
+  historicalContext: z.string().optional(),
+  culturalHeritage: z.string().optional(),
+  adversityAndResilience: z.string().optional(),
   professionalAchievements: z.string().optional(),
   areasOfExpertise: z.array(z.string()).default([]),
   communityContributions: z.string().optional(),
@@ -309,14 +315,22 @@ features.post('/biographies', async (c) => {
     const result = await client.query(
       `INSERT INTO biographies (
          family_id, member_id, professional_summary, early_life_background, education,
-         career_journey, professional_achievements, areas_of_expertise, community_contributions,
+         career_journey, public_service_chieftainship, agricultural_pioneering, international_travels,
+         historical_context, cultural_heritage, adversity_and_resilience,
+         professional_achievements, areas_of_expertise, community_contributions,
          personal_philosophy, legacy, personal_life, updated_by_profile_id
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        ON CONFLICT (member_id) DO UPDATE SET
          professional_summary = EXCLUDED.professional_summary,
          early_life_background = EXCLUDED.early_life_background,
          education = EXCLUDED.education,
          career_journey = EXCLUDED.career_journey,
+         public_service_chieftainship = EXCLUDED.public_service_chieftainship,
+         agricultural_pioneering = EXCLUDED.agricultural_pioneering,
+         international_travels = EXCLUDED.international_travels,
+         historical_context = EXCLUDED.historical_context,
+         cultural_heritage = EXCLUDED.cultural_heritage,
+         adversity_and_resilience = EXCLUDED.adversity_and_resilience,
          professional_achievements = EXCLUDED.professional_achievements,
          areas_of_expertise = EXCLUDED.areas_of_expertise,
          community_contributions = EXCLUDED.community_contributions,
@@ -328,7 +342,9 @@ features.post('/biographies', async (c) => {
        RETURNING *`,
       [
         profile.family_id, d.memberId, d.professionalSummary ?? null, d.earlyLifeBackground ?? null,
-        d.education ?? null, d.careerJourney ?? null, d.professionalAchievements ?? null,
+        d.education ?? null, d.careerJourney ?? null, d.publicServiceChieftainship ?? null,
+        d.agriculturalPioneering ?? null, d.internationalTravels ?? null, d.historicalContext ?? null,
+        d.culturalHeritage ?? null, d.adversityAndResilience ?? null, d.professionalAchievements ?? null,
         d.areasOfExpertise, d.communityContributions ?? null, d.personalPhilosophy ?? null,
         d.legacy ?? null, d.personalLife ?? null, user.id
       ]

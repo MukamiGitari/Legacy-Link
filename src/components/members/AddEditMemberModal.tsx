@@ -6,8 +6,62 @@ import { canDelete } from '../../lib/permissions';
 import { getParents, getSpouses } from '../../lib/lineage';
 import { uploadFileToR2 } from '../../lib/api';
 
-const AVATAR_PRESETS = ['aria', 'kaari', 'kanyoro', 'kiogora', 'mworia', 'kaburu', 'kathurima', 'kobia']
-  .map(seed => `https://api.dicebear.com/7.x/personas/svg?seed=${seed}`);
+// Skin-tone tokens supported by DiceBear open-peeps / lorelei
+const SKIN_TONES = ['apricot', 'coast', 'yellow', 'tan', 'brown', 'darkBrown'] as const;
+
+type AgeGroup = '0-10' | '10-20' | '20-30' | '30-40' | '50-70' | '70-80';
+
+function peepsUrl(seed: string, skinColor: string) {
+  return `https://api.dicebear.com/7.x/open-peeps/svg?seed=${seed}&skinColor=${skinColor}&backgroundColor=transparent`;
+}
+function loreleiUrl(seed: string, skinColor: string) {
+  return `https://api.dicebear.com/7.x/lorelei/svg?seed=${seed}&skinColor=${skinColor}&backgroundColor=transparent`;
+}
+function bigEarsUrl(seed: string, skinColor: string) {
+  return `https://api.dicebear.com/7.x/big-ears/svg?seed=${seed}&skinColor=${skinColor}&backgroundColor=transparent`;
+}
+
+// Seeds chosen to evoke each age/gender group — DiceBear renders them as silhouettes
+// so seeds are just stable identifiers; the skinColor drives visual variety.
+const AVATAR_GROUPS: Record<AgeGroup, { label: string; male: string[]; female: string[] }> = {
+  '0-10': {
+    label: 'Child (0–10)',
+    male:   SKIN_TONES.map(s => bigEarsUrl('boy-child-a', s)),
+    female: SKIN_TONES.map(s => bigEarsUrl('girl-child-b', s)),
+  },
+  '10-20': {
+    label: 'Teen (10–20)',
+    male:   SKIN_TONES.map(s => peepsUrl('teen-male-x', s)),
+    female: SKIN_TONES.map(s => peepsUrl('teen-female-y', s)),
+  },
+  '20-30': {
+    label: 'Young adult (20–30)',
+    male:   SKIN_TONES.map(s => peepsUrl('young-adult-male-1', s)),
+    female: SKIN_TONES.map(s => loreleiUrl('young-adult-female-1', s)),
+  },
+  '30-40': {
+    label: 'Adult (30–40)',
+    male:   SKIN_TONES.map(s => peepsUrl('adult-male-2', s)),
+    female: SKIN_TONES.map(s => loreleiUrl('adult-female-2', s)),
+  },
+  '50-70': {
+    label: 'Middle-aged (50–70)',
+    male:   SKIN_TONES.map(s => peepsUrl('middle-aged-male-3', s)),
+    female: SKIN_TONES.map(s => loreleiUrl('middle-aged-female-3', s)),
+  },
+  '70-80': {
+    label: 'Elder (70–80)',
+    male:   SKIN_TONES.map(s => peepsUrl('elder-male-4', s)),
+    female: SKIN_TONES.map(s => loreleiUrl('elder-female-4', s)),
+  },
+};
+
+const AGE_GROUP_KEYS = Object.keys(AVATAR_GROUPS) as AgeGroup[];
+
+const SKIN_LABELS: Record<string, string> = {
+  apricot: 'Light', coast: 'Light-medium', yellow: 'East Asian',
+  tan: 'Medium', brown: 'Medium-dark', darkBrown: 'Dark',
+};
 
 interface AddEditMemberModalProps {
   memberId: string | null; // null = create mode
@@ -42,9 +96,10 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
   const [petName, setPetName] = useState(existing?.petName ?? '');
   const [isFounder, setIsFounder] = useState(existing?.isFounder ?? false);
   const [namedAfter, setNamedAfter] = useState(existing?.namedAfter ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(existing?.avatarUrl ?? AVATAR_PRESETS[0]);
+  const [avatarUrl, setAvatarUrl] = useState(existing?.avatarUrl ?? AVATAR_GROUPS['30-40'].male[0]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [avatarAgeTab, setAvatarAgeTab] = useState<AgeGroup>('30-40');
 
   const [parent1Id, setParent1Id] = useState(existingParents[0] ?? '');
   const [parent2Id, setParent2Id] = useState(existingParents[1] ?? '');
@@ -205,21 +260,47 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
                 <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoSelect(e.target.files)} />
               </label>
             </div>
-            <p className="mt-2 text-xs text-heritage-green-500 dark:text-heritage-dark-muted">Or pick a placeholder avatar instead:</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {AVATAR_PRESETS.map(url => (
-                <button
-                  type="button"
-                  key={url}
-                  onClick={() => { setAvatarUrl(url); setAvatarFile(null); }}
-                  className={`rounded-full ${avatarUrl === url ? 'ring-2 ring-heritage-gold-500' : ''}`}
-                >
-                  <img src={url} className="w-10 h-10 rounded-full bg-heritage-cream-200" alt="" />
-                </button>
-              ))}
-              <div className="w-10 h-10 rounded-full bg-heritage-cream-200 flex items-center justify-center text-heritage-green-400">
-                <User size={18} />
+
+            {/* Avatar picker — grouped by age then M/F × skin tone */}
+            <div className="mt-3 border border-heritage-cream-300 dark:border-heritage-dark-border rounded-xl overflow-hidden">
+              {/* Age-group tabs */}
+              <div className="flex overflow-x-auto scrollbar-none border-b border-heritage-cream-300 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover">
+                {AGE_GROUP_KEYS.map(key => (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setAvatarAgeTab(key)}
+                    className={`px-3 py-2 text-[11px] font-medium whitespace-nowrap shrink-0 transition-colors
+                      ${avatarAgeTab === key
+                        ? 'border-b-2 border-heritage-gold-500 text-heritage-green-900 dark:text-heritage-dark-text bg-white dark:bg-heritage-dark-card'
+                        : 'text-heritage-green-500 dark:text-heritage-dark-muted hover:text-heritage-green-800'}`}
+                  >
+                    {AVATAR_GROUPS[key].label}
+                  </button>
+                ))}
               </div>
+
+              {/* Male / Female rows */}
+              {(['male', 'female'] as const).map(sex => (
+                <div key={sex} className="px-3 py-2 border-b last:border-b-0 border-heritage-cream-200 dark:border-heritage-dark-border">
+                  <p className="text-[10px] uppercase tracking-widest text-heritage-green-400 dark:text-heritage-dark-muted mb-1.5">
+                    {sex === 'male' ? '♂ Male' : '♀ Female'}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {AVATAR_GROUPS[avatarAgeTab][sex].map((url, i) => (
+                      <button
+                        type="button"
+                        key={url}
+                        title={SKIN_LABELS[SKIN_TONES[i]]}
+                        onClick={() => { setAvatarUrl(url); setAvatarFile(null); }}
+                        className={`rounded-full transition-transform hover:scale-110 ${avatarUrl === url ? 'ring-2 ring-heritage-gold-500 ring-offset-1' : ''}`}
+                      >
+                        <img src={url} className="w-10 h-10 rounded-full bg-heritage-cream-100 dark:bg-heritage-dark-hover" alt={`${sex} ${SKIN_LABELS[SKIN_TONES[i]]}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

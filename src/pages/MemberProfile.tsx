@@ -180,6 +180,42 @@ export const MemberProfile: React.FC<Props> = ({ memberId, onBack, onSelectMembe
                       <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.careerJourney}</p>
                     </section>
                   )}
+                  {biography.publicServiceChieftainship && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Public Service & Chieftainship</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.publicServiceChieftainship}</p>
+                    </section>
+                  )}
+                  {biography.agriculturalPioneering && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Agricultural Pioneering & Cooperatives</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.agriculturalPioneering}</p>
+                    </section>
+                  )}
+                  {biography.internationalTravels && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">International Delegations & Studies</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.internationalTravels}</p>
+                    </section>
+                  )}
+                  {biography.historicalContext && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Historical Events Witnessed</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.historicalContext}</p>
+                    </section>
+                  )}
+                  {biography.culturalHeritage && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Cultural Heritage & Customs</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.culturalHeritage}</p>
+                    </section>
+                  )}
+                  {biography.adversityAndResilience && (
+                    <section>
+                      <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Adversity & Resilience</h3>
+                      <p className="text-sm leading-relaxed text-heritage-green-800 dark:text-heritage-dark-text whitespace-pre-line">{biography.adversityAndResilience}</p>
+                    </section>
+                  )}
                   {biography.professionalAchievements && (
                     <section>
                       <h3 className="font-serif text-lg text-heritage-green-900 dark:text-heritage-dark-text mb-2">Professional Achievements</h3>
