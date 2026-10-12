@@ -90,6 +90,32 @@ export async function uploadFileToR2({
   recipeId?: string;
   albumId?: string;
 }) {
+  // Strategy 1: Direct upload via Worker endpoint (CORS-safe, streams directly to R2 bucket binding)
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (albumId) formData.append('albumId', albumId);
+
+    const token = getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/albums/photos/upload-direct`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { key: data.key, url: data.publicUrl || data.url };
+    }
+  } catch (directErr) {
+    console.warn('[upload] direct upload failed, trying presign fallback:', directErr);
+  }
+
+  // Strategy 2: Presigned S3 PUT upload fallback
   const { uploadUrl, key, publicUrl } = await api.post<{ uploadUrl: string; key: string; publicUrl: string }>(
     '/albums/photos/presign-upload',
     {
@@ -110,8 +136,5 @@ export async function uploadFileToR2({
     throw new Error('Upload to storage failed');
   }
 
-  // `key` is the bare R2 object key (e.g. "photos/abc123-file.jpg") — not a
-  // browser-loadable URL. `publicUrl` (built by the Worker from R2_PUBLIC_URL)
-  // is what should actually be stored/rendered as the photo/avatar's url.
   return { key, url: publicUrl };
 }

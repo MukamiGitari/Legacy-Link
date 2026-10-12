@@ -268,6 +268,52 @@ albums.post('/photos/presign-upload', async (c) => {
   });
 });
 
+// POST /api/albums/photos/upload-direct — upload media directly through the Worker to R2 binding (avoids CORS)
+albums.post('/photos/upload-direct', async (c) => {
+  const user = c.get('user');
+
+  return withClient(c.env, async (client) => {
+    const profile = await getProfile(client, user.id);
+    if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
+    const isAuthorizedUploader = ['super_admin', 'family_admin', 'family_member'].includes(profile.role);
+    if (!isAuthorizedUploader) {
+      return c.json({ error: 'Guests cannot upload photos' }, 403);
+    }
+
+    const formData = await c.req.parseBody();
+    const file = formData['file'];
+    const albumId = formData['albumId'];
+    if (!file || typeof file === 'string') {
+      return c.json({ error: 'No file provided' }, 400);
+    }
+
+    if (albumId && typeof albumId === 'string') {
+      const albumRes = await client.query(
+        `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
+        [albumId, profile.family_id],
+      );
+      if (albumRes.rowCount === 0) {
+        await client.query(
+          `INSERT INTO albums (id, family_id, title, category)
+           VALUES ($1, $2, 'Family Album', 'childhood')
+           ON CONFLICT (id) DO NOTHING`,
+          [albumId, profile.family_id],
+        );
+      }
+    }
+
+    const filename = file.name || 'image.jpg';
+    const key = buildKey('photos', filename);
+    const arrayBuffer = await file.arrayBuffer();
+    await c.env.MEDIA_BUCKET.put(key, arrayBuffer, {
+      httpMetadata: { contentType: file.type || 'image/jpeg' },
+    });
+
+    const publicUrl = getPublicUrl(c.env, key);
+    return c.json({ key, publicUrl, url: publicUrl }, 201);
+  });
+});
+
 // POST /api/albums/photos — register an uploaded photo and tag members
 albums.post('/photos', async (c) => {
   const body = await c.req.json();
