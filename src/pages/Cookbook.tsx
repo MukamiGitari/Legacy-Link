@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   X, Plus, Clock, Star, Tag, ChefHat, Trash2, Search,
-  ShoppingBasket, ListChecks, Flame, ArrowRight, BookOpen,
+  ShoppingBasket, ListChecks, Flame, ArrowRight, BookOpen, Camera, Loader2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -364,7 +364,36 @@ const RecipeDetail: React.FC<{
   onSelectMember: (id: string) => void;
   onDelete?: () => void;
 }> = ({ recipe, onClose, onSelectMember, onDelete }) => {
-  const { data } = useApp();
+  const { data, currentProfile, updateRecipe, isOnlineMode, pushToast } = useApp();
+  const canEdit = canAddContent(currentProfile?.role);
+  const [updatingPhoto, setUpdatingPhoto] = useState(false);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (file: File | undefined) => {
+    if (!file || updatingPhoto) return;
+    setUpdatingPhoto(true);
+    try {
+      let url = '';
+      if (isOnlineMode) {
+        const { uploadFileToR2 } = await import('../lib/api');
+        const res = await uploadFileToR2({ category: 'photos', file });
+        url = res.url;
+      } else {
+        const reader = new FileReader();
+        url = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+      updateRecipe(recipe.id, { photoUrl: url });
+      pushToast('Recipe photo updated successfully!');
+    } catch (err: any) {
+      pushToast(`Failed to update recipe photo: ${err?.message || 'unknown error'}`);
+    } finally {
+      setUpdatingPhoto(false);
+    }
+  };
+
   const contributor = recipe.contributedByMemberId
     ? data.members.find(m => m.id === recipe.contributedByMemberId)
     : undefined;
@@ -389,6 +418,28 @@ const RecipeDetail: React.FC<{
           )}
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+          {/* Add / Change Photo button */}
+          {canEdit && (
+            <div className="absolute top-4 left-4 z-10">
+              <button
+                type="button"
+                disabled={updatingPhoto}
+                onClick={() => photoInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-all shadow-md"
+              >
+                {updatingPhoto ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
+                <span>{updatingPhoto ? 'Uploading…' : (recipe.photoUrl ? 'Change Photo' : 'Add Photo')}</span>
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => handlePhotoUpload(e.target.files?.[0])}
+              />
+            </div>
+          )}
 
           {/* Close button */}
           <button

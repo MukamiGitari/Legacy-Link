@@ -50,7 +50,8 @@ const cookbookCreateSchema = z.object({
 });
 
 const recipeCreateSchema = z.object({
-  albumId: z.string().uuid(),
+  id: z.string().uuid().optional(),
+  albumId: z.string().uuid().or(z.literal('cb1')).transform(v => v === 'cb1' ? 'c0000000-0000-0000-0000-000000000001' : v),
   title: z.string().min(1).max(200),
   category: z.enum(['breakfast', 'main', 'snacks', 'desserts']),
   isVegetarian: z.boolean().default(false),
@@ -172,17 +173,42 @@ recipes.post('/', async (c) => {
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
     const {
-      albumId, title, category, isVegetarian, photoUrl, ingredients, instructions,
+      id, albumId, title, category, isVegetarian, photoUrl, ingredients, instructions,
       cookTime, familyStory, contributedByMemberId,
     } = parsed.data;
 
+    // Ensure cookbook album exists to satisfy foreign key constraint
+    const albumRes = await client.query(
+      `SELECT id FROM cookbook_albums WHERE id = $1 AND family_id = $2`,
+      [albumId, profile.family_id],
+    );
+    if (albumRes.rowCount === 0) {
+      await client.query(
+        `INSERT INTO cookbook_albums (id, family_id, title, style)
+         VALUES ($1, $2, 'Traditional Family Cookbook', 'traditional')
+         ON CONFLICT (id) DO NOTHING`,
+        [albumId, profile.family_id],
+      );
+    }
+
     const result = await client.query(
       `INSERT INTO recipes (
-         album_id, family_id, title, category, is_vegetarian, photo_url,
+         id, album_id, family_id, title, category, is_vegetarian, photo_url,
          ingredients, instructions, cook_time, family_story, contributed_by_member_id
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+       ) VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         category = EXCLUDED.category,
+         is_vegetarian = EXCLUDED.is_vegetarian,
+         photo_url = EXCLUDED.photo_url,
+         ingredients = EXCLUDED.ingredients,
+         instructions = EXCLUDED.instructions,
+         cook_time = EXCLUDED.cook_time,
+         family_story = EXCLUDED.family_story,
+         contributed_by_member_id = EXCLUDED.contributed_by_member_id
+       RETURNING *`,
       [
-        albumId, profile.family_id, title, category, isVegetarian, photoUrl ?? null,
+        id ?? null, albumId, profile.family_id, title, category, isVegetarian, photoUrl ?? null,
         ingredients, instructions, cookTime ?? null, familyStory ?? null, contributedByMemberId ?? null,
       ],
     );

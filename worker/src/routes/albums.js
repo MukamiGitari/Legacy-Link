@@ -202,7 +202,9 @@ albums.delete('/:id', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (profile.role !== 'family_admin') return c.json({ error: 'Only admins can delete albums' }, 403);
+    if (!['super_admin', 'family_admin'].includes(profile.role)) {
+      return c.json({ error: 'Only admins can delete albums' }, 403);
+    }
 
     const existing = await client.query(
       `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
@@ -331,7 +333,7 @@ albums.delete('/photos/:id', async (c) => {
   return withClient(c.env, async (client) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked to your profile' }, 403);
-    if (!['family_admin', 'family_member'].includes(profile.role)) {
+    if (!['super_admin', 'family_admin', 'family_member'].includes(profile.role)) {
       return c.json({ error: 'Guests cannot delete photos' }, 403);
     }
 

@@ -19,7 +19,10 @@ interface Props {
 }
 
 export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCategory }) => {
-  const { data, addRecipe } = useApp();
+  const { data, addRecipe, isOnlineMode, pushToast } = useApp();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<RecipeCategory>(initialCategory ?? 'main');
   const [isVegetarian, setIsVegetarian] = useState(false);
@@ -36,6 +39,7 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCateg
 
   const handlePhotoFile = (file: File | undefined) => {
     if (!file) return;
+    setPhotoFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -45,24 +49,48 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCateg
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    const ingredients = ingredientsText.split('\n').map(s => s.trim()).filter(Boolean);
-    const instructions = instructionsText.split('\n').map(s => s.trim()).filter(Boolean);
-    addRecipe({
-      albumId,
-      title: title.trim(),
-      category,
-      isVegetarian,
-      photoUrl: photoUrl || undefined,
-      ingredients,
-      instructions,
-      cookTime: cookTime.trim() || undefined,
-      familyStory: familyStory.trim() || undefined,
-      contributedByMemberId: contributedByMemberId || undefined,
-    });
-    onClose();
+    if (!title.trim() || uploading) return;
+    setUploading(true);
+
+    try {
+      let finalPhotoUrl = photoUrl || undefined;
+      if (photoFile && isOnlineMode) {
+        try {
+          const { uploadFileToR2 } = await import('../../lib/api');
+          const res = await uploadFileToR2({ category: 'photos', file: photoFile });
+          finalPhotoUrl = res.url;
+        } catch (uploadErr) {
+          console.warn('[AddRecipeModal] R2 upload failed, keeping preview:', uploadErr);
+        }
+      }
+
+      // Canonical UUID for the cookbook album
+      const resolvedAlbumId = (albumId === 'cb1' || !albumId)
+        ? (data.cookbookAlbums[0]?.id || 'c0000000-0000-0000-0000-000000000001')
+        : albumId;
+
+      const ingredients = ingredientsText.split('\n').map(s => s.trim()).filter(Boolean);
+      const instructions = instructionsText.split('\n').map(s => s.trim()).filter(Boolean);
+      addRecipe({
+        albumId: resolvedAlbumId,
+        title: title.trim(),
+        category,
+        isVegetarian,
+        photoUrl: finalPhotoUrl,
+        ingredients,
+        instructions,
+        cookTime: cookTime.trim() || undefined,
+        familyStory: familyStory.trim() || undefined,
+        contributedByMemberId: contributedByMemberId || undefined,
+      });
+      onClose();
+    } catch (err: any) {
+      pushToast(`Couldn't add recipe: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -82,17 +110,31 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCateg
         <div className="p-6 space-y-4">
           <div>
             <label className={labelCls}>Food photo</label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div className="w-16 h-16 rounded-lg overflow-hidden bg-heritage-cream-200 flex items-center justify-center border border-heritage-cream-400 dark:border-heritage-dark-border shrink-0">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border hover:border-heritage-green-600 cursor-pointer bg-heritage-cream-50/50 dark:bg-heritage-dark-hover/30 transition-all"
+            >
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-heritage-cream-200 dark:bg-heritage-dark-hover flex items-center justify-center border border-heritage-cream-300 dark:border-heritage-dark-border shrink-0">
                 {photoPreview
                   ? <img src={photoPreview} className="w-full h-full object-cover" alt="" />
                   : <span className="text-2xl">🍽️</span>}
               </div>
-              <span className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted">
-                {photoPreview ? 'Photo selected' : 'Optional — choose a photo of the finished dish'}
-              </span>
-              <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoFile(e.target.files?.[0])} />
-            </label>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-text block">
+                  {photoPreview ? 'Photo selected (click to replace)' : 'Click to choose a photo of this dish'}
+                </span>
+                <span className="text-[11px] text-heritage-green-600 dark:text-heritage-dark-muted block mt-0.5">
+                  Supports JPEG, PNG, WEBP (optional)
+                </span>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => handlePhotoFile(e.target.files?.[0])}
+              />
+            </div>
           </div>
 
           <div>
