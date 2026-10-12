@@ -248,7 +248,14 @@ albums.post('/photos/presign-upload', async (c) => {
         `SELECT id FROM albums WHERE id = $1 AND family_id = $2`,
         [albumId, profile.family_id],
       );
-      if (albumRes.rowCount === 0) return c.json({ error: 'Album not found' }, 404);
+      if (albumRes.rowCount === 0) {
+        await client.query(
+          `INSERT INTO albums (id, family_id, title, category)
+           VALUES ($1, $2, 'Family Album', 'childhood')
+           ON CONFLICT (id) DO NOTHING`,
+          [albumId, profile.family_id],
+        );
+      }
     }
 
     const key = buildKey('photos', filename);

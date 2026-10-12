@@ -17,20 +17,10 @@ const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean
 });
 
 export const members: Member[] = [
-  // Generation -2 & -1 — Ancestors of Nkuruu
-  m({ id: 'b0000000-0000-0000-0000-000000000005', firstName: 'Kurirua', lastName: 'Ancestor', gender: 'male', generation: -2,
-    occupation: 'Founding Ancestor',
-    bio: 'Great-grandfather of Senior Chief Gerald Kithinji M\'Ikunyua and father of M\'Mbwiria.',
-    isFounder: true, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
-  m({ id: 'b0000000-0000-0000-0000-000000000004', firstName: "M'Mbwiria", lastName: 'son of Kurirua', gender: 'male', generation: -1,
-    occupation: 'Lineage Patriarch',
-    bio: 'Father of Nkuruu M\'Mbwiria and grandfather of Senior Chief Gerald Kithinji M\'Ikunyua. Son of Kurirua.',
-    isFounder: true, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
-
-  // Generation 0 — Parents & Wives
+  // Generation 0 — Founding Patriarch & Wives
   m({ id: 'b0000000-0000-0000-0000-000000000001', firstName: 'Nkuruu', lastName: "M'Mbwiria", gender: 'male', generation: 0,
     occupation: 'Farmer & WWI Veteran',
-    bio: 'Father of Senior Chief Gerald M\'Ikunyua and patriarch of the Mbwiria lineage. A World War I veteran deployed to Dodoma, Tanzania, who farmed bananas, yams, and coffee in Kinoru and kept cattle and sheep.',
+    bio: 'Father of Senior Chief Gerald M\'Ikunyua and founding patriarch of the Mbwiria lineage (son of M\'Mbwiria, son of Kurirua). A World War I veteran deployed to Dodoma, Tanzania, who farmed bananas, yams, and coffee in Kinoru and kept cattle and sheep.',
     isFounder: true, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
   m({ id: 'b0000000-0000-0000-0000-000000000002', firstName: 'Salome Gateti', lastName: 'CioMuga', gender: 'female', generation: 0,
     occupation: 'Homesteader & Farmer',
@@ -64,11 +54,19 @@ export const members: Member[] = [
   m({ id: 'b0000000-0000-0000-0001-000000000001', firstName: 'Gerald Kithinji', lastName: "M'Ikunyua", gender: 'male', generation: 1,
     dateOfBirth: '1937-08-14', birthPlace: 'Kinoru Village, Meru, Kenya', occupation: 'Senior Chief, Animal Production Officer & Agricultural Pioneer',
     bio: 'Patriarch of the M\'Ikunyua family, pioneering agriculturalist, Senior Chief of Ntima location, and lifelong public servant who transformed dairy farming, cooperatives, and community development across Meru and Kenya.',
-    isFounder: true, professionalTitle: 'Senior Chief / Assistant Animal Production Officer', currentOrganization: 'Ministry of Agriculture & Livestock / Office of the President', location: 'Kinoru, Meru, Kenya' }),
+    isFounder: false, professionalTitle: 'Senior Chief / Assistant Animal Production Officer', currentOrganization: 'Ministry of Agriculture & Livestock / Office of the President', location: 'Kinoru, Meru, Kenya' }),
   m({ id: 'b0000000-0000-0000-0001-000000000002', firstName: 'Lily', lastName: 'Ncurubi', gender: 'female', generation: 1,
     birthPlace: 'Meru, Kenya', occupation: 'Matriarch & Community Leader',
     bio: 'Beloved matriarch of the M\'Ikunyua family, who supported community development, local agriculture, and raised six children who carry forward the family legacy.',
     isFounder: false, location: 'Kinoru, Meru, Kenya' }),
+
+  // Generation 2 — Children of Gerald & Lily
+  m({ id: 'b0000000-0000-0000-0002-000000000001', firstName: 'Thomas', lastName: 'Muriithi', gender: 'male', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0002-000000000002', firstName: 'Timothy', lastName: 'Mwirigi', gender: 'male', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0002-000000000003', firstName: 'Jane', lastName: 'Kathure', gender: 'female', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0002-000000000004', firstName: 'Martin', lastName: 'Gitari', gender: 'male', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0002-000000000005', firstName: 'Betty', lastName: 'Karwitha', gender: 'female', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0002-000000000006', firstName: 'Edwin', lastName: 'Kimathi', gender: 'male', generation: 2, birthPlace: 'Kinoru, Meru, Kenya', location: 'Meru, Kenya' }),
 
   // Generation 1 — the root couple
   m({ id: 'm1', firstName: 'Reuben', lastName: 'Kobia', gender: 'male', generation: 1,
@@ -159,9 +157,6 @@ const parentOf = (parentId: string, childId: string): Relationship => ({
 });
 
 export const relationships: Relationship[] = [
-  // Ancestry Lineage of Nkuruu
-  parentOf('b0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000004'), // Kurirua -> M'Mbwiria
-  parentOf('b0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'), // M'Mbwiria -> Nkuruu M'Mbwiria
 
   // Nkuruu M'Mbwiria marriages (Two Wives)
   ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', '1920-01-01'), // First Wife: Salome Gateti
@@ -185,6 +180,20 @@ export const relationships: Relationship[] = [
 
   // Gerald & Lily
   ...spouse('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0001-000000000002'),
+
+  // Generation 2 — Children of Gerald & Lily
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000001'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000001'),
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000002'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000002'),
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000003'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000003'),
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000004'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000004'),
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000005'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000005'),
+  parentOf('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0002-000000000006'),
+  parentOf('b0000000-0000-0000-0001-000000000002', 'b0000000-0000-0000-0002-000000000006'),
   ...spouse('m1', 'm2', '1950-06-10'),
   ...spouse('m3', 'm4', '1976-08-14'),
   ...spouse('m5', 'm6', '1977-03-19'),

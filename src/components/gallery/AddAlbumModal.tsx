@@ -21,12 +21,14 @@ interface Props {
 }
 
 export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
-  const { data, addAlbum } = useApp();
+  const { data, addAlbum, isOnlineMode } = useApp();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Album['category']>('childhood');
   const [description, setDescription] = useState('');
   const [coverPhotoUrl, setCoverPhotoUrl] = useState('');
   const [coverPreview, setCoverPreview] = useState('');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [featuredMemberId, setFeaturedMemberId] = useState('');
 
   const inputCls = "w-full rounded-lg border border-heritage-cream-400 bg-white dark:bg-heritage-dark-hover dark:border-heritage-dark-border dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400";
@@ -34,6 +36,7 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
   const handleCoverFile = (file: File | undefined) => {
     if (!file) return;
+    setCoverFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
@@ -43,17 +46,35 @@ export const AddAlbumModal: React.FC<Props> = ({ onClose, onCreated }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    const album = addAlbum({
-      title: title.trim(),
-      category,
-      description: description.trim() || undefined,
-      coverPhotoUrl: coverPhotoUrl || defaultCoverFor(category),
-      featuredMemberId: featuredMemberId || undefined,
-    });
-    onCreated(album.id);
+    if (!title.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      let finalCover = defaultCoverFor(category);
+      if (coverFile && isOnlineMode) {
+        try {
+          const { uploadFileToR2 } = await import('../../lib/api');
+          const res = await uploadFileToR2({ category: 'photos', file: coverFile });
+          finalCover = res.url;
+        } catch {
+          finalCover = defaultCoverFor(category);
+        }
+      } else if (coverPhotoUrl && coverPhotoUrl.startsWith('http')) {
+        finalCover = coverPhotoUrl;
+      }
+
+      const album = addAlbum({
+        title: title.trim(),
+        category,
+        description: description.trim() || undefined,
+        coverPhotoUrl: finalCover,
+        featuredMemberId: featuredMemberId || undefined,
+      });
+      onCreated(album.id);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

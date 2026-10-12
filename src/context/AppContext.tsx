@@ -401,7 +401,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         title: album.title,
         category: album.category,
         description: album.description,
-        coverPhotoUrl: album.coverPhotoUrl,
+        coverPhotoUrl: album.coverPhotoUrl?.startsWith('http') ? album.coverPhotoUrl : undefined,
         featuredMemberId: album.featuredMemberId,
       }));
     }
@@ -460,13 +460,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const photo: Photo = { ...p, id: newId(), familyId: data.family.id };
     setData(prev => ({ ...prev, photos: [...prev.photos, photo] }));
     if (isOnlineMode) {
-      persist('add photo', () => api.post('/albums/photos', {
-        albumId: photo.albumId,
-        url: photo.url,
-        caption: photo.caption,
-        takenAt: photo.takenAt,
-        taggedMemberIds: photo.taggedMemberIds,
-      }));
+      persist('add photo', async () => {
+        try {
+          return await api.post('/albums/photos', {
+            albumId: photo.albumId,
+            url: photo.url,
+            caption: photo.caption,
+            takenAt: photo.takenAt,
+            taggedMemberIds: photo.taggedMemberIds,
+          });
+        } catch (err: any) {
+          const errMsg = err?.message || String(err);
+          // If the server returned "Album not found", auto-create the album on the server and retry
+          if (errMsg.includes('Album not found')) {
+            const targetAlbum = data.albums.find(a => a.id === photo.albumId);
+            if (targetAlbum) {
+              await api.post('/albums', {
+                id: targetAlbum.id,
+                title: targetAlbum.title,
+                category: targetAlbum.category,
+                description: targetAlbum.description,
+                coverPhotoUrl: targetAlbum.coverPhotoUrl?.startsWith('http') ? targetAlbum.coverPhotoUrl : undefined,
+                featuredMemberId: targetAlbum.featuredMemberId,
+              }).catch(() => null);
+
+              // Retry saving the photo now that the album exists
+              return await api.post('/albums/photos', {
+                albumId: photo.albumId,
+                url: photo.url,
+                caption: photo.caption,
+                takenAt: photo.takenAt,
+                taggedMemberIds: photo.taggedMemberIds,
+              });
+            }
+          }
+          throw err;
+        }
+      });
     }
     logActivity(`Uploaded a photo`, 'photo');
     notifyTaggedMembers(

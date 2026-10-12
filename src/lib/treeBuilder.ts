@@ -1,5 +1,5 @@
 import type { Member, Relationship } from '../types';
-import { getChildren, getSpouses, WIFE_COLORS, getWifeLabel, getSpouseFamily, getFoundingAncestors } from './lineage';
+import { getParents, getChildren, getSpouses, WIFE_COLORS, getWifeLabel, getSpouseFamily, getFoundingAncestors } from './lineage';
 
 export interface WifeLine {
   spouse: Member;
@@ -121,13 +121,26 @@ export function buildForest(
 
   const roots: TreeUnit[] = [];
 
-  // Founding roots
-  members
-    .filter(m => foundingIds.has(m.id))
-    .forEach(m => {
-      const unit = buildUnit(m.id);
-      if (unit) roots.push(unit);
-    });
+  // Top-level roots must be apex ancestors (no parent recorded within this tree)
+  const hasParentInTree = (memberId: string) => {
+    const parents = getParents(memberId, relationships);
+    return parents.some(pid => byId.has(pid));
+  };
+
+  const candidateRoots = members
+    .filter(m => foundingIds.has(m.id) && !hasParentInTree(m.id))
+    .sort((a, b) => a.generation - b.generation);
+
+  const primaryRoots = candidateRoots.length > 0
+    ? candidateRoots
+    : members
+        .filter(m => !hasParentInTree(m.id))
+        .sort((a, b) => a.generation - b.generation);
+
+  primaryRoots.forEach(m => {
+    const unit = buildUnit(m.id);
+    if (unit) roots.push(unit);
+  });
 
   // When 'inlaws' is selected, also catch any disconnected member roots
   if (filter === 'inlaws') {
