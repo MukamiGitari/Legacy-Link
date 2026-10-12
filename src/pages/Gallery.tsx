@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  X, Plus, ImagePlus, Trash2, Tag,
+  X, Plus, ImagePlus, Trash2, Tag, Pencil,
   Heart, ArrowRight, ArrowLeft, Camera,
   Smile, Cake, GraduationCap, Users2, BookOpen, Images, FolderOpen,
   ChevronLeft, ChevronRight, Maximize2, Minimize2, Play, Pause, LayoutGrid, Film,
@@ -8,6 +8,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { AddAlbumModal } from '../components/gallery/AddAlbumModal';
+import { EditAlbumModal } from '../components/gallery/EditAlbumModal';
 import { AddPhotosModal } from '../components/gallery/AddPhotosModal';
 import type { Album, Photo } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
@@ -75,6 +76,8 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
   // Add album modal
   const [showAddAlbum, setShowAddAlbum] = useState(false);
   const [addAlbumCategory, setAddAlbumCategory] = useState<Album['category'] | undefined>();
+  // Edit album modal
+  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
 
   // Likes (local counter)
   const [likes, setLikes] = useState<Record<string, number>>({});
@@ -217,7 +220,16 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {canAdd && (
+                    <button
+                      onClick={() => setEditingAlbum(selectedAlbum)}
+                      className="flex items-center gap-1.5 bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border shadow-soft transition-colors"
+                      title="Edit Album Details"
+                    >
+                      <Pencil size={15} /> Edit Album
+                    </button>
+                  )}
                   {canAdd && (
                     <button
                       onClick={() => setAddPhotosAlbumId(selectedAlbum.id)}
@@ -417,8 +429,10 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                           album={album}
                           photos={data.photos.filter(p => p.albumId === album.id)}
                           members={data.members}
+                          canEdit={canAdd}
                           canRemove={canRemove}
                           onSelect={() => setSelectedAlbumId(album.id)}
+                          onEdit={() => setEditingAlbum(album)}
                           onDelete={() => handleDeleteAlbum(album.id, album.title)}
                         />
                       ))}
@@ -493,8 +507,10 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                         album={album}
                         photos={data.photos.filter(p => p.albumId === album.id)}
                         members={data.members}
+                        canEdit={canAdd}
                         canRemove={canRemove}
                         onSelect={() => setSelectedAlbumId(album.id)}
+                        onEdit={() => setEditingAlbum(album)}
                         onDelete={() => handleDeleteAlbum(album.id, album.title)}
                       />
                     ))}
@@ -520,6 +536,13 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             setSelectedAlbumId(albumId);
             setAddPhotosAlbumId(albumId);
           }}
+        />
+      )}
+
+      {editingAlbum && (
+        <EditAlbumModal
+          album={editingAlbum}
+          onClose={() => setEditingAlbum(null)}
         />
       )}
 
@@ -789,12 +812,14 @@ interface AlbumCardProps {
   album: Album;
   photos: Photo[];
   members: ReturnType<typeof useApp>['data']['members'];
+  canEdit: boolean;
   canRemove: boolean;
   onSelect: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
-function AlbumCard({ album, photos, members, canRemove, onSelect, onDelete }: AlbumCardProps) {
+function AlbumCard({ album, photos, members, canEdit, canRemove, onSelect, onEdit, onDelete }: AlbumCardProps) {
   const meta = getCategoryMeta(album.category as Exclude<CategoryKey, 'all'>);
   const featuredMember = album.featuredMemberId
     ? members.find(m => m.id === album.featuredMemberId)
@@ -853,19 +878,34 @@ function AlbumCard({ album, photos, members, canRemove, onSelect, onDelete }: Al
           <span className="font-semibold text-heritage-green-800 dark:text-heritage-gold-400 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
             Open Album <ArrowRight size={13} />
           </span>
-          {canRemove && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-1.5 text-heritage-green-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-              title="Delete Album"
-              aria-label="Delete Album"
-            >
-              <Trash2 size={13} />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {canEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 text-heritage-green-600 hover:text-heritage-green-900 dark:text-heritage-dark-muted dark:hover:text-heritage-dark-text rounded-lg hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover transition-colors"
+                title="Edit Album Details"
+                aria-label="Edit Album Details"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+            {canRemove && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1.5 text-heritage-green-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                title="Delete Album"
+                aria-label="Delete Album"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
