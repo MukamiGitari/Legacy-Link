@@ -17,6 +17,39 @@ const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean
 });
 
 export const members: Member[] = [
+  // Generation 0 — Parents & Wives
+  m({ id: 'b0000000-0000-0000-0000-000000000001', firstName: 'Nkuruu', lastName: "M'Mbwiria", gender: 'male', generation: 0,
+    occupation: 'Farmer & WWI Veteran',
+    bio: 'Father of Senior Chief Gerald M\'Ikunyua and patriarch of the Mbwiria lineage. A World War I veteran deployed to Dodoma, Tanzania, who farmed bananas, yams, and coffee in Kinoru and kept cattle and sheep.',
+    isFounder: true, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0000-000000000002', firstName: 'Salome Gateti', lastName: 'CioMuga', gender: 'female', generation: 0,
+    occupation: 'Homesteader & Farmer',
+    bio: 'Mother of Senior Chief Gerald M\'Ikunyua and first wife of Nkuruu M\'Mbwiria. Raised three sons in Kinoru, planted millet and ncabi (black beans) in Kithoka, and saved young Gerald from a childhood fire.',
+    isFounder: true, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0000-000000000003', firstName: 'Second Wife', lastName: "M'Mbwiria", gender: 'female', generation: 0,
+    occupation: 'Homesteader & Farmer',
+    bio: 'Second wife of Nkuruu M\'Mbwiria who raised three sons in Kinoru alongside Salome Gateti.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+
+  // Generation 1 — Brothers of Gerald (House of Salome Gateti)
+  m({ id: 'b0000000-0000-0000-0001-000000000011', firstName: 'Eldest Brother', lastName: "M'Mbwiria", gender: 'male', generation: 1,
+    bio: 'First son of Salome Gateti and Nkuruu M\'Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0001-000000000012', firstName: 'Second Brother', lastName: "M'Mbwiria", gender: 'male', generation: 1,
+    bio: 'Second son of Salome Gateti and Nkuruu M\'Mbwiria; attended school in the early 1940s and circumcised in 1942.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+
+  // Generation 1 — Stepbrothers of Gerald (House of Second Wife)
+  m({ id: 'b0000000-0000-0000-0001-000000000021', firstName: 'Stepbrother 1', lastName: "M'Mbwiria", gender: 'male', generation: 1,
+    bio: 'First son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0001-000000000022', firstName: 'Stepbrother 2', lastName: "M'Mbwiria", gender: 'male', generation: 1,
+    bio: 'Second son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+  m({ id: 'b0000000-0000-0000-0001-000000000023', firstName: 'Stepbrother 3', lastName: "M'Mbwiria", gender: 'male', generation: 1,
+    bio: 'Third son of the second wife of Nkuruu M\'Mbwiria; raised in Kinoru homestead.',
+    birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+
   // Generation 1 — M'Ikunyua Patriarch & Matriarch
   m({ id: 'b0000000-0000-0000-0001-000000000001', firstName: 'Gerald Kithinji', lastName: "M'Ikunyua", gender: 'male', generation: 1,
     dateOfBirth: '1937-08-14', birthPlace: 'Kinoru Village, Meru, Kenya', occupation: 'Senior Chief, Animal Production Officer & Agricultural Pioneer',
@@ -116,6 +149,27 @@ const parentOf = (parentId: string, childId: string): Relationship => ({
 });
 
 export const relationships: Relationship[] = [
+  // Nkuruu M'Mbwiria marriages (Two Wives)
+  ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', '1920-01-01'), // First Wife: Salome Gateti
+  ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000003', '1925-01-01'), // Second Wife
+
+  // House of Salome Gateti (Gerald + 2 Full Brothers)
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000011'),
+  parentOf('b0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0001-000000000011'),
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000012'),
+  parentOf('b0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0001-000000000012'),
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000001'),
+  parentOf('b0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0001-000000000001'),
+
+  // House of Second Wife (3 Stepbrothers)
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000021'),
+  parentOf('b0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0001-000000000021'),
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000022'),
+  parentOf('b0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0001-000000000022'),
+  parentOf('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0001-000000000023'),
+  parentOf('b0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0001-000000000023'),
+
+  // Gerald & Lily
   ...spouse('b0000000-0000-0000-0001-000000000001', 'b0000000-0000-0000-0001-000000000002'),
   ...spouse('m1', 'm2', '1950-06-10'),
   ...spouse('m3', 'm4', '1976-08-14'),
