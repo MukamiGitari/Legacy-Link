@@ -407,7 +407,7 @@ export interface RestorationCode {
 }
 
 /** Every game in the Games hub that can contribute points to the combined family leaderboard. */
-export type GameKey = 'trivia' | 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'sudoku' | 'flashcards' | 'scrabbleTiles';
+export type GameKey = 'trivia' | 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'sudoku' | 'flashcards' | 'scrabbleTiles' | 'pool';
 
 /** One completed round of any non-trivia game, kept for the combined family leaderboard.
  *  Trivia keeps its own richer `TriviaScore` record (with category), but every round — trivia

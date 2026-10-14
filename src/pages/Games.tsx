@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { UserSearch, ListOrdered, Quote, PenLine, Layers, Grid3x3, Trophy, Crown, Grid2x2, Spade, type LucideIcon } from 'lucide-react';
+import { UserSearch, ListOrdered, Quote, PenLine, Layers, Grid3x3, Trophy, Crown, Grid2x2, Spade, CircleDot, type LucideIcon } from 'lucide-react';
 import { GuessWho } from '../components/games/GuessWho';
 import { BirthdayBingo } from '../components/games/BirthdayBingo';
 import { WhoSaidIt } from '../components/games/WhoSaidIt';
@@ -8,12 +8,13 @@ import { LanguageFlashcards } from '../components/games/LanguageFlashcards';
 import { Sudoku } from '../components/games/Sudoku';
 import { ScrabbleTiles } from '../components/games/ScrabbleTiles';
 import { Canasta } from '../components/games/Canasta';
+import { PoolGame } from '../components/games/PoolGame';
 import { useApp } from '../context/AppContext';
 import { resolveDisplayName } from '../lib/names';
 import type { GameKey as ScoredGameKey } from '../types';
 
 export type GameKey = 'guessWho' | 'birthdayBingo' | 'whoSaidIt' | 'storyBuilder' | 'flashcards' | 'sudoku' | 'scrabbleTiles';
-export type TableGameKey = 'canasta';
+export type TableGameKey = 'canasta' | 'pool';
 
 const SCORED_GAME_LABEL: Record<ScoredGameKey, string> = {
   trivia: 'Trivia',
@@ -23,6 +24,7 @@ const SCORED_GAME_LABEL: Record<ScoredGameKey, string> = {
   sudoku: 'Sudoku',
   flashcards: 'Flashcards',
   scrabbleTiles: 'Scrabble Tiles',
+  pool: 'Pool',
 };
 
 interface GameMeta {
@@ -91,6 +93,12 @@ const TABLE_GAMES: TableGameMeta[] = [
     icon: Spade,
     description: "Grab real cards and let this keep score — melds, canastas, and going-out bonuses included.",
   },
+  {
+    key: 'pool',
+    label: 'Pool',
+    icon: CircleDot,
+    description: 'An 8-ball table for two — share a device, or play a relative online with a room code.',
+  },
 ];
 
 export const Games: React.FC = () => {
@@ -142,6 +150,7 @@ export const Games: React.FC = () => {
   if (active === 'sudoku') return <Sudoku onBack={back} />;
   if (active === 'scrabbleTiles') return <ScrabbleTiles onBack={back} />;
   if (activeTableGame === 'canasta') return <Canasta onBack={backFromTableGame} />;
+  if (activeTableGame === 'pool') return <PoolGame onBack={backFromTableGame} />;
 
   return (
     <div className="space-y-6">
@@ -159,7 +168,7 @@ export const Games: React.FC = () => {
         </div>
         <p className="text-xs text-heritage-green-500 dark:text-heritage-dark-muted mb-4">
           Every round of every game counts — points are summed across Trivia, Guess Who, Birthday
-          Bingo, Who Said It, Sudoku, Flashcards, and Scrabble Tiles to crown one overall family champion.
+          Bingo, Who Said It, Sudoku, Flashcards, Scrabble Tiles, and Pool to crown one overall family champion.
         </p>
 
         {leaderboard.length === 0 ? (

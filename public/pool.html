@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Pool Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3efe8;--ink:#2a1d14;--muted:#7a6a5c;--panel:#e8e0d3;--accent:#b8862b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17110d;--ink:#f1e6d4;--muted:#a69580;--panel:#261b14;--accent:#e0b04f}}
+:root[data-theme="dark"]{--bg:#17110d;--ink:#f1e6d4;--muted:#a69580;--panel:#261b14;--accent:#e0b04f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.bar{width:100%;max-width:900px;display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
+.pl{flex:1;background:var(--panel);border-radius:10px;padding:10px 14px;border:2px solid transparent;transition:border-color .2s}
+.pl.on{border-color:var(--accent)}
+.pl b{font-weight:800;font-size:1.05rem}
+.pl small{display:block;color:var(--muted);margin-top:2px}
+.tray{display:flex;gap:3px;margin-top:6px;min-height:14px}
+.tray i{width:14px;height:14px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.35)}
+#cv{width:100%;max-width:900px;aspect-ratio:2/1;touch-action:none;border-radius:14px;display:block}
+.foot{width:100%;max-width:900px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
+#msg{font-weight:600}
+button{font:inherit;font-weight:600;background:var(--accent);color:#1b120a;border:0;border-radius:8px;padding:12px 18px;min-height:44px;cursor:pointer}
+#rot{display:none;color:var(--muted);font-size:.85rem;margin-top:8px}
+@media (orientation:portrait) and (max-width:600px){#rot{display:block}}
+input{font:inherit;padding:12px 10px;min-height:44px;border-radius:8px;border:1px solid var(--muted);background:var(--panel);color:var(--ink);width:130px}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="pl on" id="p0"><b>Player 1</b><small id="g0">Table open</small><div class="tray" id="t0"></div></div>
+  <div class="pl" id="p1"><b>Player 2</b><small id="g1">Table open</small><div class="tray" id="t1"></div></div>
+</div>
+<canvas id="cv" width="800" height="400" aria-label="Pool table"></canvas>
+<div class="foot"><div><input id="nm" placeholder="Your name" maxlength="24"> <input id="rm" placeholder="Room code" maxlength="12"> <button id="go">Play online</button></div></div>
+<div class="foot"><span id="msg">Player 1: drag back from the white ball, release to shoot.</span><span><button id="mute" aria-label="Toggle sound">🔊</button> <button id="new">New game</button></span></div>
+<div id="rot">Tip: turn your phone sideways for a bigger table.</div>
+<script>
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+const R=10,X0=40,X1=760,Y0=40,Y1=360,DT=1/120,FRIC=0.9962,STOP=10,MAXV=1500,MAXPULL=140;
+const POCKETS=[[X0,Y0],[X1,Y0],[X0,Y1],[X1,Y1],[400,Y0-4],[400,Y1+4]],PR=19;
+const Q=new URLSearchParams(location.search);
+const WORKER=Q.get('ws')||((location.protocol==='https:'?'wss://':'ws://')+location.host);
+let net=null,shotSeat=0,shots=0;
+const COL=['#fff','#e8b923','#1f4fb0','#c62d2d','#5b2a86','#e66b17','#1f7a3d','#7a1f1f','#111'];
+let ac=null,muted=false,strikeAnim=null;
+function unlock(){if(!ac){const A=window.AudioContext||window.webkitAudioContext;if(A)ac=new A()}if(ac&&ac.state==='suspended')ac.resume()}
+function blip(f0,f1,dur,vol,type){if(!ac||muted)return;const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type=type||'sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur)}
+const sfx={hit:v=>blip(1800+v*900,900,.05,.05+.25*v,'triangle'),rail:v=>blip(160,70,.09,.06+.2*v,'sine'),cue:v=>blip(260,90,.06,.1+.25*v,'square'),
+  pocket:()=>{blip(420,120,.22,.25,'sine');if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(25)}};
+const railHit=v=>{if(Math.abs(v)>30)sfx.rail(Math.min(Math.abs(v)/900,1))};
+let placing=false,placeDrag=false,firstHit=null,onPlaced=null;
+let balls,turn,groups,pot,moving,over,aim,msg=document.getElementById('msg');
+const colorOf=n=>COL[n>8?n-8:n];
+function rack(){
+  balls=[{n:0,x:210,y:200,vx:0,vy:0,in:false}];
+  const order=[1,9,2,10,8,3,11,4,12,5,13,6,14,7,15];let k=0;
+  for(let c=0;c<5;c++)for(let r=0;r<=c;r++){
+    balls.push({n:order[k++],x:540+c*R*1.75,y:200+(r-c/2)*R*2.05,vx:0,vy:0,in:false});
+  }
+}
+function reset(){rack();turn=0;groups=[null,null];pot=[[],[]];moving=false;over=false;aim=null;placing=false;ui('Player 1: drag back from the white ball, release to shoot.')}
+function ui(t){msg.textContent=t;
+  for(let i=0;i<2;i++){
+    document.getElementById('p'+i).classList.toggle('on',i===turn&&!over);
+    document.getElementById('g'+i).textContent=groups[i]||'Table open';
+    document.getElementById('t'+i).innerHTML=pot[i].map(n=>`<i style="background:${colorOf(n)}"></i>`).join('');
+  }
+}
+// One shot = {angle, power 0..1}. Physics is fixed-step, so the same shot replays identically on any device.
+function fire(a,pw){if(strikeAnim)return;strikeAnim={a,pw,t0:performance.now()}}
+function shoot(angle,power){
+  const c=balls[0];c.vx=Math.cos(angle)*power*MAXV;c.vy=Math.sin(angle)*power*MAXV;
+  moving=true;shotPots=[];firstHit=null;shotSeat=turn;shots++;
+}
+let shotPots=[];
+function step(){
+  for(const b of balls){if(b.in)continue;
+    b.x+=b.vx*DT;b.y+=b.vy*DT;b.vx*=FRIC;b.vy*=FRIC;
+    if(Math.hypot(b.vx,b.vy)<STOP){b.vx=b.vy=0}
+    let potted=false;
+    for(const p of POCKETS)if(Math.hypot(b.x-p[0],b.y-p[1])<PR){potted=true;break}
+    if(potted){b.in=true;b.vx=b.vy=0;shotPots.push(b.n);sfx.pocket();continue}
+    if(b.x<X0+R){b.x=X0+R;railHit(b.vx);b.vx=Math.abs(b.vx)*.8}
+    if(b.x>X1-R){b.x=X1-R;railHit(b.vx);b.vx=-Math.abs(b.vx)*.8}
+    if(b.y<Y0+R){b.y=Y0+R;railHit(b.vy);b.vy=Math.abs(b.vy)*.8}
+    if(b.y>Y1-R){b.y=Y1-R;railHit(b.vy);b.vy=-Math.abs(b.vy)*.8}
+  }
+  for(let i=0;i<balls.length;i++){const a=balls[i];if(a.in)continue;
+    for(let j=i+1;j<balls.length;j++){const b=balls[j];if(b.in)continue;
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+      if(d<2*R&&d>0){
+        if(firstHit===null&&(a.n===0||b.n===0))firstHit=a.n===0?b.n:a.n;
+        const nx=dx/d,ny=dy/d,ov=(2*R-d)/2;
+        a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+        const dv=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
+        if(dv>0){if(dv>8)sfx.hit(Math.min(dv/700,1));a.vx-=dv*nx;a.vy-=dv*ny;b.vx+=dv*nx;b.vy+=dv*ny}
+      }}}
+  return balls.some(b=>!b.in&&(b.vx||b.vy));
+}
+function settle(){settleCore();if(net&&shotSeat===net.seat)net.ws.send(JSON.stringify({t:'settled',turn,over}))}
+function settleCore(){
+  moving=false;
+  const me=turn,scratch=shotPots.includes(0),others=shotPots.filter(n=>n!==0);
+  const type=n=>n===8?'8':n<8?'Solids':'Stripes';
+  const ownLeft=groups[me]&&balls.some(b=>(!b.in||shotPots.includes(b.n))&&b.n!==8&&type(b.n)===groups[me]);
+  const wrong=firstHit===null||(!groups[me]?firstHit===8:(ownLeft?type(firstHit)!==groups[me]:firstHit!==8));
+  const foul=scratch||wrong;
+  if(others.includes(8)){
+    const own=groups[me],left=own&&balls.some(b=>!b.in&&b.n!==8&&type(b.n)===own);
+    over=true;pot[me].push(...others);
+    const win=own&&!left&&!foul;
+    turn=win?me:1-me;ui(`Player ${turn+1} wins! ${win?'The 8-ball dropped last.':'The 8-ball went in too early.'}`);if(window.parent!==window)parent.postMessage({type:'pool-over',won:!!(net&&net.seat===turn)},location.origin);return;
+  }
+  if(!groups[me]&&others.length&&!foul){groups[me]=type(others[0]);groups[1-me]=groups[me]==='Solids'?'Stripes':'Solids'}
+  others.forEach(n=>{const owner=groups[0]&&type(n)===groups[0]?0:groups[1]&&type(n)===groups[1]?1:me;pot[owner].push(n)});
+  const kept=!foul&&others.some(n=>type(n)===groups[me]);
+  if(foul){const c=balls[0];c.in=false;c.vx=c.vy=0;if(scratch){c.x=210;c.y=200}placing=true;turn=1-me}
+  else if(!kept)turn=1-turn;
+  ui(foul?`Foul by Player ${me+1} (${scratch?'scratch':'wrong ball first'}). Player ${turn+1}: drag the white ball to place it anywhere.`:`Player ${turn+1}: your shot.`);
+}
+function pt(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*800/r.width,y:(e.clientY-r.top)*400/r.height}}
+cv.addEventListener('pointerdown',e=>{
+  unlock();
+  if(moving||over||strikeAnim||(net&&net.seat!==turn))return;const p=pt(e),c=balls[0];
+  if(placing){placeDrag=true;movePlace(p);cv.setPointerCapture(e.pointerId);return}
+  if(Math.hypot(p.x-c.x,p.y-c.y)<(e.pointerType==='touch'?R*6:R*3.5)){aim={x:p.x,y:p.y};cv.setPointerCapture(e.pointerId)}
+});
+cv.addEventListener('pointermove',e=>{if(placeDrag){movePlace(pt(e));return}if(aim){const p=pt(e);aim.x=p.x;aim.y=p.y}});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function movePlace(p){const c=balls[0];c.x=clamp(p.x,X0+R,X1-R);c.y=clamp(p.y,Y0+R,Y1-R)}
+function finishPlace(){
+  const c=balls[0];
+  for(let i=0;i<60;i++){const o=balls.find(b=>b!==c&&!b.in&&Math.hypot(b.x-c.x,b.y-c.y)<2*R);if(!o)break;
+    const a=Math.atan2(c.y-o.y,c.x-o.x);c.x=clamp(o.x+Math.cos(a)*2.1*R,X0+R,X1-R);c.y=clamp(o.y+Math.sin(a)*2.1*R,Y0+R,Y1-R)}
+  placing=false;ui(`Player ${turn+1}: your shot.`);if(onPlaced)onPlaced(c.x,c.y);
+}
+cv.addEventListener('pointerup',()=>{
+  if(placeDrag){placeDrag=false;finishPlace();return}
+  if(!aim)return;const c=balls[0],dx=c.x-aim.x,dy=c.y-aim.y,pull=Math.min(Math.hypot(dx,dy),MAXPULL);
+  aim=null;if(pull>8){const a=Math.atan2(dy,dx),pw=pull/MAXPULL;if(net)net.ws.send(JSON.stringify({t:'shot',angle:a,power:pw}));fire(a,pw)}
+});
+function drawCue(c,a,pull){cx.strokeStyle='#d9b27a';cx.lineWidth=5;cx.lineCap='round';cx.beginPath();cx.moveTo(c.x-Math.cos(a)*(R+6+pull*.5),c.y-Math.sin(a)*(R+6+pull*.5));cx.lineTo(c.x-Math.cos(a)*(R+6+pull*.5+180),c.y-Math.sin(a)*(R+6+pull*.5+180));cx.stroke();cx.lineWidth=1}
+function draw(){
+  cx.fillStyle='#4a2c17';cx.fillRect(0,0,800,400);
+  cx.fillStyle='#e0b04f';cx.fillRect(14,14,772,372);
+  cx.fillStyle='#4a2c17';cx.fillRect(18,18,764,364);
+  cx.fillStyle='#17695f';cx.fillRect(X0-6,Y0-6,X1-X0+12,Y1-Y0+12);
+  cx.strokeStyle='rgba(255,255,255,.12)';cx.beginPath();cx.moveTo(210,Y0);cx.lineTo(210,Y1);cx.stroke();
+  cx.fillStyle='#0a0a0a';POCKETS.forEach(p=>{cx.beginPath();cx.arc(p[0],p[1],PR,0,7);cx.fill()});
+  for(const b of balls){if(b.in)continue;
+    cx.beginPath();cx.arc(b.x,b.y,R,0,7);cx.fillStyle=b.n>8?'#fff':colorOf(b.n);cx.fill();
+    if(b.n>8){cx.save();cx.beginPath();cx.arc(b.x,b.y,R,0,7);cx.clip();cx.fillStyle=colorOf(b.n);cx.fillRect(b.x-R,b.y-5,2*R,10);cx.restore()}
+    if(b.n){cx.beginPath();cx.arc(b.x,b.y,4.2,0,7);cx.fillStyle='#fff';cx.fill();cx.fillStyle='#111';cx.font='bold 6px sans-serif';cx.textAlign='center';cx.fillText(b.n,b.x,b.y+2.2)}
+    cx.strokeStyle='rgba(0,0,0,.4)';cx.beginPath();cx.arc(b.x,b.y,R,0,7);cx.stroke();
+  }
+  if(placing){cx.strokeStyle='#e0b04f';cx.lineWidth=2;cx.beginPath();cx.arc(balls[0].x,balls[0].y,R+5,0,7);cx.stroke();cx.lineWidth=1}
+  if(strikeAnim){const e=Math.min((performance.now()-strikeAnim.t0)/130,1);drawCue(balls[0],strikeAnim.a,strikeAnim.pw*MAXPULL*(1-e*e))}
+  if(aim&&!moving){
+    const c=balls[0],dx=c.x-aim.x,dy=c.y-aim.y,pull=Math.min(Math.hypot(dx,dy),MAXPULL),a=Math.atan2(dy,dx);
+    cx.setLineDash([5,6]);cx.strokeStyle='rgba(255,255,255,.7)';cx.beginPath();cx.moveTo(c.x,c.y);cx.lineTo(c.x+Math.cos(a)*220,c.y+Math.sin(a)*220);cx.stroke();cx.setLineDash([]);
+    cx.strokeStyle='#d9b27a';cx.lineWidth=5;cx.lineCap='round';cx.beginPath();
+    cx.moveTo(c.x-Math.cos(a)*(R+6+pull*.5),c.y-Math.sin(a)*(R+6+pull*.5));
+    cx.lineTo(c.x-Math.cos(a)*(R+6+pull*.5+180),c.y-Math.sin(a)*(R+6+pull*.5+180));cx.stroke();cx.lineWidth=1;
+    cx.fillStyle='#e0b04f';cx.fillRect(24,382-8,pull/MAXPULL*140,5);
+  }
+}
+let last=performance.now(),acc=0;
+function loop(t){
+  if(strikeAnim&&performance.now()-strikeAnim.t0>=130){const q=strikeAnim;strikeAnim=null;sfx.cue(q.pw);shoot(q.a,q.pw)}
+  if(moving){acc+=Math.min((t-last)/1000,.05);while(acc>=DT){acc-=DT;if(!step()){settle();acc=0;break}}}
+  last=t;draw();requestAnimationFrame(loop);
+}
+document.getElementById('mute').onclick=e=>{muted=!muted;e.currentTarget.textContent=muted?'🔇':'🔊'};
+document.getElementById('new').onclick=()=>{if(net)net.ws.send(JSON.stringify({t:'reset'}));reset()};
+onPlaced=(x,y)=>{if(net)net.ws.send(JSON.stringify({t:'place',x,y}))};
+function names(n){[0,1].forEach(i=>document.querySelector('#p'+i+' b').textContent=n[i]||'Waiting for player…')}
+document.getElementById('go').onclick=()=>{
+  unlock();
+  const room=document.getElementById('rm').value.trim().toUpperCase()||Math.random().toString(36).slice(2,6).toUpperCase();
+  const name=document.getElementById('nm').value.trim()||'Guest';
+  document.getElementById('rm').value=room;
+  if(net)net.ws.close();
+  const ws=new WebSocket(`${WORKER}/ws?room=${encodeURIComponent(room)}&name=${encodeURIComponent(name)}`);
+  net={ws,seat:2};reset();
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.t==='hello'){net.seat=m.seat;names(m.names);ui(m.seat<2?`Room ${room}: you are Player ${m.seat+1}. Share the code.`:`Room ${room}: watching.`)}
+    else if(m.t==='names')names(m.names);
+    else if(m.t==='shot'&&!moving)fire(m.angle,m.power);
+    else if(m.t==='place'&&placing){balls[0].x=m.x;balls[0].y=m.y;placing=false;ui(`Player ${turn+1}: your shot.`)}
+    else if(m.t==='reset')reset();};
+  ws.onclose=()=>{ui('Disconnected from the room.');net=null};
+};
+document.getElementById('nm').value=Q.get('name')||'';
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

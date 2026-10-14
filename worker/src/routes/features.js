@@ -534,7 +534,7 @@ features.delete('/language/:id', async (c) => {
 // ===========================================================================
 const scoreSchema = z.object({
   playerName: z.string().min(1).max(100).optional(),
-  gameKey: z.enum(['trivia', 'guessWho', 'birthdayBingo', 'whoSaidIt', 'sudoku', 'flashcards', 'scrabbleTiles']),
+  gameKey: z.enum(['trivia', 'guessWho', 'birthdayBingo', 'whoSaidIt', 'sudoku', 'flashcards', 'scrabbleTiles', 'pool']),
   points: z.number().int().min(0),
 });
 
