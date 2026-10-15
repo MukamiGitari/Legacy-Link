@@ -6,7 +6,12 @@ import { canAddContent } from '../lib/permissions';
 export const Chronicle: React.FC = () => {
   const { data, addChronicleEra, currentProfile } = useApp();
   const canAdd = canAddContent(currentProfile?.role);
-  const eras = [...data.chronicleEras].sort((a, b) => a.sortOrder - b.sortOrder);
+  const eraYear = (label: string): number => {
+    const m = label.match(/\b(1[0-9]{3}|20[0-9]{2})/);
+    return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+  };
+  // Earliest -> latest by the year in the era label; sortOrder only breaks ties / orders undated eras.
+  const eras = [...data.chronicleEras].sort((a, b) => eraYear(a.eraLabel) - eraYear(b.eraLabel) || a.sortOrder - b.sortOrder);
 
   const [showForm, setShowForm] = useState(false);
   const [eraLabel, setEraLabel] = useState('');

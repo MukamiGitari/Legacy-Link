@@ -6,6 +6,16 @@ import { canAddContent } from '../lib/permissions';
 import { AudioRecorder } from '../components/vault/AudioRecorder';
 import { FamilySong } from './FamilySong';
 
+
+/** Best-effort year for ordering: first 4-digit year (or decade like "1960s") found in the era text,
+ *  otherwise the year the memory was added. Memories sort earliest -> latest. */
+const memoryYear = (era: string | undefined, createdAt: string): number => {
+  const m = era?.match(/\b(1[0-9]{3}|20[0-9]{2})/);
+  if (m) return parseInt(m[1], 10);
+  const y = new Date(createdAt).getFullYear();
+  return Number.isNaN(y) ? Number.MAX_SAFE_INTEGER : y;
+};
+
 interface Props {
   onSelectMember: (id: string) => void;
 }
@@ -53,7 +63,7 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted max-w-md">
-          Stories keep the family's history alive — add one worth remembering.
+          Memories are told in the first person ("I remember…") and listed from earliest to latest.
         </p>
         {canAdd && (
           <button
@@ -68,11 +78,11 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
       {showForm && canAdd && (
         <form onSubmit={submit} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card p-5 space-y-3">
           <input
-            value={title} onChange={e => setTitle(e.target.value)} placeholder="Title, e.g. Grandmother's Wedding Day & The Silk Shawl (1960)"
+            value={title} onChange={e => setTitle(e.target.value)} placeholder="Title, e.g. The Day I Learned to Shell Peas (1998)"
             className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
           />
           <textarea
-            value={body} onChange={e => setBody(e.target.value)} rows={4} placeholder="Tell the story..."
+            value={body} onChange={e => setBody(e.target.value)} rows={4} placeholder={'Write it in the first person, e.g. "I remember the summer we..."'}
             className="w-full rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border dark:bg-heritage-dark-hover dark:text-heritage-dark-text px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-heritage-gold-400"
           />
           <div className="flex flex-wrap gap-3">
@@ -102,7 +112,9 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
       )}
 
       <div className="space-y-4">
-        {data.memories.map(mem => {
+        {[...data.memories]
+          .sort((a, b) => memoryYear(a.era, a.createdAt) - memoryYear(b.era, b.createdAt) || a.createdAt.localeCompare(b.createdAt))
+          .map(mem => {
           const author = data.members.find(m => m.id === mem.authorMemberId);
           return (
             <div key={mem.id} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card overflow-hidden">

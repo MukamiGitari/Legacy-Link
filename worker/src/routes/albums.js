@@ -362,7 +362,7 @@ albums.post('/photos', async (c) => {
         .map((_, i) => `($1, $${i + 2})`)
         .join(', ');
       await client.query(
-        `INSERT INTO photo_tags (photo_id, member_id) VALUES ${tagValues}`,
+        `INSERT INTO photo_tags (photo_id, member_id) VALUES ${tagValues} ON CONFLICT DO NOTHING`,
         [photo.id, ...taggedMemberIds],
       );
     }
