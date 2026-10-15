@@ -3,9 +3,9 @@ import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { resolveDisplayName } from '../../lib/names';
 
-// Optional: wss:// address of the family-pool Worker (see pool-online/). Without it the
-// table still works for two players on one device; only "Play online" needs it.
-const POOL_WS = import.meta.env.VITE_POOL_WS_URL as string | undefined;
+// wss:// address of the family-pool Worker (see pool-online/). Override with VITE_POOL_WS_URL.
+// "Play online" needs it; two players on one device works without it.
+const POOL_WS = (import.meta.env.VITE_POOL_WS_URL as string | undefined) || 'wss://family-pool.heritagehub.workers.dev';
 
 const WIN_POINTS = 100;
 
