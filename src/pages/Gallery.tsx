@@ -181,78 +181,6 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
             )}
           </div>
 
-          {/* Album Header Banner */}
-          {(() => {
-            const meta = getCategoryMeta(selectedAlbum.category as Exclude<CategoryKey, 'all'>);
-            const featuredMember = selectedAlbum.featuredMemberId
-              ? data.members.find(m => m.id === selectedAlbum.featuredMemberId)
-              : null;
-
-            return (
-              <div className="bg-white dark:bg-heritage-dark-card rounded-2xl p-6 sm:p-8 shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-heritage-bark-600 text-white shadow-soft">
-                      {meta.icon} {meta.label}
-                    </span>
-                    <span className="text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted bg-heritage-cream-100 dark:bg-heritage-dark-hover px-3 py-1 rounded-full">
-                      {selectedAlbumPhotos.length} {selectedAlbumPhotos.length === 1 ? 'photo' : 'photos'}
-                    </span>
-                  </div>
-                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-heritage-green-900 dark:text-heritage-dark-text">
-                    {selectedAlbum.title}
-                  </h2>
-                  {selectedAlbum.description && (
-                    <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted max-w-2xl leading-relaxed">
-                      {selectedAlbum.description}
-                    </p>
-                  )}
-                  {featuredMember && (
-                    <p className="text-xs text-heritage-bark-600 dark:text-heritage-gold-400 font-medium">
-                      Dedicated to:{' '}
-                      <button
-                        onClick={() => onSelectMember(featuredMember.id)}
-                        className="font-semibold underline hover:text-heritage-green-800"
-                      >
-                        {fullName(featuredMember)}
-                      </button>
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                  {canAdd && (
-                    <button
-                      onClick={() => setEditingAlbum(selectedAlbum)}
-                      className="flex items-center gap-1.5 bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border shadow-soft transition-colors"
-                      title="Edit Album Details"
-                    >
-                      <Pencil size={15} /> Edit Album
-                    </button>
-                  )}
-                  {canAdd && (
-                    <button
-                      onClick={() => setAddPhotosAlbumId(selectedAlbum.id)}
-                      className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-soft transition-colors"
-                    >
-                      <ImagePlus size={15} /> Add Photos
-                    </button>
-                  )}
-                  {canRemove && (
-                    <button
-                      onClick={() => handleDeleteAlbum(selectedAlbum.id, selectedAlbum.title)}
-                      className="p-2.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/40 transition-colors"
-                      title="Delete Album"
-                      aria-label="Delete Album"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Empty state when album has no photos */}
           {selectedAlbumPhotos.length === 0 ? (
             <div className="border-2 border-dashed border-heritage-cream-200 dark:border-heritage-dark-border rounded-2xl p-12 text-center bg-white dark:bg-heritage-dark-card space-y-4">
@@ -327,6 +255,80 @@ export const Gallery: React.FC<Props> = ({ onSelectMember }) => {
                 </div>
               ))}
             </div>
+          )}
+          {/* Album details sit below the photos, not above them, and step aside while a
+              picture is open full screen. */}
+          {!isSlideFullscreen && (
+          (() => {
+            const meta = getCategoryMeta(selectedAlbum.category as Exclude<CategoryKey, 'all'>);
+            const featuredMember = selectedAlbum.featuredMemberId
+              ? data.members.find(m => m.id === selectedAlbum.featuredMemberId)
+              : null;
+
+            return (
+              <div className="bg-white dark:bg-heritage-dark-card rounded-2xl p-6 sm:p-8 shadow-soft border border-heritage-cream-200 dark:border-heritage-dark-border flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-heritage-bark-600 text-white shadow-soft">
+                      {meta.icon} {meta.label}
+                    </span>
+                    <span className="text-xs font-semibold text-heritage-green-700 dark:text-heritage-dark-muted bg-heritage-cream-100 dark:bg-heritage-dark-hover px-3 py-1 rounded-full">
+                      {selectedAlbumPhotos.length} {selectedAlbumPhotos.length === 1 ? 'photo' : 'photos'}
+                    </span>
+                  </div>
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-heritage-green-900 dark:text-heritage-dark-text">
+                    {selectedAlbum.title}
+                  </h2>
+                  {selectedAlbum.description && (
+                    <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted max-w-2xl leading-relaxed">
+                      {selectedAlbum.description}
+                    </p>
+                  )}
+                  {featuredMember && (
+                    <p className="text-xs text-heritage-bark-600 dark:text-heritage-gold-400 font-medium">
+                      Dedicated to:{' '}
+                      <button
+                        onClick={() => onSelectMember(featuredMember.id)}
+                        className="font-semibold underline hover:text-heritage-green-800"
+                      >
+                        {fullName(featuredMember)}
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {canAdd && (
+                    <button
+                      onClick={() => setEditingAlbum(selectedAlbum)}
+                      className="flex items-center gap-1.5 bg-heritage-cream-100 dark:bg-heritage-dark-hover hover:bg-heritage-cream-200 dark:hover:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border shadow-soft transition-colors"
+                      title="Edit Album Details"
+                    >
+                      <Pencil size={15} /> Edit Album
+                    </button>
+                  )}
+                  {canAdd && (
+                    <button
+                      onClick={() => setAddPhotosAlbumId(selectedAlbum.id)}
+                      className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-soft transition-colors"
+                    >
+                      <ImagePlus size={15} /> Add Photos
+                    </button>
+                  )}
+                  {canRemove && (
+                    <button
+                      onClick={() => handleDeleteAlbum(selectedAlbum.id, selectedAlbum.title)}
+                      className="p-2.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/40 transition-colors"
+                      title="Delete Album"
+                      aria-label="Delete Album"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()
           )}
         </div>
       ) : (

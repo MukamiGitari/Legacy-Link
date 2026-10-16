@@ -10,8 +10,18 @@ interface Props {
   onSelectMember: (id: string) => void;
 }
 
+// Memories read oldest-first: by the year in the era ("1940s" -> 1940), then in the order they
+// were added. Memories with no era (or no year in it) go last.
+const eraYear = (era?: string) => {
+  const m = era?.match(/\d{4}/);
+  return m ? parseInt(m[0], 10) : Infinity;
+};
+
 export const Memories: React.FC<Props> = ({ onSelectMember }) => {
   const { data, addMemory, currentProfile } = useApp();
+  const chronologicalMemories = [...data.memories].sort(
+    (x, y) => eraYear(x.era) - eraYear(y.era) || x.createdAt.localeCompare(y.createdAt),
+  );
   const canAdd = canAddContent(currentProfile?.role);
   const [view, setView] = useState<'stories' | 'songs'>('stories');
   const [showForm, setShowForm] = useState(false);
@@ -102,7 +112,7 @@ export const Memories: React.FC<Props> = ({ onSelectMember }) => {
       )}
 
       <div className="space-y-4">
-        {data.memories.map(mem => {
+        {chronologicalMemories.map(mem => {
           const author = data.members.find(m => m.id === mem.authorMemberId);
           return (
             <div key={mem.id} className="rounded-xl border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card overflow-hidden">
