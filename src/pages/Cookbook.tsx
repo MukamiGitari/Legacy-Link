@@ -2,11 +2,17 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X, Plus, Clock, Star, ChefHat, Trash2, Search, Mic, MicOff,
   Flame, ArrowRight, BookOpen, Camera, Loader2, Heart,
-  LayoutGrid, Columns, Sparkles, SlidersHorizontal, Check,
+  LayoutGrid, Columns, Sparkles, SlidersHorizontal, Check, CalendarDays,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
 import { AddRecipeModal } from '../components/cookbook/AddRecipeModal';
+import {
+  WeeklyMealPlanner,
+  createEmptyWeeklyPlan,
+  type WeeklyPlan,
+} from '../components/cookbook/WeeklyMealPlanner';
+import { PlanRecipeModal } from '../components/cookbook/PlanRecipeModal';
 import type { Recipe, RecipeCategory } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
 
@@ -48,7 +54,7 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   };
 
   // State
-  const [activeTab, setActiveTab] = useState<'recipes' | 'pantry' | 'favorites' | 'stories'>('recipes');
+  const [activeTab, setActiveTab] = useState<'recipes' | 'pantry' | 'favorites' | 'stories' | 'meal_plan'>('recipes');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<CookingMethodId>('all');
   const [selectedCategory, setSelectedCategory] = useState<'all' | RecipeCategory>('all');
@@ -56,6 +62,23 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [addCategory, setAddCategory] = useState<RecipeCategory | null>(null);
   const [openRecipeId, setOpenRecipeId] = useState<string | null>(null);
+  const [planningRecipe, setPlanningRecipe] = useState<Recipe | null>(null);
+
+  // Weekly Plan in localStorage
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan>(() => {
+    try {
+      const saved = localStorage.getItem('legacy-link-weekly-meal-plan');
+      return saved ? JSON.parse(saved) : createEmptyWeeklyPlan();
+    } catch {
+      return createEmptyWeeklyPlan();
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('legacy-link-weekly-meal-plan', JSON.stringify(weeklyPlan));
+    } catch {}
+  }, [weeklyPlan]);
 
   // Favorites in localStorage
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
@@ -194,7 +217,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
       // 4. Pantry / search query filter (matches title, ingredient list, author, or story)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        // Support comma-separated pantry search e.g. "potatoes, maize"
         const terms = q.split(',').map((t) => t.trim()).filter(Boolean);
 
         const titleMatch = terms.some((t) => r.title.toLowerCase().includes(t));
@@ -213,6 +235,10 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
       return true;
     });
   }, [data.recipes, activeTab, selectedCategory, selectedMethod, searchQuery, favoriteIds, data.members]);
+
+  const scheduledCount = useMemo(() => {
+    return Object.values(weeklyPlan).reduce((acc, cur) => acc + Object.keys(cur).length, 0);
+  }, [weeklyPlan]);
 
   return (
     <div className="space-y-6">
@@ -237,8 +263,8 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
           </div>
         </div>
 
-        {/* Sub-tabs */}
-        <div className="flex items-center gap-1.5 bg-[#1b222c] p-1.5 rounded-2xl border border-white/5 w-full md:w-auto overflow-x-auto">
+        {/* Sub-tabs matching Tablet Mockup */}
+        <div className="flex items-center gap-1.5 bg-[#1b222c] p-1.5 rounded-2xl border border-white/5 w-full md:w-auto overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('recipes')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
@@ -258,6 +284,17 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
             }`}
           >
             Pantry Search
+          </button>
+          <button
+            onClick={() => setActiveTab('meal_plan')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
+              activeTab === 'meal_plan'
+                ? 'bg-heritage-gold-500 text-heritage-green-950 shadow-md font-bold'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <CalendarDays size={13} className={activeTab === 'meal_plan' ? 'text-heritage-green-950' : 'text-heritage-gold-400'} />
+            <span>Meal Plan ({scheduledCount})</span>
           </button>
           <button
             onClick={() => setActiveTab('favorites')}
@@ -283,267 +320,284 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
         </div>
       </div>
 
-      {/* ── 2. Interactive Pantry Finder & Appliance Filter Tags (Gold Highlighted Box) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: Interactive Pantry Finder Box with Golden Outline */}
-        <div className="lg:col-span-7 bg-[#12171e] text-white p-5 rounded-3xl border-2 border-heritage-gold-500/80 shadow-lg relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-serif font-bold text-sm tracking-wide text-heritage-gold-300 flex items-center gap-2">
-              <Sparkles size={16} className="text-heritage-gold-400" />
-              Interactive Pantry Finder
-            </span>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-[11px] text-slate-400 hover:text-white underline"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+      {/* ── Active View Rendering ── */}
+      {activeTab === 'meal_plan' ? (
+        /* ── WEEKLY MEAL PLANNER TIMETABLE ── */
+        <WeeklyMealPlanner
+          recipes={data.recipes}
+          weeklyPlan={weeklyPlan}
+          onUpdatePlan={setWeeklyPlan}
+          onOpenRecipe={(id) => setOpenRecipeId(id)}
+          pushToast={pushToast}
+        />
+      ) : (
+        /* ── REGULAR RECIPE STREAM & PANTRY FINDER ── */
+        <>
+          {/* ── 2. Interactive Pantry Finder & Appliance Filter Tags (Gold Highlighted Box) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left: Interactive Pantry Finder Box with Golden Outline */}
+            <div className="lg:col-span-7 bg-[#12171e] text-white p-5 rounded-3xl border-2 border-heritage-gold-500/80 shadow-lg relative overflow-hidden flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-serif font-bold text-sm tracking-wide text-heritage-gold-300 flex items-center gap-2">
+                  <Sparkles size={16} className="text-heritage-gold-400" />
+                  Interactive Pantry Finder
+                </span>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-[11px] text-slate-400 hover:text-white underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
 
-          <div className="relative mt-1">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search recipes by pantry ingredients (e.g., maize, potatoes, coconut, ndengu)..."
-              className="w-full pl-10 pr-12 py-3 bg-[#1c232d] border border-white/10 rounded-2xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-heritage-gold-500 transition-all"
-            />
-            <button
-              onClick={startVoiceSearch}
-              title="Voice Search Pantry"
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-                isListening
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-white/10 text-heritage-gold-300 hover:bg-white/20'
-              }`}
-            >
-              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
-          </div>
-
-          {/* Quick pantry suggestions */}
-          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 text-xs text-slate-400 scrollbar-none">
-            <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">Popular:</span>
-            {['Potatoes', 'Green Maize', 'Coconut Milk', 'Pumpkin Leaves', 'Ndengu', 'Beans'].map((chip) => (
-              <button
-                key={chip}
-                onClick={() => setSearchQuery(chip)}
-                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-heritage-gold-500/20 hover:text-heritage-gold-300 text-[11px] text-slate-300 border border-white/5 transition-colors shrink-0"
-              >
-                +{chip}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Right: Appliance & Cooking Method Filter Tags */}
-        <div className="lg:col-span-5 bg-[#12171e] text-white p-5 rounded-3xl border border-white/10 shadow-lg flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-serif font-bold text-sm tracking-wide text-slate-300 flex items-center gap-1.5">
-              <SlidersHorizontal size={15} className="text-heritage-gold-400" />
-              Appliance & Method Filter Tags
-            </span>
-            <span className="text-[11px] text-slate-400 font-medium">{filteredRecipes.length} recipes</span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            {COOKING_METHODS.map((method) => {
-              const active = selectedMethod === method.id;
-              const count = methodCounts[method.id];
-              return (
+              <div className="relative mt-1">
+                <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search recipes by pantry ingredients (e.g., maize, potatoes, coconut, ndengu)..."
+                  className="w-full pl-10 pr-12 py-3 bg-[#1c232d] border border-white/10 rounded-2xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-heritage-gold-500 transition-all"
+                />
                 <button
-                  key={method.id}
-                  onClick={() => setSelectedMethod(method.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                    active
-                      ? 'bg-sky-600 border-sky-400 text-white shadow-md scale-105'
-                      : 'bg-[#1b222c] border-white/5 text-slate-300 hover:bg-white/10'
+                  onClick={startVoiceSearch}
+                  title="Voice Search Pantry"
+                  className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+                    isListening
+                      ? 'bg-red-500 text-white animate-pulse'
+                      : 'bg-white/10 text-heritage-gold-300 hover:bg-white/20'
                   }`}
                 >
-                  {'icon' in method && <span>{method.icon}</span>}
-                  <span>{method.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${active ? 'bg-white/20' : 'bg-black/30 text-slate-400'}`}>
-                    {count}
-                  </span>
+                  {isListening ? <MicOff size={16} /> : <Mic size={16} />}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Category Filter row */}
-          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5 overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              All Categories
-            </button>
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setSelectedCategory(cat.key)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors flex items-center gap-1 ${
-                  selectedCategory === cat.key
-                    ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. Recipe Stream Controls & Layout Switcher ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
-        <div>
-          <h2 className="font-serif font-black text-xl text-heritage-green-950 dark:text-heritage-gold-300 tracking-wide uppercase flex items-center gap-2">
-            <span>Compact Recipe Stream</span>
-            <span className="text-xs font-sans font-bold px-2 py-0.5 rounded-full bg-heritage-green-800 text-heritage-cream-100 dark:bg-heritage-dark-card dark:text-heritage-dark-muted">
-              {filteredRecipes.length}
-            </span>
-          </h2>
-          <p className="text-xs text-heritage-bark-500 dark:text-heritage-dark-muted">
-            {layoutMode === 'masonry'
-              ? 'Masonry stream active: dynamic heights showcase full recipe titles and heirlooms without clipping.'
-              : 'Compact grid active: uniform tablet dashboard cards.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {/* Layout Toggle (Masonry vs Grid) */}
-          <div className="flex items-center gap-1 bg-white dark:bg-heritage-dark-card p-1 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border shadow-soft">
-            <button
-              onClick={() => setLayoutMode('masonry')}
-              title="Masonry Stream View (Dynamic Title Height)"
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                layoutMode === 'masonry'
-                  ? 'bg-heritage-green-800 text-white shadow-soft'
-                  : 'text-heritage-bark-600 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
-              }`}
-            >
-              <Columns size={15} />
-              <span className="hidden sm:inline">Masonry</span>
-            </button>
-            <button
-              onClick={() => setLayoutMode('grid')}
-              title="Compact Grid View (Uniform Tablet Cards)"
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                layoutMode === 'grid'
-                  ? 'bg-heritage-green-800 text-white shadow-soft'
-                  : 'text-heritage-bark-600 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
-              }`}
-            >
-              <LayoutGrid size={15} />
-              <span className="hidden sm:inline">Grid</span>
-            </button>
-          </div>
-
-          {/* Add Recipe Action Button */}
-          {canAdd && (
-            <button
-              onClick={() => {
-                setAddCategory(null);
-                setShowAddRecipe(true);
-              }}
-              className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-soft transition-all active:scale-95 shrink-0"
-            >
-              <Plus size={15} /> Add Recipe
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── 4. Recipe Stream (Masonry vs Grid Rendering) ── */}
-      {filteredRecipes.length === 0 ? (
-        <div className="bg-white dark:bg-heritage-dark-card border-2 border-dashed border-heritage-cream-300 dark:border-heritage-dark-border rounded-3xl p-12 text-center shadow-soft">
-          <div className="w-16 h-16 rounded-full bg-heritage-cream-100 dark:bg-heritage-dark-hover mx-auto flex items-center justify-center text-heritage-bark-500 mb-4">
-            <BookOpen size={28} />
-          </div>
-          <h3 className="font-serif font-bold text-lg text-heritage-green-950 dark:text-heritage-dark-text">
-            No recipes matched your search
-          </h3>
-          <p className="text-xs text-heritage-bark-500 dark:text-heritage-dark-muted mt-1 max-w-sm mx-auto">
-            Try adjusting your pantry search ingredients or selecting "ALL RECIPES" in the method filter.
-          </p>
-          {canAdd && (
-            <button
-              onClick={() => {
-                setAddCategory(null);
-                setShowAddRecipe(true);
-              }}
-              className="mt-5 inline-flex items-center gap-2 bg-heritage-green-800 hover:bg-heritage-green-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-soft transition-all"
-            >
-              <Plus size={15} /> Add a New Recipe
-            </button>
-          )}
-        </div>
-      ) : layoutMode === 'masonry' ? (
-        /* ── MASONRY VIEW: Multi-column staggered layout ── */
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5">
-          {filteredRecipes.map((recipe) => {
-            const contributor = recipe.contributedByMemberId
-              ? data.members.find((m) => m.id === recipe.contributedByMemberId)
-              : undefined;
-            const isFav = favoriteIds.includes(recipe.id);
-            const method = getRecipeMethod(recipe);
-            const rating = getRecipeRating(recipe.id);
-
-            return (
-              <div key={recipe.id} className="break-inside-avoid">
-                <TabletRecipeCard
-                  recipe={recipe}
-                  contributor={contributor ? fullName(contributor) : undefined}
-                  isFavorite={isFav}
-                  onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
-                  method={method}
-                  rating={rating}
-                  canRemove={canRemove}
-                  onOpen={() => setOpenRecipeId(recipe.id)}
-                  onDelete={() => handleDeleteRecipe(recipe.id)}
-                  isMasonry={true}
-                />
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* ── COMPACT GRID VIEW: Tablet dashboard grid ── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredRecipes.map((recipe) => {
-            const contributor = recipe.contributedByMemberId
-              ? data.members.find((m) => m.id === recipe.contributedByMemberId)
-              : undefined;
-            const isFav = favoriteIds.includes(recipe.id);
-            const method = getRecipeMethod(recipe);
-            const rating = getRecipeRating(recipe.id);
 
-            return (
-              <TabletRecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                contributor={contributor ? fullName(contributor) : undefined}
-                isFavorite={isFav}
-                onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
-                method={method}
-                rating={rating}
-                canRemove={canRemove}
-                onOpen={() => setOpenRecipeId(recipe.id)}
-                onDelete={() => handleDeleteRecipe(recipe.id)}
-                isMasonry={false}
-              />
-            );
-          })}
-        </div>
+              {/* Quick pantry suggestions */}
+              <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 text-xs text-slate-400 scrollbar-none">
+                <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">Popular:</span>
+                {['Potatoes', 'Green Maize', 'Coconut Milk', 'Pumpkin Leaves', 'Ndengu', 'Beans'].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => setSearchQuery(chip)}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-heritage-gold-500/20 hover:text-heritage-gold-300 text-[11px] text-slate-300 border border-white/5 transition-colors shrink-0"
+                  >
+                    +{chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Appliance & Cooking Method Filter Tags */}
+            <div className="lg:col-span-5 bg-[#12171e] text-white p-5 rounded-3xl border border-white/10 shadow-lg flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-serif font-bold text-sm tracking-wide text-slate-300 flex items-center gap-1.5">
+                  <SlidersHorizontal size={15} className="text-heritage-gold-400" />
+                  Appliance & Method Filter Tags
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">{filteredRecipes.length} recipes</span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {COOKING_METHODS.map((method) => {
+                  const active = selectedMethod === method.id;
+                  const count = methodCounts[method.id];
+                  return (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedMethod(method.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                        active
+                          ? 'bg-sky-600 border-sky-400 text-white shadow-md scale-105'
+                          : 'bg-[#1b222c] border-white/5 text-slate-300 hover:bg-white/10'
+                      }`}
+                    >
+                      {'icon' in method && <span>{method.icon}</span>}
+                      <span>{method.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${active ? 'bg-white/20' : 'bg-black/30 text-slate-400'}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Category Filter row */}
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5 overflow-x-auto scrollbar-none">
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors ${
+                    selectedCategory === 'all'
+                      ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  All Categories
+                </button>
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => setSelectedCategory(cat.key)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors flex items-center gap-1 ${
+                      selectedCategory === cat.key
+                        ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. Recipe Stream Controls & Layout Switcher ── */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
+            <div>
+              <h2 className="font-serif font-black text-xl text-heritage-green-950 dark:text-heritage-gold-300 tracking-wide uppercase flex items-center gap-2">
+                <span>Compact Recipe Stream</span>
+                <span className="text-xs font-sans font-bold px-2 py-0.5 rounded-full bg-heritage-green-800 text-heritage-cream-100 dark:bg-heritage-dark-card dark:text-heritage-dark-muted">
+                  {filteredRecipes.length}
+                </span>
+              </h2>
+              <p className="text-xs text-heritage-bark-500 dark:text-heritage-dark-muted">
+                {layoutMode === 'masonry'
+                  ? 'Masonry stream active: dynamic heights showcase full recipe titles and heirlooms without clipping.'
+                  : 'Compact grid active: uniform tablet dashboard cards.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              {/* Layout Toggle (Masonry vs Grid) */}
+              <div className="flex items-center gap-1 bg-white dark:bg-heritage-dark-card p-1 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border shadow-soft">
+                <button
+                  onClick={() => setLayoutMode('masonry')}
+                  title="Masonry Stream View (Dynamic Title Height)"
+                  className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    layoutMode === 'masonry'
+                      ? 'bg-heritage-green-800 text-white shadow-soft'
+                      : 'text-heritage-bark-600 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
+                  }`}
+                >
+                  <Columns size={15} />
+                  <span className="hidden sm:inline">Masonry</span>
+                </button>
+                <button
+                  onClick={() => setLayoutMode('grid')}
+                  title="Compact Grid View (Uniform Tablet Cards)"
+                  className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    layoutMode === 'grid'
+                      ? 'bg-heritage-green-800 text-white shadow-soft'
+                      : 'text-heritage-bark-600 dark:text-heritage-dark-muted hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
+                  }`}
+                >
+                  <LayoutGrid size={15} />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+              </div>
+
+              {/* Add Recipe Action Button */}
+              {canAdd && (
+                <button
+                  onClick={() => {
+                    setAddCategory(null);
+                    setShowAddRecipe(true);
+                  }}
+                  className="flex items-center gap-1.5 bg-heritage-green-800 hover:bg-heritage-green-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-soft transition-all active:scale-95 shrink-0"
+                >
+                  <Plus size={15} /> Add Recipe
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── 4. Recipe Stream (Masonry vs Grid Rendering) ── */}
+          {filteredRecipes.length === 0 ? (
+            <div className="bg-white dark:bg-heritage-dark-card border-2 border-dashed border-heritage-cream-300 dark:border-heritage-dark-border rounded-3xl p-12 text-center shadow-soft">
+              <div className="w-16 h-16 rounded-full bg-heritage-cream-100 dark:bg-heritage-dark-hover mx-auto flex items-center justify-center text-heritage-bark-500 mb-4">
+                <BookOpen size={28} />
+              </div>
+              <h3 className="font-serif font-bold text-lg text-heritage-green-950 dark:text-heritage-dark-text">
+                No recipes matched your search
+              </h3>
+              <p className="text-xs text-heritage-bark-500 dark:text-heritage-dark-muted mt-1 max-w-sm mx-auto">
+                Try adjusting your pantry search ingredients or selecting "ALL RECIPES" in the method filter.
+              </p>
+              {canAdd && (
+                <button
+                  onClick={() => {
+                    setAddCategory(null);
+                    setShowAddRecipe(true);
+                  }}
+                  className="mt-5 inline-flex items-center gap-2 bg-heritage-green-800 hover:bg-heritage-green-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-soft transition-all"
+                >
+                  <Plus size={15} /> Add a New Recipe
+                </button>
+              )}
+            </div>
+          ) : layoutMode === 'masonry' ? (
+            /* ── MASONRY VIEW: Multi-column staggered layout ── */
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5">
+              {filteredRecipes.map((recipe) => {
+                const contributor = recipe.contributedByMemberId
+                  ? data.members.find((m) => m.id === recipe.contributedByMemberId)
+                  : undefined;
+                const isFav = favoriteIds.includes(recipe.id);
+                const method = getRecipeMethod(recipe);
+                const rating = getRecipeRating(recipe.id);
+
+                return (
+                  <div key={recipe.id} className="break-inside-avoid">
+                    <TabletRecipeCard
+                      recipe={recipe}
+                      contributor={contributor ? fullName(contributor) : undefined}
+                      isFavorite={isFav}
+                      onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
+                      onPlan={() => setPlanningRecipe(recipe)}
+                      method={method}
+                      rating={rating}
+                      canRemove={canRemove}
+                      onOpen={() => setOpenRecipeId(recipe.id)}
+                      onDelete={() => handleDeleteRecipe(recipe.id)}
+                      isMasonry={true}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* ── COMPACT GRID VIEW: Tablet dashboard grid ── */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredRecipes.map((recipe) => {
+                const contributor = recipe.contributedByMemberId
+                  ? data.members.find((m) => m.id === recipe.contributedByMemberId)
+                  : undefined;
+                const isFav = favoriteIds.includes(recipe.id);
+                const method = getRecipeMethod(recipe);
+                const rating = getRecipeRating(recipe.id);
+
+                return (
+                  <TabletRecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    contributor={contributor ? fullName(contributor) : undefined}
+                    isFavorite={isFav}
+                    onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
+                    onPlan={() => setPlanningRecipe(recipe)}
+                    method={method}
+                    rating={rating}
+                    canRemove={canRemove}
+                    onOpen={() => setOpenRecipeId(recipe.id)}
+                    onDelete={() => handleDeleteRecipe(recipe.id)}
+                    isMasonry={false}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Modals ── */}
@@ -555,11 +609,22 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
         />
       )}
 
+      {planningRecipe && (
+        <PlanRecipeModal
+          recipe={planningRecipe}
+          weeklyPlan={weeklyPlan}
+          onUpdatePlan={setWeeklyPlan}
+          onClose={() => setPlanningRecipe(null)}
+          pushToast={pushToast}
+        />
+      )}
+
       {openRecipe && (
         <RecipeDetail
           recipe={openRecipe}
           onClose={() => setOpenRecipeId(null)}
           onSelectMember={onSelectMember}
+          onPlan={() => setPlanningRecipe(openRecipe)}
           onDelete={canRemove ? () => handleDeleteRecipe(openRecipe.id) : undefined}
         />
       )}
@@ -574,6 +639,7 @@ interface TabletRecipeCardProps {
   contributor?: string;
   isFavorite: boolean;
   onToggleFavorite: (e: React.MouseEvent) => void;
+  onPlan: () => void;
   method: CookingMethodId;
   rating: string;
   canRemove: boolean;
@@ -587,6 +653,7 @@ function TabletRecipeCard({
   contributor,
   isFavorite,
   onToggleFavorite,
+  onPlan,
   method,
   rating,
   canRemove,
@@ -666,7 +733,6 @@ function TabletRecipeCard({
       {/* ── Card Body with Masonry-Optimized Titles ── */}
       <div className="p-4 flex flex-col flex-grow justify-between space-y-2.5">
         <div>
-          {/* Recipe Title: In Masonry, no line clamp so full titles like "Sheet Pan Honey Glazed Salmon & Veggies" or "Traditional Meru Mukimo" fit naturally! */}
           <h3
             className={`font-serif font-black text-white group-hover:text-heritage-gold-400 transition-colors uppercase tracking-tight leading-snug text-sm sm:text-base ${
               isMasonry ? 'line-clamp-none' : 'line-clamp-2 min-h-[2.5rem]'
@@ -683,13 +749,24 @@ function TabletRecipeCard({
           )}
         </div>
 
-        {/* Method & Star Rating Row (Matching Tablet Screenshot) */}
+        {/* Method, Star Rating & Plan Action Row */}
         <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-300 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
               <Flame size={12} className="text-amber-400" />
               <span>{methodLabel}</span>
             </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlan();
+              }}
+              className="flex items-center gap-1 text-[11px] font-bold text-heritage-gold-400 hover:text-white bg-heritage-gold-500/10 hover:bg-heritage-gold-500/30 px-2 py-0.5 rounded-md border border-heritage-gold-500/30 transition-colors"
+              title="Add to weekly meal plan"
+            >
+              <CalendarDays size={11} />
+              <span>Plan</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-1 text-heritage-gold-400 font-bold text-xs">
@@ -715,8 +792,9 @@ const RecipeDetail: React.FC<{
   recipe: Recipe;
   onClose: () => void;
   onSelectMember: (id: string) => void;
+  onPlan: () => void;
   onDelete?: () => void;
-}> = ({ recipe, onClose, onSelectMember, onDelete }) => {
+}> = ({ recipe, onClose, onSelectMember, onPlan, onDelete }) => {
   const { data, currentProfile, updateRecipe, isOnlineMode, pushToast } = useApp();
   const canEdit = canAddContent(currentProfile?.role);
   const [updatingPhoto, setUpdatingPhoto] = useState(false);
@@ -815,6 +893,23 @@ const RecipeDetail: React.FC<{
 
         {/* Body content */}
         <div className="p-6 overflow-y-auto space-y-6">
+          {/* Quick Schedule to Meal Plan Banner */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-heritage-gold-500/20 via-amber-500/10 to-transparent border border-heritage-gold-500/30">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="text-heritage-gold-400" size={18} />
+              <span className="text-xs text-white font-bold">Cook this during the week?</span>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                onPlan();
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-heritage-gold-500 hover:bg-heritage-gold-400 text-heritage-green-950 font-bold text-xs shadow-md transition-all active:scale-95"
+            >
+              + Add to Weekly Timetable
+            </button>
+          </div>
+
           {/* Family Heirloom Story */}
           {recipe.familyStory && (
             <div className="p-4 rounded-2xl bg-heritage-gold-500/10 border border-heritage-gold-500/30 text-heritage-gold-200">
