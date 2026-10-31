@@ -15,7 +15,8 @@ bucket_name = "legacy-link-media"
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "0dd11eb6d33f4efe8b35a01a77bff7bb"
-localConnectionString = "postgresql://neondb_owner:<YOUR_NEON_PASSWORD>@ep-wild-hat-a5mc2fhj-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# For local dev, set the connection string via env instead of committing it:
+#   export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="postgresql://..."
 
 # Native Cloudflare rate limiting — no external KV/Durable Object needed.
 [[unsafe.bindings]]
@@ -30,6 +31,13 @@ type = "ratelimit"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
+# Stricter limit for the AI data-entry assistant (each call costs money).
+[[unsafe.bindings]]
+name = "ASSISTANT_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
 # Non-secret config
 [vars]
 FRONTEND_ORIGIN = "https://legacy-link-web.heritagehub.workers.dev"
@@ -43,3 +51,4 @@ R2_PUBLIC_URL   = "https://pub-3ebe5c982f5440fa8aea08a0e35d53c4.r2.dev"
 #   FAMILY_INVITE_CODE
 #   R2_ACCESS_KEY_ID
 #   R2_SECRET_ACCESS_KEY
+#   ANTHROPIC_API_KEY   (AI data-entry assistant)
