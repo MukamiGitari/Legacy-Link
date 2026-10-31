@@ -23,6 +23,7 @@ import { Admin } from './pages/Admin';
 import { useApp } from './context/AppContext';
 import { isAdminRole, canAddContent } from './lib/permissions';
 import { ShieldAlert } from 'lucide-react';
+import { ChatPanel } from './components/assistant/ChatPanel';
 
 export type Page =
   | 'dashboard' | 'myFamily' | 'tree' | 'directory' | 'profile' | 'gallery' | 'cookbook'
@@ -162,6 +163,7 @@ const App: React.FC = () => {
         />
       )}
 
+      <ChatPanel onSelectMember={openMemberDrawer} onNavigate={navigate} />
       <ToastStack />
     </div>
   );

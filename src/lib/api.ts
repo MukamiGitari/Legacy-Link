@@ -138,3 +138,35 @@ export async function uploadFileToR2({
 
   return { key, url: publicUrl };
 }
+
+export interface AssistantChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface AssistantChatResponse {
+  reply: string;
+  source?: 'workers-ai' | 'anthropic' | 'synthesizer';
+}
+
+export async function askAssistant(
+  message: string,
+  history: AssistantChatMessage[] = []
+): Promise<AssistantChatResponse> {
+  return await api.post<AssistantChatResponse>('/assistant/chat', { message, history });
+}
+
+export async function getAssistantSuggestions(): Promise<string[]> {
+  try {
+    const res = await api.get<{ suggestions: string[] }>('/assistant/suggestions');
+    return res.suggestions || [];
+  } catch {
+    return [
+      "Tell me about Senior Chief Gerald M'Ikunyua's early life and legacy",
+      "Who was our family founder and how did our roots begin?",
+      "Share a wise proverb from the Heritage Vault and explain it",
+      "What traditional Meru recipes are in our cookbook?",
+      "What eras are documented in our Family Chronicle?",
+    ];
+  }
+}

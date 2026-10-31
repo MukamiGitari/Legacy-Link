@@ -3,6 +3,10 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Cloudflare Workers AI binding for the Family Heritage Assistant
+[ai]
+binding = "AI"
+
 # R2 bucket binding — lets the Worker read/write directly if ever needed,
 # though uploads/downloads mainly go through presigned URLs (see services/r2.js).
 [[r2_buckets]]
@@ -37,9 +41,14 @@ R2_BUCKET_NAME  = "legacy-link-media"
 R2_ENDPOINT     = "https://6db9d44c4bc1b0f7fd80969dd52fb4af.r2.cloudflarestorage.com"
 # The bucket's PUBLIC, browser-viewable base URL
 R2_PUBLIC_URL   = "https://pub-3ebe5c982f5440fa8aea08a0e35d53c4.r2.dev"
+# Comma-separated list of approved family UUIDs allowed to use the AI assistant.
+# Leave empty to allow all registered family members.
+APPROVED_FAMILY_IDS = ""
 
 # Set these with `wrangler secret put <NAME>` — never commit real values:
 #   JWT_ACCESS_SECRET
 #   FAMILY_INVITE_CODE
 #   R2_ACCESS_KEY_ID
 #   R2_SECRET_ACCESS_KEY
+#   ANTHROPIC_API_KEY (optional, fallback to Workers AI or Knowledge Synthesizer)
+#   OPENAI_API_KEY (optional)

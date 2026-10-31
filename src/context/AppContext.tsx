@@ -189,6 +189,7 @@ interface AppContextValue {
   updateProfileDisplayName: (id: string, displayName: string) => void;
   logActivity: (action: string, entityType: string) => void;
 
+  reloadDataset: () => Promise<void>;
   resetToSeed: () => void;
 }
 
@@ -223,21 +224,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isLoading, setIsLoading] = useState(true);
 
+  const reloadDataset = useCallback(async () => {
+    try {
+      const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
+      const meRes = await api.get<{ profile: Profile }>('/family/profiles/me').catch(() => null);
+      const assembled = assembleDataset(datasetRes);
+      setData(assembled);
+      if (meRes?.profile?.id) {
+        setCurrentProfileId(meRes.profile.id);
+      } else if (assembled.profiles[0]?.id) {
+        setCurrentProfileId(assembled.profiles[0].id);
+      }
+    } catch (err) {
+      console.error('[legacy-link] failed to reload dataset:', err);
+    }
+  }, []);
+
   // Initial session restoration effect (Cloudflare Worker backend)
   useEffect(() => {
     (async () => {
       try {
         const refreshed = await refreshAccessToken();
         if (refreshed) {
-          const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
-          const meRes = await api.get<{ profile: Profile }>('/family/profiles/me').catch(() => null);
-          const assembled = assembleDataset(datasetRes);
-          setData(assembled);
-          if (meRes?.profile?.id) {
-            setCurrentProfileId(meRes.profile.id);
-          } else if (assembled.profiles[0]?.id) {
-            setCurrentProfileId(assembled.profiles[0].id);
-          }
+          await reloadDataset();
           setIsDemoOrLocal(false);
           setIsAuthenticated(true);
           return;
@@ -248,7 +257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [reloadDataset]);
 
   const currentProfile = useMemo(
     () => data.profiles.find(p => p.id === currentProfileId) ?? data.profiles[0],
@@ -1065,9 +1074,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await api.post<{ user: any; accessToken: string }>('/auth/login', { email, password });
       if (res?.accessToken) {
         setAccessToken(res.accessToken);
-        const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
-        const assembled = assembleDataset(datasetRes);
-        setData(assembled);
+        await reloadDataset();
         setCurrentProfileId(res.user.id);
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
@@ -1100,9 +1107,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (res?.accessToken) {
         setAccessToken(res.accessToken);
-        const datasetRes = await api.get<Partial<FamilyDataset>>('/family/dataset');
-        const assembled = assembleDataset(datasetRes);
-        setData(assembled);
+        await reloadDataset();
         setCurrentProfileId(res.user.id);
         setIsDemoOrLocal(false);
         setIsAuthenticated(true);
@@ -1179,6 +1184,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addProfile, updateProfileRole, updateProfileMemberId, updateFamilyDetails, generateInvitationCode,
     generateRestorationCode, redeemRestorationCode, logActivity,
     updateProfileAvatar, updateProfileDisplayName,
+    reloadDataset,
     resetToSeed,
   };
 
