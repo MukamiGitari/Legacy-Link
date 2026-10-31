@@ -179,7 +179,7 @@ export const AddRecipeModal: React.FC<Props> = ({ albumId, onClose, initialCateg
                 }`}
               aria-pressed={isVegetarian}
             >
-              <Star size={13} fill={isVegetarian ? 'currentColor' : 'none'} /> Vegetarian
+              <Star size={13} fill={isVegetarian ? 'currentColor' : 'none'} /> Vegetarian / Vegan
             </button>
           </div>
 

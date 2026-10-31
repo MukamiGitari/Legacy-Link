@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X, Plus, Clock, Star, ChefHat, Trash2, Search, Mic, MicOff,
   Flame, ArrowRight, BookOpen, Camera, Loader2, Heart,
-  LayoutGrid, Columns, Sparkles, SlidersHorizontal, Check, CalendarDays,
+  LayoutGrid, Columns, Sparkles, Check, CalendarDays, Filter,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fullName } from '../lib/lineage';
@@ -16,7 +16,7 @@ import { PlanRecipeModal } from '../components/cookbook/PlanRecipeModal';
 import type { Recipe, RecipeCategory } from '../types';
 import { canAddContent, canDelete } from '../lib/permissions';
 
-// ── Category & Method Metadata ────────────────────────────────────────────────
+// ── Category Metadata ─────────────────────────────────────────────────────────
 
 const CATEGORIES: { key: RecipeCategory; label: string; icon: string }[] = [
   { key: 'breakfast', label: 'Breakfast', icon: '🌅' },
@@ -25,16 +25,49 @@ const CATEGORIES: { key: RecipeCategory; label: string; icon: string }[] = [
   { key: 'desserts', label: 'Desserts', icon: '🍰' },
 ];
 
-const COOKING_METHODS = [
-  { id: 'all', label: 'ALL RECIPES' },
-  { id: 'stovetop', label: 'STOVETOP', icon: '🔥' },
-  { id: 'clay_pot', label: 'TRADITIONAL POT', icon: '🏺' },
-  { id: 'oven', label: 'OVEN BAKE', icon: '♨️' },
-  { id: 'air_fryer', label: 'AIR FRYER', icon: '⚡' },
-  { id: 'veg', label: 'VEGETARIAN', icon: '🌿' },
-] as const;
+export const isVeganRecipe = (r: Recipe): boolean => {
+  const text = (
+    r.title +
+    ' ' +
+    r.ingredients.join(' ') +
+    ' ' +
+    (r.familyStory || '')
+  ).toLowerCase();
 
-type CookingMethodId = (typeof COOKING_METHODS)[number]['id'];
+  const nonVegan = [
+    'meat', 'beef', 'chicken', 'pork', 'fish', 'goat', 'lamb', 'mutton',
+    'milk', 'butter', 'cream', 'cheese', 'yoghurt', 'yogurt', 'egg', 'eggs',
+    'ghee', 'lard', 'bacon', 'mayo', 'honey', 'poultry'
+  ];
+  const hasAnimalProducts = nonVegan.some((item) => text.includes(item));
+  if (text.includes('vegan') || text.includes('plant-based')) return true;
+  if (r.isVegetarian && !hasAnimalProducts) return true;
+  if (!hasAnimalProducts && r.ingredients.length > 0 && !text.includes('meat') && !text.includes('bone')) return true;
+  return false;
+};
+
+export const isVegetarianRecipe = (r: Recipe): boolean => {
+  if (r.isVegetarian) return true;
+  const text = (
+    r.title +
+    ' ' +
+    r.ingredients.join(' ') +
+    ' ' +
+    (r.familyStory || '')
+  ).toLowerCase();
+  const meats = ['meat', 'beef', 'chicken', 'pork', 'fish', 'goat', 'lamb', 'mutton', 'bacon', 'lard', 'poultry'];
+  return !meats.some((m) => text.includes(m));
+};
+
+export const getDietaryStatus = (r: Recipe): { label: string; icon: string; isVegan: boolean } | null => {
+  if (isVeganRecipe(r)) {
+    return { label: 'Vegan', icon: '🌱', isVegan: true };
+  }
+  if (isVegetarianRecipe(r)) {
+    return { label: 'Vegetarian', icon: '🌿', isVegan: false };
+  }
+  return null;
+};
 
 interface Props {
   onSelectMember: (id: string) => void;
@@ -56,8 +89,8 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
   // State
   const [activeTab, setActiveTab] = useState<'recipes' | 'pantry' | 'favorites' | 'stories' | 'meal_plan'>('recipes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<CookingMethodId>('all');
   const [selectedCategory, setSelectedCategory] = useState<'all' | RecipeCategory>('all');
+  const [onlyVegetarian, setOnlyVegetarian] = useState(false);
   const [layoutMode, setLayoutMode] = useState<'masonry' | 'grid'>('masonry');
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [addCategory, setAddCategory] = useState<RecipeCategory | null>(null);
@@ -153,22 +186,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
     }
   };
 
-  // Cooking method detector based on title, instructions, and ingredients
-  const getRecipeMethod = (r: Recipe): CookingMethodId => {
-    const text = (
-      r.title +
-      ' ' +
-      r.instructions.join(' ') +
-      ' ' +
-      (r.familyStory || '')
-    ).toLowerCase();
-
-    if (text.includes('air fryer') || text.includes('crisp') || text.includes('air fry')) return 'air_fryer';
-    if (text.includes('oven') || text.includes('bake') || text.includes('roast')) return 'oven';
-    if (text.includes('pot') || text.includes('stew') || text.includes('boil') || text.includes('mash') || text.includes('mukimo') || text.includes('irio')) return 'clay_pot';
-    return 'stovetop';
-  };
-
   // Recipe Rating generator (consistent per recipe ID for visual realism)
   const getRecipeRating = (id: string): string => {
     let hash = 0;
@@ -176,26 +193,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
     const score = 4.6 + (Math.abs(hash) % 4) * 0.1;
     return score.toFixed(1);
   };
-
-  // Method Counts
-  const methodCounts = useMemo(() => {
-    const counts: Record<CookingMethodId, number> = {
-      all: data.recipes.length,
-      stovetop: 0,
-      clay_pot: 0,
-      oven: 0,
-      air_fryer: 0,
-      veg: 0,
-    };
-
-    data.recipes.forEach((r) => {
-      const m = getRecipeMethod(r);
-      if (counts[m] !== undefined) counts[m]++;
-      if (r.isVegetarian) counts.veg++;
-    });
-
-    return counts;
-  }, [data.recipes]);
 
   // Main Filtered Recipe Stream
   const filteredRecipes = useMemo(() => {
@@ -207,12 +204,8 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
       // 2. Category filter
       if (selectedCategory !== 'all' && r.category !== selectedCategory) return false;
 
-      // 3. Method filter
-      if (selectedMethod === 'veg') {
-        if (!r.isVegetarian) return false;
-      } else if (selectedMethod !== 'all') {
-        if (getRecipeMethod(r) !== selectedMethod) return false;
-      }
+      // 3. Vegetarian / Vegan filter
+      if (onlyVegetarian && !isVegetarianRecipe(r)) return false;
 
       // 4. Pantry / search query filter (matches title, ingredient list, author, or story)
       if (searchQuery.trim()) {
@@ -234,11 +227,15 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
 
       return true;
     });
-  }, [data.recipes, activeTab, selectedCategory, selectedMethod, searchQuery, favoriteIds, data.members]);
+  }, [data.recipes, activeTab, selectedCategory, onlyVegetarian, searchQuery, favoriteIds, data.members]);
 
   const scheduledCount = useMemo(() => {
     return Object.values(weeklyPlan).reduce((acc, cur) => acc + Object.keys(cur).length, 0);
   }, [weeklyPlan]);
+
+  const totalVegCount = useMemo(() => {
+    return data.recipes.filter(isVegetarianRecipe).length;
+  }, [data.recipes]);
 
   return (
     <div className="space-y-6">
@@ -333,104 +330,74 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
       ) : (
         /* ── REGULAR RECIPE STREAM & PANTRY FINDER ── */
         <>
-          {/* ── 2. Interactive Pantry Finder & Appliance Filter Tags (Gold Highlighted Box) ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Left: Interactive Pantry Finder Box with Golden Outline */}
-            <div className="lg:col-span-7 bg-[#12171e] text-white p-5 rounded-3xl border-2 border-heritage-gold-500/80 shadow-lg relative overflow-hidden flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-serif font-bold text-sm tracking-wide text-heritage-gold-300 flex items-center gap-2">
-                  <Sparkles size={16} className="text-heritage-gold-400" />
-                  Interactive Pantry Finder
+          {/* ── 2. Full-Width Interactive Pantry Finder Console (Golden Highlighted Box) ── */}
+          <div className="bg-[#12171e] text-white p-5 md:p-6 rounded-3xl border-2 border-heritage-gold-500/80 shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles size={17} className="text-heritage-gold-400" />
+                <span className="font-serif font-bold text-sm md:text-base tracking-wide text-heritage-gold-300">
+                  Interactive Pantry Finder & Category Explorer
                 </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-slate-400">
+                <span>{filteredRecipes.length} recipes matched</span>
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="text-[11px] text-slate-400 hover:text-white underline"
+                    className="text-heritage-gold-400 hover:underline"
                   >
-                    Clear
+                    Clear Search
                   </button>
                 )}
               </div>
-
-              <div className="relative mt-1">
-                <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search recipes by pantry ingredients (e.g., maize, potatoes, coconut, ndengu)..."
-                  className="w-full pl-10 pr-12 py-3 bg-[#1c232d] border border-white/10 rounded-2xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-heritage-gold-500 transition-all"
-                />
-                <button
-                  onClick={startVoiceSearch}
-                  title="Voice Search Pantry"
-                  className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
-                    isListening
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-white/10 text-heritage-gold-300 hover:bg-white/20'
-                  }`}
-                >
-                  {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-                </button>
-              </div>
-
-              {/* Quick pantry suggestions */}
-              <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 text-xs text-slate-400 scrollbar-none">
-                <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">Popular:</span>
-                {['Potatoes', 'Green Maize', 'Coconut Milk', 'Pumpkin Leaves', 'Ndengu', 'Beans'].map((chip) => (
-                  <button
-                    key={chip}
-                    onClick={() => setSearchQuery(chip)}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-heritage-gold-500/20 hover:text-heritage-gold-300 text-[11px] text-slate-300 border border-white/5 transition-colors shrink-0"
-                  >
-                    +{chip}
-                  </button>
-                ))}
-              </div>
             </div>
 
-            {/* Right: Appliance & Cooking Method Filter Tags */}
-            <div className="lg:col-span-5 bg-[#12171e] text-white p-5 rounded-3xl border border-white/10 shadow-lg flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-serif font-bold text-sm tracking-wide text-slate-300 flex items-center gap-1.5">
-                  <SlidersHorizontal size={15} className="text-heritage-gold-400" />
-                  Appliance & Method Filter Tags
-                </span>
-                <span className="text-[11px] text-slate-400 font-medium">{filteredRecipes.length} recipes</span>
-              </div>
+            {/* Search Input with Voice Mic */}
+            <div className="relative">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search recipes by pantry ingredients (e.g., maize, potatoes, coconut, ndengu)..."
+                className="w-full pl-11 pr-14 py-3.5 bg-[#1c232d] border border-white/10 rounded-2xl text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-heritage-gold-500 transition-all shadow-inner"
+              />
+              <button
+                onClick={startVoiceSearch}
+                title="Voice Search Pantry"
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
+                  isListening
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : 'bg-white/10 text-heritage-gold-300 hover:bg-white/20'
+                }`}
+              >
+                {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+              </button>
+            </div>
 
-              <div className="flex items-center gap-2 flex-wrap pt-1">
-                {COOKING_METHODS.map((method) => {
-                  const active = selectedMethod === method.id;
-                  const count = methodCounts[method.id];
-                  return (
-                    <button
-                      key={method.id}
-                      onClick={() => setSelectedMethod(method.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                        active
-                          ? 'bg-sky-600 border-sky-400 text-white shadow-md scale-105'
-                          : 'bg-[#1b222c] border-white/5 text-slate-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {'icon' in method && <span>{method.icon}</span>}
-                      <span>{method.label}</span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${active ? 'bg-white/20' : 'bg-black/30 text-slate-400'}`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Popular Pantry Ingredient Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs text-slate-400 scrollbar-none">
+              <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0">Pantry Staples:</span>
+              {['Potatoes', 'Green Maize', 'Coconut Milk', 'Pumpkin Leaves', 'Ndengu', 'Beans'].map((chip) => (
+                <button
+                  key={chip}
+                  onClick={() => setSearchQuery(chip)}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-heritage-gold-500/20 hover:text-heritage-gold-300 text-[11px] text-slate-300 border border-white/5 transition-colors shrink-0"
+                >
+                  +{chip}
+                </button>
+              ))}
+            </div>
 
-              {/* Category Filter row */}
-              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5 overflow-x-auto scrollbar-none">
+            {/* Category & Vegetarian/Vegan Filter Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/5">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
                     selectedCategory === 'all'
-                      ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-heritage-gold-500 text-heritage-green-950 font-bold shadow-md'
+                      : 'bg-white/5 text-slate-300 hover:bg-white/10'
                   }`}
                 >
                   All Categories
@@ -439,10 +406,10 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                   <button
                     key={cat.key}
                     onClick={() => setSelectedCategory(cat.key)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-colors flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-colors flex items-center gap-1.5 ${
                       selectedCategory === cat.key
-                        ? 'bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-500/40'
-                        : 'text-slate-400 hover:text-slate-200'
+                        ? 'bg-heritage-gold-500 text-heritage-green-950 font-bold shadow-md'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10'
                     }`}
                   >
                     <span>{cat.icon}</span>
@@ -450,6 +417,20 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                   </button>
                 ))}
               </div>
+
+              {/* Vegetarian / Vegan Badge Filter Toggle */}
+              <button
+                onClick={() => setOnlyVegetarian((v) => !v)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+                  onlyVegetarian
+                    ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
+                    : 'bg-white/5 border-white/10 text-emerald-400 hover:bg-emerald-500/10'
+                }`}
+                title="Filter by Vegetarian or Vegan meals"
+              >
+                <span>🌱</span>
+                <span>Vegetarian / Vegan ({totalVegCount})</span>
+              </button>
             </div>
           </div>
 
@@ -523,7 +504,7 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                 No recipes matched your search
               </h3>
               <p className="text-xs text-heritage-bark-500 dark:text-heritage-dark-muted mt-1 max-w-sm mx-auto">
-                Try adjusting your pantry search ingredients or selecting "ALL RECIPES" in the method filter.
+                Try adjusting your pantry search ingredients or turning off the Vegetarian/Vegan filter.
               </p>
               {canAdd && (
                 <button
@@ -545,7 +526,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                   ? data.members.find((m) => m.id === recipe.contributedByMemberId)
                   : undefined;
                 const isFav = favoriteIds.includes(recipe.id);
-                const method = getRecipeMethod(recipe);
                 const rating = getRecipeRating(recipe.id);
 
                 return (
@@ -556,7 +536,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                       isFavorite={isFav}
                       onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
                       onPlan={() => setPlanningRecipe(recipe)}
-                      method={method}
                       rating={rating}
                       canRemove={canRemove}
                       onOpen={() => setOpenRecipeId(recipe.id)}
@@ -575,7 +554,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                   ? data.members.find((m) => m.id === recipe.contributedByMemberId)
                   : undefined;
                 const isFav = favoriteIds.includes(recipe.id);
-                const method = getRecipeMethod(recipe);
                 const rating = getRecipeRating(recipe.id);
 
                 return (
@@ -586,7 +564,6 @@ export const Cookbook: React.FC<Props> = ({ onSelectMember }) => {
                     isFavorite={isFav}
                     onToggleFavorite={(e) => toggleFavorite(recipe.id, e)}
                     onPlan={() => setPlanningRecipe(recipe)}
-                    method={method}
                     rating={rating}
                     canRemove={canRemove}
                     onOpen={() => setOpenRecipeId(recipe.id)}
@@ -640,7 +617,6 @@ interface TabletRecipeCardProps {
   isFavorite: boolean;
   onToggleFavorite: (e: React.MouseEvent) => void;
   onPlan: () => void;
-  method: CookingMethodId;
   rating: string;
   canRemove: boolean;
   onOpen: () => void;
@@ -654,21 +630,13 @@ function TabletRecipeCard({
   isFavorite,
   onToggleFavorite,
   onPlan,
-  method,
   rating,
   canRemove,
   onOpen,
   onDelete,
   isMasonry,
 }: TabletRecipeCardProps) {
-  const methodLabel =
-    method === 'air_fryer'
-      ? 'Air Fryer'
-      : method === 'oven'
-      ? 'Oven'
-      : method === 'clay_pot'
-      ? 'Clay Pot'
-      : 'Stovetop';
+  const dietary = getDietaryStatus(recipe);
 
   return (
     <div
@@ -708,10 +676,15 @@ function TabletRecipeCard({
           <span>{recipe.cookTime || '25 mins Prep'}</span>
         </div>
 
-        {/* Vegetarian or Category Badge (Top Left) */}
-        {recipe.isVegetarian && (
-          <span className="absolute top-2.5 left-2.5 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-md">
-            🌿 Veg
+        {/* Vegan or Vegetarian Badge (Top Left over Photo) */}
+        {dietary && (
+          <span
+            className={`absolute top-2.5 left-2.5 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-md uppercase tracking-wider ${
+              dietary.isVegan ? 'bg-emerald-600/95 border border-emerald-400/40' : 'bg-green-700/95 border border-green-400/40'
+            }`}
+          >
+            <span>{dietary.icon}</span>
+            <span>{dietary.label}</span>
           </span>
         )}
 
@@ -749,13 +722,26 @@ function TabletRecipeCard({
           )}
         </div>
 
-        {/* Method, Star Rating & Plan Action Row */}
+        {/* Dietary / Category, Star Rating & Plan Action Row */}
         <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-300 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
-              <Flame size={12} className="text-amber-400" />
-              <span>{methodLabel}</span>
-            </span>
+            {dietary ? (
+              <span
+                className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                  dietary.isVegan
+                    ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+                    : 'text-green-300 bg-green-500/15 border-green-500/30'
+                }`}
+              >
+                <span>{dietary.icon}</span>
+                <span>{dietary.label}</span>
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-slate-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/5 capitalize">
+                {recipe.category}
+              </span>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -799,6 +785,7 @@ const RecipeDetail: React.FC<{
   const canEdit = canAddContent(currentProfile?.role);
   const [updatingPhoto, setUpdatingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const dietary = getDietaryStatus(recipe);
 
   const handlePhotoUpload = async (file: File | undefined) => {
     if (!file || updatingPhoto) return;
@@ -877,9 +864,21 @@ const RecipeDetail: React.FC<{
 
           {/* Title overlay */}
           <div className="absolute bottom-4 left-6 right-6">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-heritage-gold-400 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-sm">
-              {recipe.category.toUpperCase()}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-heritage-gold-400 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                {recipe.category.toUpperCase()}
+              </span>
+              {dietary && (
+                <span
+                  className={`text-[10px] font-black uppercase tracking-wider text-white px-2.5 py-0.5 rounded-md backdrop-blur-sm flex items-center gap-1 ${
+                    dietary.isVegan ? 'bg-emerald-600' : 'bg-green-700'
+                  }`}
+                >
+                  <span>{dietary.icon}</span>
+                  <span>{dietary.label}</span>
+                </span>
+              )}
+            </div>
             <h2 className="font-serif font-black text-2xl sm:text-3xl text-white mt-1 uppercase tracking-tight">
               {recipe.title}
             </h2>
