@@ -15,7 +15,8 @@ bucket_name = "legacy-link-media"
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "0dd11eb6d33f4efe8b35a01a77bff7bb"
-localConnectionString = "postgresql://neondb_owner:<YOUR_NEON_PASSWORD>@ep-wild-hat-a5mc2fhj-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# For local dev, set the connection string via env instead of committing it:
+#   export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="postgresql://..."
 
 # Native Cloudflare rate limiting — no external KV/Durable Object needed.
 [[unsafe.bindings]]
