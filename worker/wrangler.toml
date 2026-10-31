@@ -30,6 +30,13 @@ type = "ratelimit"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
+# Stricter limit for the AI data-entry assistant (each call costs money).
+[[unsafe.bindings]]
+name = "ASSISTANT_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
 # Non-secret config
 [vars]
 FRONTEND_ORIGIN = "https://legacy-link-web.heritagehub.workers.dev"
@@ -43,3 +50,4 @@ R2_PUBLIC_URL   = "https://pub-3ebe5c982f5440fa8aea08a0e35d53c4.r2.dev"
 #   FAMILY_INVITE_CODE
 #   R2_ACCESS_KEY_ID
 #   R2_SECRET_ACCESS_KEY
+#   ANTHROPIC_API_KEY   (AI data-entry assistant)

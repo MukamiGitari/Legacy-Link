@@ -8,6 +8,7 @@ import familyRoutes from './routes/family.js';
 import albumRoutes from './routes/albums.js';
 import featureRoutes from './routes/features.js';
 import songRoutes from './routes/songs.js';
+import assistantRoutes from './routes/assistant.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = new Hono();
@@ -44,6 +45,8 @@ app.use('/api/family/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/albums/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/features/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/songs/*', rateLimit('API_RATE_LIMITER'));
+// Each assistant call hits a paid LLM API, so it gets its own, much tighter limiter.
+app.use('/api/assistant/*', rateLimit('ASSISTANT_RATE_LIMITER'));
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 
@@ -56,6 +59,7 @@ app.route('/api/family', familyRoutes);
 app.route('/api/albums', albumRoutes);
 app.route('/api/features', featureRoutes);
 app.route('/api/songs', songRoutes);
+app.route('/api/assistant', assistantRoutes);
 
 // Centralized error handler.
 app.onError((err, c) => {
