@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { X, User, UploadCloud, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Gender } from '../../types';
@@ -329,12 +329,34 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
               <label className={labelCls}>Generation {generation === -2 ? '(Foundation)' : ''}</label>
               <input type="number" min={-5} max={8} className={inputCls} value={generation} onChange={e => setGeneration(Number(e.target.value))} />
             </div>
-            <div>
-              <label className={labelCls}>Status</label>
-              <select className={inputCls} value={isLiving ? 'living' : 'deceased'} onChange={e => setIsLiving(e.target.value === 'living')}>
-                <option value="living">Living</option>
-                <option value="deceased">Deceased</option>
-              </select>
+            <div className="col-span-1 md:col-span-2">
+              <label className={labelCls}>Life Status</label>
+              <div className="grid grid-cols-2 gap-2 mt-1 p-1 bg-heritage-cream-100 dark:bg-heritage-dark-bg/60 rounded-xl border border-heritage-cream-300 dark:border-heritage-dark-border">
+                <button
+                  type="button"
+                  onClick={() => setIsLiving(true)}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    isLiving
+                      ? "bg-heritage-green-800 text-heritage-cream-100 shadow-sm border border-heritage-green-900 font-semibold"
+                      : "text-heritage-bark-600 dark:text-heritage-dark-muted hover:text-heritage-bark-900 dark:hover:text-heritage-dark-text"
+                  }`}
+                >
+                  <span className="text-base">🌿</span>
+                  <span>Living</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLiving(false)}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    !isLiving
+                      ? "bg-amber-900/90 text-amber-100 shadow-sm border border-amber-950 font-semibold"
+                      : "text-heritage-bark-600 dark:text-heritage-dark-muted hover:text-heritage-bark-900 dark:hover:text-heritage-dark-text"
+                  }`}
+                >
+                  <span className="text-base">🕊️</span>
+                  <span>In Memory (Deceased)</span>
+                </button>
+              </div>
             </div>
             <div>
               <label className={labelCls}>Date of birth</label>
@@ -536,3 +558,4 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
     </div>
   );
 };
+
