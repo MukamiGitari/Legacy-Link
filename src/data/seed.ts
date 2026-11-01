@@ -11,7 +11,7 @@ const AVATAR = (seed: string) =>
 
 const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean }): Member => ({
   familyId: FAMILY_ID,
-  isLiving: partial.isLiving !== undefined ? partial.isLiving : (partial.generation !== undefined && partial.generation <= 1 ? false : (partial.dateOfPassing ? false : true)),
+  isLiving: partial.isLiving !== undefined ? partial.isLiving : ((partial.id === 'b0000000-0000-0000-0001-000000000001' || partial.id === 'b0000000-0000-0000-0001-000000000002') ? true : (partial.generation !== undefined && partial.generation <= 1 ? false : (partial.dateOfPassing ? false : true))),
   avatarUrl: AVATAR(partial.id),
   ...partial,
 });
