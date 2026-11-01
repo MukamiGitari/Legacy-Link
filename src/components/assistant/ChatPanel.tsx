@@ -132,7 +132,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       // Send conversation history (last 10 turns)
       const history = updatedMessages
         .slice(-10)
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
       const res = await askAssistant(text, history);
       setMessages((prev) => [
@@ -397,3 +397,4 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   );
 };
 export default ChatPanel;
+

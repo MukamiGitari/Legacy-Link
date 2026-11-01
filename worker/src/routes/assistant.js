@@ -35,7 +35,7 @@ const chatSchema = z.object({
     .array(
       z.object({
         role: z.enum(['user', 'assistant', 'system']),
-        content: z.string().max(4000),
+        content: z.string().max(25000),
       })
     )
     .max(20)
@@ -482,3 +482,4 @@ INSTRUCTIONS:
 
 
 export default assistant;
+
