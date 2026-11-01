@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   FamilyDataset, Member, Relationship, Album, Photo, Memory,
   FamilyEvent, Announcement, ChronicleEra, Profile, Biography, LegacyContribution,
   LanguageEntry, TriviaScore, CookbookAlbum, Recipe,
@@ -11,7 +11,7 @@ const AVATAR = (seed: string) =>
 
 const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean }): Member => ({
   familyId: FAMILY_ID,
-  isLiving: partial.dateOfPassing ? false : true,
+  isLiving: partial.isLiving !== undefined ? partial.isLiving : (partial.generation !== undefined && partial.generation <= 1 ? false : (partial.dateOfPassing ? false : true)),
   avatarUrl: AVATAR(partial.id),
   ...partial,
 });
