@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Home, Users, Image, ChefHat, TreePine, BookHeart,
-  ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, type LucideIcon,
+  ScrollText, ShieldCheck, X, UsersRound, Languages, Brain, Gamepad2, Sparkles, type LucideIcon,
 } from 'lucide-react';
 import type { Page } from '../../App';
 import { useApp } from '../../context/AppContext';
@@ -60,10 +60,20 @@ interface SidebarProps {
   onNavigate: (p: Page) => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  onOpenAssistant?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobileOpen, onCloseMobile }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentPage,
+  onNavigate,
+  mobileOpen,
+  onCloseMobile,
+  onOpenAssistant,
+}) => {
   const { data, currentProfile } = useApp();
+  const rawFamilyName = (data.family?.name || '').replace(/\s*family\s*/i, '').trim() || 'Family';
+  const assistantName = `${rawFamilyName} Assistant`;
+
   const visibleGroups = NAV_GROUPS
     .map(g => ({ ...g, items: g.items.filter(item => !item.adminOnly || isAdminRole(currentProfile.role)) }))
     .filter(g => g.items.length > 0);
@@ -80,6 +90,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobil
           <X size={20} />
         </button>
       </div>
+
+      {/* Prominent Chatbot Assistant Button */}
+      {onOpenAssistant && (
+        <div className="px-3 pt-3">
+          <button
+            onClick={() => {
+              onOpenAssistant();
+              onCloseMobile();
+            }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-heritage-gold-500/25 via-amber-500/20 to-heritage-gold-500/10 border border-heritage-gold-500/50 text-heritage-gold-300 hover:brightness-110 active:scale-95 transition-all text-xs font-bold shadow-md group"
+            title={`Ask ${assistantName}`}
+          >
+            <Sparkles size={16} className="text-heritage-gold-400 group-hover:rotate-12 transition-transform shrink-0" />
+            <span className="truncate">{assistantName}</span>
+            <span className="ml-auto flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-heritage-gold-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-heritage-gold-400"></span>
+            </span>
+          </button>
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-4 px-3 space-y-4">
         {visibleGroups.map((group, gi) => (
@@ -118,14 +149,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, mobil
 
   return (
     <>
-      {/* Desktop */}
-      <aside className="hidden md:block w-64 shrink-0 h-screen sticky top-0">{content}</aside>
+      <aside className="hidden md:block w-64 shrink-0 h-screen sticky top-0 shadow-soft-lg z-30">
+        {content}
+      </aside>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={onCloseMobile} />
-          <div className="absolute inset-y-0 left-0 w-72 shadow-xl">{content}</div>
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onCloseMobile} />
+          <div className="relative w-72 max-w-[80vw] h-full shadow-2xl">
+            {content}
+          </div>
         </div>
       )}
     </>

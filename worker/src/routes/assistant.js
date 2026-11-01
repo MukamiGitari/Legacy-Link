@@ -247,8 +247,11 @@ function synthesizeResponse(query, context, callerName) {
   }
 
   // 7. General Family Overview / Welcome
+  const rawFamName = (family.name || '').replace(/\s*family\s*/i, '').trim() || 'Family';
+  const asstTitle = `${rawFamName} Assistant`;
+
   return (
-    `Greetings, ${callerName || 'family member'}! I am your **Legacy Link Family Assistant**.\n\n` +
+    `Greetings, ${callerName || 'family member'}! I am your **${asstTitle}**.\n\n` +
     `I hold knowledge of the **${family.name}** ancestry, spanning our ${members.length} documented family members, biographical milestones, traditional Meru proverbs, recipes, and historical chronicle.\n\n` +
     `Here are some things you can ask me:\n` +
     `• *"Tell me about Senior Chief Gerald Kithinji M'Ikunyua's early life."*\n` +
@@ -374,7 +377,10 @@ assistant.post('/chat', async (c) => {
       .map((r) => `- ${r.title} (${r.category})`)
       .join('\n');
 
-    const systemPrompt = `You are the "Legacy Link Family Assistant" (also honored as the Family Griot and Heritage Keeper) for the ${context.family.name || 'Family'}.
+    const rawFamName = (context.family?.name || '').replace(/\s*family\s*/i, '').trim() || 'Family';
+    const asstTitle = `${rawFamName} Assistant`;
+
+    const systemPrompt = `You are the "${asstTitle}" (also honored as the Family Griot and Heritage Keeper) for the ${context.family.name || 'Family'}.
 You are warm, wise, culturally proud, respectful, and deeply knowledgeable about the family's lineage, African/Meru heritage, values, elders, recipes, and traditions.
 
 GROUNDING KNOWLEDGE BASE:

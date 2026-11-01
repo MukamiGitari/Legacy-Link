@@ -17,13 +17,43 @@ import { useApp } from '../../context/AppContext';
 import { askAssistant, getAssistantSuggestions, type AssistantChatMessage } from '../../lib/api';
 
 interface ChatPanelProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onToggle?: () => void;
   onSelectMember?: (memberId: string) => void;
   onNavigate?: (page: any) => void;
 }
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({
+  isOpen: controlledIsOpen,
+  onClose: controlledOnClose,
+  onToggle: controlledOnToggle,
+  onSelectMember,
+  onNavigate,
+}) => {
   const { data, currentProfile } = useApp();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalOpen;
+
+  const handleClose = () => {
+    if (controlledOnClose) {
+      controlledOnClose();
+    } else {
+      setInternalOpen(false);
+    }
+  };
+
+  const handleOpen = () => {
+    if (controlledOnToggle) {
+      controlledOnToggle();
+    } else {
+      setInternalOpen(true);
+    }
+  };
+
+  const rawFamilyName = (data.family?.name || '').replace(/\s*family\s*/i, '').trim() || 'Family';
+  const assistantName = `${rawFamilyName} Assistant`;
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -48,7 +78,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate
     return [
       {
         role: 'assistant',
-        content: `Greetings! I am your **Legacy Link Family Assistant**.\n\nI can answer questions about your family tree, ancestors like Senior Chief Gerald Kithinji M'Ikunyua, traditional Meru proverbs, recipes, and recorded family memories.\n\nHow can I help you explore your heritage today?`,
+        content: `Greetings! I am the **${assistantName}**.\n\nI can answer questions about your family tree, ancestors like Senior Chief Gerald Kithinji M'Ikunyua, traditional Meru proverbs, recipes, and recorded family memories.\n\nHow can I help you explore your heritage today?`,
       },
     ];
   });
@@ -114,7 +144,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate
       ]);
     } catch (err: any) {
       console.error('[Assistant Chat Error]:', err);
-      // Fallback message
       setMessages((prev) => [
         ...prev,
         {
@@ -200,16 +229,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate
       {/* Floating Launcher Pill / Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-heritage-green-900 via-heritage-green-800 to-heritage-green-900 text-heritage-cream-100 shadow-xl shadow-heritage-green-950/25 border border-heritage-gold-500/40 hover:scale-105 active:scale-95 transition-all duration-200 group"
-          aria-label="Ask Family Heritage Assistant"
+          onClick={handleOpen}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-heritage-green-900 via-heritage-green-800 to-heritage-green-900 text-heritage-cream-100 shadow-2xl shadow-heritage-green-950/40 border border-heritage-gold-500/50 hover:scale-105 active:scale-95 transition-all duration-200 group"
+          aria-label={`Ask ${assistantName}`}
         >
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-heritage-gold-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-heritage-gold-500"></span>
           </span>
           <Sparkles size={17} className="text-heritage-gold-300 group-hover:rotate-12 transition-transform" />
-          <span className="font-medium text-xs tracking-wide">Family Assistant</span>
+          <span className="font-bold text-xs tracking-wide">{assistantName}</span>
         </button>
       )}
 
@@ -224,8 +253,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-serif font-semibold text-base leading-tight">Family Assistant</h3>
-                  <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-400/30">
+                  <h3 className="font-serif font-bold text-base leading-tight">{assistantName}</h3>
+                  <span className="text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-heritage-gold-500/20 text-heritage-gold-300 border border-heritage-gold-400/30">
                     Griot AI
                   </span>
                 </div>
@@ -244,7 +273,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onSelectMember, onNavigate
                 <RotateCcw size={16} />
               </button>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 title="Close assistant"
                 className="p-1.5 rounded-lg text-heritage-cream-300 hover:text-heritage-cream-100 hover:bg-white/10 transition-colors"
               >

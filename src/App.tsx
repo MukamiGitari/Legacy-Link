@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [modalMemberId, setModalMemberId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [profileMemberId, setProfileMemberId] = useState<string | null>(null);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const navigate = (p: Page) => {
     setPage(p);
@@ -100,6 +101,7 @@ const App: React.FC = () => {
         onNavigate={navigate}
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
+        onOpenAssistant={() => setAssistantOpen(true)}
       />
 
       <div className="flex-1 min-w-0">
@@ -110,6 +112,7 @@ const App: React.FC = () => {
           canAddMember={canAddContent(currentProfile?.role)}
           onNavigate={navigate}
           onSelectMember={openMemberDrawer}
+          onOpenAssistant={() => setAssistantOpen(true)}
         />
 
         <main className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -163,7 +166,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <ChatPanel onSelectMember={openMemberDrawer} onNavigate={navigate} />
+      <ChatPanel isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} onToggle={() => setAssistantOpen(v => !v)} onSelectMember={openMemberDrawer} onNavigate={navigate} />
       <ToastStack />
     </div>
   );
