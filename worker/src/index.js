@@ -45,7 +45,8 @@ app.use('/api/family/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/albums/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/features/*', rateLimit('API_RATE_LIMITER'));
 app.use('/api/songs/*', rateLimit('API_RATE_LIMITER'));
-app.use('/api/assistant/*', rateLimit('API_RATE_LIMITER'));
+// Each assistant call hits a paid LLM API, so it gets its own, much tighter limiter.
+app.use('/api/assistant/*', rateLimit('ASSISTANT_RATE_LIMITER'));
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 
