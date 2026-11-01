@@ -11,6 +11,23 @@ async function getProfile(client, userId) {
   return await getOrCreateProfile(client, userId);
 }
 
+// Deny by default: only families listed in APPROVED_FAMILY_IDS may use the assistant.
+// Signup is open and gives every new account its own family, so an empty list must mean "off",
+// never "everyone" (otherwise strangers could use the assistant and spend the Anthropic budget).
+function approvedFamilyIds(env) {
+  return String(env.APPROVED_FAMILY_IDS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+function isFamilyApproved(env, familyId) {
+  return Boolean(familyId) && approvedFamilyIds(env).includes(String(familyId).toLowerCase());
+}
+
+// Anthropic only accepts user/assistant turns, and the first one must be from the user.
+function toAnthropicMessages(history, message) {
+  const turns = history.filter((h) => h.role === 'user' || h.role === 'assistant');
+  while (turns.length && turns[0].role !== 'user') turns.shift();
+  return [...turns.map((h) => ({ role: h.role, content: h.content })), { role: 'user', content: message }];
+}
+
 // Request validation schema
 const chatSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -280,12 +297,7 @@ assistant.get('/status', async (c) => {
       return c.json({ ok: false, error: 'No family linked' }, 403);
     }
 
-    // Check optional family restrictions
-    const allowed = c.env.APPROVED_FAMILY_IDS
-      ? c.env.APPROVED_FAMILY_IDS.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
-      : null;
-
-    const isApproved = !allowed || allowed.length === 0 || allowed.includes(profile.family_id.toLowerCase());
+    const isApproved = isFamilyApproved(c.env, profile.family_id);
 
     return c.json({
       ok: true,
@@ -342,14 +354,9 @@ assistant.post('/chat', async (c) => {
       return c.json({ error: 'No family linked to your account' }, 403);
     }
 
-    // Restriction check: Restricting assistant access to approved family IDs if configured
-    const allowed = c.env.APPROVED_FAMILY_IDS
-      ? c.env.APPROVED_FAMILY_IDS.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
-      : null;
-
-    if (allowed && allowed.length > 0 && !allowed.includes(profile.family_id.toLowerCase())) {
+    if (!isFamilyApproved(c.env, profile.family_id)) {
       return c.json(
-        { error: 'The AI Family Assistant is currently restricted for this family space. Contact an administrator.' },
+        { error: 'The AI Family Assistant is not enabled for this family space. Contact an administrator.' },
         403
       );
     }
@@ -446,15 +453,14 @@ INSTRUCTIONS:
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
+            model: c.env.ASSISTANT_MODEL || 'claude-sonnet-5-5',
             max_tokens: 1000,
             system: systemPrompt,
-            messages: [
-              ...history.map((h) => ({ role: h.role, content: h.content })),
-              { role: 'user', content: message },
-            ],
+            messages: toAnthropicMessages(history, message),
           }),
         });
+
+        if (!anthropicRes.ok) console.warn('[Assistant] Anthropic API returned status', anthropicRes.status);
 
         if (anthropicRes.ok) {
           const data = await anthropicRes.json();
