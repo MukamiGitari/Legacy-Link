@@ -137,6 +137,8 @@ export interface Memory {
   authorMemberId?: string;
   coverPhotoUrl?: string;
   audioUrl?: string;
+  recordedByMemberId?: string;
+  recordedByName?: string;
   relatedMemberIds: string[];
   createdAt: string;
 }
@@ -241,6 +243,9 @@ export interface ChronicleEra {
   headline: string;
   narrative?: string;
   photoUrl?: string;
+  audioUrl?: string;
+  recordedByMemberId?: string;
+  recordedByName?: string;
 }
 
 export interface Profile {
@@ -334,6 +339,8 @@ export interface LanguageEntry {
   photoUrl?: string;
   /** Optional audio recording URL (R2 uploaded file or voice recording). */
   audioUrl?: string;
+  recordedByMemberId?: string;
+  recordedByName?: string;
   /** Which family member is known for saying this or shared this wisdom. */
   saidByMemberId?: string;
   contributedByProfileId?: string;

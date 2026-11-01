@@ -144,12 +144,14 @@ interface AppContextValue {
 
   // memories / events / announcements
   addMemory: (m: Omit<Memory, 'id' | 'familyId' | 'createdAt'>) => void;
+  updateMemory: (id: string, patch: Partial<Omit<Memory, 'id' | 'familyId' | 'createdAt'>>) => void;
   addEvent: (e: Omit<FamilyEvent, 'id' | 'familyId' | 'rsvps'>) => void;
   setRsvp: (eventId: string, memberId: string, status: FamilyEvent['rsvps'][number]['status']) => void;
   addAnnouncement: (a: Omit<Announcement, 'id' | 'familyId' | 'createdAt'>) => void;
 
   // chronicle
   addChronicleEra: (c: Omit<ChronicleEra, 'id' | 'familyId' | 'sortOrder'>) => void;
+  updateChronicleEra: (id: string, patch: Partial<Omit<ChronicleEra, 'id' | 'familyId'>>) => void;
 
   // biography & legacy
   saveBiography: (memberId: string, patch: Omit<Partial<Biography>, 'id' | 'familyId' | 'memberId' | 'updatedAt' | 'updatedByProfileId'>) => void;
@@ -595,10 +597,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         authorMemberId: memory.authorMemberId,
         coverPhotoUrl: memory.coverPhotoUrl,
         audioUrl: memory.audioUrl,
+        recordedByMemberId: memory.recordedByMemberId,
+        recordedByName: memory.recordedByName,
         relatedMemberIds: memory.relatedMemberIds,
       }));
     }
     logActivity(`Shared a memory "${m.title}"`, 'memory');
+  };
+
+  const updateMemory: AppContextValue['updateMemory'] = (id, patch) => {
+    setData(prev => ({
+      ...prev,
+      memories: prev.memories.map(m => (m.id === id ? { ...m, ...patch } : m)),
+    }));
+    if (isOnlineMode) {
+      persist('update memory', () => api.put(`/features/memories/${id}`, patch));
+    }
+    logActivity('Updated a memory', 'memory');
   };
 
   const addEvent: AppContextValue['addEvent'] = (e) => {
@@ -656,9 +671,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headline: era.headline,
         narrative: era.narrative,
         photoUrl: era.photoUrl,
+        audioUrl: era.audioUrl,
+        recordedByMemberId: era.recordedByMemberId,
+        recordedByName: era.recordedByName,
       }));
     }
     logActivity(`Added chronicle era "${era.eraLabel}"`, 'chronicle_era');
+  };
+
+  const updateChronicleEra: AppContextValue['updateChronicleEra'] = (id, patch) => {
+    setData(prev => ({
+      ...prev,
+      chronicleEras: prev.chronicleEras.map(e => (e.id === id ? { ...e, ...patch } : e)),
+    }));
+    if (isOnlineMode) {
+      persist('update chronicle era', () => api.put(`/features/chronicle/${id}`, patch));
+    }
+    logActivity('Updated chronicle era', 'chronicle_era');
   };
 
   const saveBiography: AppContextValue['saveBiography'] = (memberId, patch) => {
@@ -1174,7 +1203,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTreeTemplate,
     addAlbum, updateAlbum, removeAlbum, addPhoto, removePhoto,
     addCookbookAlbum, updateCookbookAlbum, removeCookbookAlbum, addRecipe, updateRecipe, removeRecipe,
-    addMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra,
+    addMemory, updateMemory, addEvent, setRsvp, addAnnouncement, addChronicleEra, updateChronicleEra,
     saveBiography, addLegacyContribution, removeLegacyContribution,
     addLanguageEntry, updateLanguageEntry, removeLanguageEntry,
     recordTriviaScore,

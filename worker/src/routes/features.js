@@ -21,6 +21,8 @@ const memorySchema = z.object({
   authorMemberId: z.string().uuid().optional(),
   coverPhotoUrl: z.string().max(1000).optional(),
   audioUrl: z.string().max(1000).optional(),
+  recordedByMemberId: z.string().uuid().optional(),
+  recordedByName: z.string().max(100).optional(),
   relatedMemberIds: z.array(z.string().uuid()).default([]),
 });
 
@@ -47,13 +49,43 @@ features.post('/memories', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { title, body, era, authorMemberId, coverPhotoUrl, audioUrl, relatedMemberIds } = parsed.data;
+    const { title, body, era, authorMemberId, coverPhotoUrl, audioUrl, recordedByMemberId, recordedByName, relatedMemberIds } = parsed.data;
     const result = await client.query(
-      `INSERT INTO memories (family_id, title, body, era, author_member_id, cover_photo_url, audio_url, related_member_ids)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [profile.family_id, title, body, era ?? null, authorMemberId ?? null, coverPhotoUrl ?? null, audioUrl ?? null, relatedMemberIds]
+      `INSERT INTO memories (family_id, title, body, era, author_member_id, cover_photo_url, audio_url, recorded_by_member_id, recorded_by_name, related_member_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [profile.family_id, title, body, era ?? null, authorMemberId ?? null, coverPhotoUrl ?? null, audioUrl ?? null, recordedByMemberId ?? null, recordedByName ?? null, relatedMemberIds]
     );
     return c.json({ memory: result.rows[0] }, 201);
+  });
+});
+
+features.put('/memories/:id', async (c) => {
+  const body = await c.req.json();
+  const parsed = memorySchema.partial().safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
+  const user = c.get('user');
+  const id = c.req.param('id');
+
+  return withClient(c.env, async (client) => {
+    const profile = await getProfile(client, user.id);
+    if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
+
+    const d = parsed.data;
+    const result = await client.query(
+      `UPDATE memories SET
+         title = COALESCE($1, title),
+         body = COALESCE($2, body),
+         era = COALESCE($3, era),
+         author_member_id = COALESCE($4, author_member_id),
+         cover_photo_url = COALESCE($5, cover_photo_url),
+         audio_url = CASE WHEN $6::text IS NULL THEN audio_url WHEN $6::text = '' THEN NULL ELSE $6::text END,
+         recorded_by_member_id = COALESCE($7, recorded_by_member_id),
+         recorded_by_name = COALESCE($8, recorded_by_name)
+       WHERE id = $9 AND family_id = $10 RETURNING *`,
+      [d.title ?? null, d.body ?? null, d.era ?? null, d.authorMemberId ?? null, d.coverPhotoUrl ?? null, d.audioUrl ?? null, d.recordedByMemberId ?? null, d.recordedByName ?? null, id, profile.family_id]
+    );
+    if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
+    return c.json({ memory: result.rows[0] });
   });
 });
 
@@ -230,6 +262,9 @@ const chronicleSchema = z.object({
   headline: z.string().min(1).max(300),
   narrative: z.string().max(5000).optional(),
   photoUrl: z.string().max(1000).optional(),
+  audioUrl: z.string().max(1000).optional(),
+  recordedByMemberId: z.string().uuid().optional(),
+  recordedByName: z.string().max(100).optional(),
 });
 
 features.get('/chronicle', async (c) => {
@@ -255,17 +290,47 @@ features.post('/chronicle', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { eraLabel, sortOrder, headline, narrative, photoUrl } = parsed.data;
+    const { eraLabel, sortOrder, headline, narrative, photoUrl, audioUrl, recordedByMemberId, recordedByName } = parsed.data;
     const result = await client.query(
-      `INSERT INTO chronicle_eras (family_id, era_label, sort_order, headline, narrative, photo_url)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [profile.family_id, eraLabel, sortOrder, headline, narrative ?? null, photoUrl ?? null]
+      `INSERT INTO chronicle_eras (family_id, era_label, sort_order, headline, narrative, photo_url, audio_url, recorded_by_member_id, recorded_by_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [profile.family_id, eraLabel, sortOrder, headline, narrative ?? null, photoUrl ?? null, audioUrl ?? null, recordedByMemberId ?? null, recordedByName ?? null]
     );
     return c.json({ era: result.rows[0] }, 201);
   });
 });
 
 // ===========================================================================
+features.put('/chronicle/:id', async (c) => {
+  const body = await c.req.json();
+  const parsed = chronicleSchema.partial().safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
+  const user = c.get('user');
+  const id = c.req.param('id');
+
+  return withClient(c.env, async (client) => {
+    const profile = await getProfile(client, user.id);
+    if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
+
+    const d = parsed.data;
+    const result = await client.query(
+      `UPDATE chronicle_eras SET
+         era_label = COALESCE($1, era_label),
+         sort_order = COALESCE($2, sort_order),
+         headline = COALESCE($3, headline),
+         narrative = COALESCE($4, narrative),
+         photo_url = COALESCE($5, photo_url),
+         audio_url = CASE WHEN $6::text IS NULL THEN audio_url WHEN $6::text = '' THEN NULL ELSE $6::text END,
+         recorded_by_member_id = COALESCE($7, recorded_by_member_id),
+         recorded_by_name = COALESCE($8, recorded_by_name)
+       WHERE id = $9 AND family_id = $10 RETURNING *`,
+      [d.eraLabel ?? null, d.sortOrder ?? null, d.headline ?? null, d.narrative ?? null, d.photoUrl ?? null, d.audioUrl ?? null, d.recordedByMemberId ?? null, d.recordedByName ?? null, id, profile.family_id]
+    );
+    if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
+    return c.json({ era: result.rows[0] });
+  });
+});
+
 // 5. Biographies
 // ===========================================================================
 const bioSchema = z.object({
@@ -442,6 +507,8 @@ const languageSchema = z.object({
   answer: z.string().max(1000).optional(),
   audioUrl: z.string().max(2000).optional(),
   saidByMemberId: z.string().uuid().optional(),
+  recordedByMemberId: z.string().uuid().optional(),
+  recordedByName: z.string().max(100).optional(),
   contributedByName: z.string().min(1).max(100).optional(),
 });
 
@@ -468,18 +535,18 @@ features.post('/language', async (c) => {
     const profile = await getProfile(client, user.id);
     if (!profile?.family_id) return c.json({ error: 'No family linked' }, 403);
 
-    const { id, entryType, term, meaning, answer, audioUrl, saidByMemberId, contributedByName } = parsed.data;
+    const { id, entryType, term, meaning, answer, audioUrl, saidByMemberId, recordedByMemberId, recordedByName, contributedByName } = parsed.data;
     const contributor = contributedByName || profile.display_name || 'A family member';
-    const values = [profile.family_id, entryType, term, meaning, answer ?? null, audioUrl ?? null, saidByMemberId ?? null, user.id, contributor];
+    const values = [profile.family_id, entryType, term, meaning, answer ?? null, audioUrl ?? null, saidByMemberId ?? null, recordedByMemberId ?? null, recordedByName ?? null, user.id, contributor];
     const result = id
       ? await client.query(
-          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name, id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, recorded_by_member_id, recorded_by_name, contributed_by_profile_id, contributed_by_name, id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
           [...values, id]
         )
       : await client.query(
-          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, contributed_by_profile_id, contributed_by_name)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+          `INSERT INTO language_entries (family_id, entry_type, term, meaning, answer, audio_url, said_by_member_id, recorded_by_member_id, recorded_by_name, contributed_by_profile_id, contributed_by_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
           values
         );
     return c.json({ entry: result.rows[0] }, 201);
@@ -505,9 +572,11 @@ features.put('/language/:id', async (c) => {
          answer = COALESCE($3, answer),
          -- NULL keeps the current clip; an empty string removes it
          audio_url = CASE WHEN $4::text IS NULL THEN audio_url WHEN $4::text = '' THEN NULL ELSE $4::text END,
-         said_by_member_id = COALESCE($5, said_by_member_id)
-       WHERE id = $6 AND family_id = $7 RETURNING *`,
-      [d.term ?? null, d.meaning ?? null, d.answer ?? null, d.audioUrl ?? null, d.saidByMemberId ?? null, id, profile.family_id]
+         said_by_member_id = COALESCE($5, said_by_member_id),
+         recorded_by_member_id = COALESCE($6, recorded_by_member_id),
+         recorded_by_name = COALESCE($7, recorded_by_name)
+       WHERE id = $8 AND family_id = $9 RETURNING *`,
+      [d.term ?? null, d.meaning ?? null, d.answer ?? null, d.audioUrl ?? null, d.saidByMemberId ?? null, d.recordedByMemberId ?? null, d.recordedByName ?? null, id, profile.family_id]
     );
     if (result.rowCount === 0) return c.json({ error: 'Not found' }, 404);
     return c.json({ entry: result.rows[0] });

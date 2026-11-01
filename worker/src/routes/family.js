@@ -117,6 +117,8 @@ function mapMemory(r, env) {
     era: r.era ?? undefined, authorMemberId: r.author_member_id ?? undefined,
     coverPhotoUrl: toPublicUrl(env, r.cover_photo_url ?? undefined),
     audioUrl: r.audio_url ?? undefined,
+    recordedByMemberId: r.recorded_by_member_id ?? undefined,
+    recordedByName: r.recorded_by_name ?? undefined,
     relatedMemberIds: Array.isArray(r.related_member_ids) ? r.related_member_ids : [],
     createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
   };
@@ -145,6 +147,9 @@ function mapChronicleEra(r) {
   return {
     id: r.id, familyId: r.family_id, eraLabel: r.era_label, sortOrder: r.sort_order,
     headline: r.headline, narrative: r.narrative ?? undefined, photoUrl: r.photo_url ?? undefined,
+    audioUrl: r.audio_url ?? undefined,
+    recordedByMemberId: r.recorded_by_member_id ?? undefined,
+    recordedByName: r.recorded_by_name ?? undefined,
   };
 }
 
@@ -187,6 +192,8 @@ function mapLanguageEntry(r) {
     id: r.id, familyId: r.family_id, entryType: r.entry_type, term: r.term, meaning: r.meaning,
     answer: r.answer ?? undefined, saidByMemberId: r.said_by_member_id ?? undefined,
     audioUrl: r.audio_url ?? undefined,
+    recordedByMemberId: r.recorded_by_member_id ?? undefined,
+    recordedByName: r.recorded_by_name ?? undefined,
     contributedByProfileId: r.contributed_by_profile_id ?? undefined,
     contributedByName: r.contributed_by_name,
     createdAt: typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),

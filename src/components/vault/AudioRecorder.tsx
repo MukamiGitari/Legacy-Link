@@ -1,16 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Upload, Trash2, Volume2, RotateCcw } from 'lucide-react';
+import { Mic, Square, Upload, Trash2, Volume2, RotateCcw, UserCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { uploadFileToR2 } from '../../lib/api';
+import { fullName } from '../../lib/lineage';
 
 /**
- * Record, upload, preview and remove one audio clip (a pronounced word, a
- * spoken proverb, a read-aloud sentence...).
+ * Record, upload, preview, and tag who made one audio clip (a pronounced word, a
+ * spoken proverb, a narrated memory, a chronicle era oral history...).
  *
- * `value` is the stored URL ('' / undefined = no audio). The component reports
- * changes through `onChange`; an empty string means the clip was removed.
- * Online, clips are uploaded to R2 and the public URL is returned. In local /
- * demo mode they are kept as data URLs so everything still works offline.
+ * `value` is the stored URL ('' / undefined = no audio).
+ * `recordedByMemberId` / `recordedByName` tags the voice recording author.
  */
 
 // Browsers differ: Chrome/Firefox record webm/ogg, Safari/iOS only records mp4.
@@ -65,6 +64,14 @@ interface Props {
   maxSeconds?: number;
   /** Lets the parent disable "Save" while a recording/upload is in progress. */
   onBusyChange?: (busy: boolean) => void;
+  /** Tagged family member who voiced this recording */
+  recordedByMemberId?: string;
+  onRecordedByMemberChange?: (memberId: string) => void;
+  /** Tagged name (if not in tree or custom speaker) */
+  recordedByName?: string;
+  onRecordedByNameChange?: (name: string) => void;
+  /** Whether to show the voice speaker tagging section (default: true) */
+  showMemberTag?: boolean;
 }
 
 export const AudioRecorder: React.FC<Props> = ({
@@ -73,8 +80,13 @@ export const AudioRecorder: React.FC<Props> = ({
   label = 'Voice note / audio recording',
   maxSeconds = 300,
   onBusyChange,
+  recordedByMemberId,
+  onRecordedByMemberChange,
+  recordedByName,
+  onRecordedByNameChange,
+  showMemberTag = true,
 }) => {
-  const { isOnlineMode, pushToast } = useApp();
+  const { data, currentProfile, isOnlineMode, pushToast } = useApp();
 
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -87,6 +99,19 @@ export const AudioRecorder: React.FC<Props> = ({
   const startedAtRef = useRef(0);
   const discardRef = useRef(false);
   const mountedRef = useRef(true);
+
+  // Auto-tag current user's member profile when recording/uploading if not already tagged
+  const autoTagCurrentMember = () => {
+    if (!recordedByMemberId && currentProfile?.memberId && onRecordedByMemberChange) {
+      onRecordedByMemberChange(currentProfile.memberId);
+      const m = data.members.find(x => x.id === currentProfile.memberId);
+      if (m && onRecordedByNameChange && !recordedByName) {
+        onRecordedByNameChange(fullName(m));
+      }
+    } else if (!recordedByName && currentProfile?.displayName && onRecordedByNameChange) {
+      onRecordedByNameChange(currentProfile.displayName);
+    }
+  };
 
   const canRecord =
     typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
@@ -124,6 +149,7 @@ export const AudioRecorder: React.FC<Props> = ({
   }, []);
 
   const store = async (file: File) => {
+    autoTagCurrentMember();
     if (isOnlineMode) {
       setWorking(true);
       try {
@@ -132,8 +158,6 @@ export const AudioRecorder: React.FC<Props> = ({
         onChange(res.url || res.key);
         pushToast('Audio saved.', 'success');
       } catch (err: any) {
-        // Don't quietly keep a huge inline copy: the server can't store it, so the person would see
-        // "saved" and then lose the clip on refresh. Say so now instead.
         console.warn('Audio upload failed:', err);
         pushToast(
           `Couldn't upload the recording (${err?.message || 'unknown error'}). It was not saved — check your connection and try again.`,
@@ -217,14 +241,18 @@ export const AudioRecorder: React.FC<Props> = ({
     await store(new File([picked], picked.name, { type }));
   };
 
+  const taggedMember = data.members.find(m => m.id === recordedByMemberId);
+
   return (
-    <div className="rounded-lg border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border bg-heritage-cream-50 dark:bg-heritage-dark-hover/50 p-4 space-y-3">
+    <div className="rounded-xl border border-dashed border-heritage-cream-400 dark:border-heritage-dark-border bg-heritage-cream-50/80 dark:bg-heritage-dark-hover/40 p-4 space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs font-medium text-heritage-green-800 dark:text-heritage-dark-text flex items-center gap-1.5">
-          <Volume2 size={15} /> {label}
+        <span className="text-xs font-semibold text-heritage-green-800 dark:text-heritage-dark-text flex items-center gap-1.5">
+          <Volume2 size={15} className="text-heritage-gold-600 dark:text-heritage-gold-400" /> {label}
         </span>
         {value && !busy && (
-          <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Audio attached</span>
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+            ✓ Audio attached
+          </span>
         )}
       </div>
 
@@ -234,7 +262,7 @@ export const AudioRecorder: React.FC<Props> = ({
             <button
               type="button"
               onClick={stopRecording}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-800 text-white font-medium animate-pulse"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-700 hover:bg-red-800 text-white font-medium animate-pulse transition-colors"
             >
               <Square size={14} /> Stop ({formatTime(seconds)} / {formatTime(maxSeconds)})
             </button>
@@ -243,7 +271,7 @@ export const AudioRecorder: React.FC<Props> = ({
               type="button"
               onClick={startRecording}
               disabled={working}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50 shadow-xs"
             >
               {value ? <RotateCcw size={14} /> : <Mic size={14} />}
               {value ? 'Re-record' : 'Record with microphone'}
@@ -252,7 +280,7 @@ export const AudioRecorder: React.FC<Props> = ({
         )}
 
         <label
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-400 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card text-heritage-green-700 dark:text-heritage-dark-muted transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card text-heritage-green-800 dark:text-heritage-dark-text transition-colors ${
             busy ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-heritage-cream-100 dark:hover:bg-heritage-dark-hover'
           }`}
         >
@@ -263,7 +291,11 @@ export const AudioRecorder: React.FC<Props> = ({
         {value && !busy && (
           <button
             type="button"
-            onClick={() => onChange('')}
+            onClick={() => {
+              onChange('');
+              if (onRecordedByMemberChange) onRecordedByMemberChange('');
+              if (onRecordedByNameChange) onRecordedByNameChange('');
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             <Trash2 size={14} /> Remove audio
@@ -282,7 +314,73 @@ export const AudioRecorder: React.FC<Props> = ({
       )}
 
       {value && (
-        <audio controls src={value} className="w-full h-9 rounded-lg" />
+        <audio controls src={value} className="w-full h-9 rounded-lg shadow-xs" />
+      )}
+
+      {/* Voice Attribution / Tagging Section */}
+      {showMemberTag && (onRecordedByMemberChange || onRecordedByNameChange) && (
+        <div className="pt-2.5 mt-2 border-t border-heritage-cream-200 dark:border-heritage-dark-border/60 space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs font-semibold text-heritage-green-900 dark:text-heritage-dark-text flex items-center gap-1.5">
+              <UserCheck size={14} className="text-heritage-bark-500 dark:text-heritage-gold-400" />
+              Tag who recorded / voiced this:
+            </span>
+            {taggedMember && (
+              <span className="text-[11px] font-medium text-heritage-green-700 dark:text-heritage-dark-muted bg-heritage-cream-100 dark:bg-heritage-dark-card px-2 py-0.5 rounded-full border border-heritage-cream-300 dark:border-heritage-dark-border">
+                🎙️ Voiced by: {fullName(taggedMember)}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {onRecordedByMemberChange && (
+              <select
+                value={recordedByMemberId || ''}
+                onChange={(e) => {
+                  const mid = e.target.value;
+                  onRecordedByMemberChange(mid);
+                  if (mid && mid !== 'custom') {
+                    const m = data.members.find(x => x.id === mid);
+                    if (m && onRecordedByNameChange) onRecordedByNameChange(fullName(m));
+                  }
+                }}
+                className="text-xs rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card px-2.5 py-1.5 text-heritage-green-900 dark:text-heritage-dark-text focus:outline-none focus:ring-1 focus:ring-heritage-gold-500 max-w-[240px] flex-1 min-w-[160px]"
+              >
+                <option value="">-- Choose Family Member --</option>
+                {data.members.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {fullName(m)} {m.generation ? `(Gen ${m.generation})` : ''}
+                  </option>
+                ))}
+                <option value="custom">Other / Enter Name Below</option>
+              </select>
+            )}
+
+            {onRecordedByNameChange && (
+              <input
+                type="text"
+                value={recordedByName || ''}
+                onChange={(e) => onRecordedByNameChange(e.target.value)}
+                placeholder="Speaker name (e.g. Aunt Sarah, Elder Mwenda)"
+                className="text-xs rounded-lg border border-heritage-cream-300 dark:border-heritage-dark-border bg-white dark:bg-heritage-dark-card px-2.5 py-1.5 text-heritage-green-900 dark:text-heritage-dark-text focus:outline-none focus:ring-1 focus:ring-heritage-gold-500 flex-1 min-w-[160px]"
+              />
+            )}
+          </div>
+
+          {taggedMember && (
+            <div className="flex items-center gap-2 pt-1 text-xs text-heritage-green-800 dark:text-heritage-dark-text">
+              <img
+                src={taggedMember.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                alt=""
+                className="w-5 h-5 rounded-full object-cover border border-heritage-gold-400"
+              />
+              <span>
+                Recording attribution: <strong className="font-semibold text-heritage-bark-700 dark:text-heritage-gold-400">{fullName(taggedMember)}</strong>
+                {taggedMember.occupation ? ` • ${taggedMember.occupation}` : ""}
+              </span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

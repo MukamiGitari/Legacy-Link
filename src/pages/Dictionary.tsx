@@ -103,6 +103,8 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
   const [formContext, setFormContext] = useState('');
   const [formAudioUrl, setFormAudioUrl] = useState('');
   const [formAudioBusy, setFormAudioBusy] = useState(false);
+  const [formRecordedByMemberId, setFormRecordedByMemberId] = useState('');
+  const [formRecordedByName, setFormRecordedByName] = useState('');
 
   const toggleLike = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -116,6 +118,8 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
     setFormMeaning('');
     setFormContext('');
     setFormAudioUrl('');
+    setFormRecordedByMemberId(currentProfile?.memberId || '');
+    setFormRecordedByName(currentProfile?.displayName || '');
     setFormContributor('');
     setShowForm(true);
   };
@@ -131,6 +135,8 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
       storyBehind: formContext.trim() || undefined,
       language: formOriginal.trim() || undefined,
       audioUrl: formAudioUrl.trim() || undefined,
+      recordedByMemberId: formRecordedByMemberId || undefined,
+      recordedByName: formRecordedByName.trim() || undefined,
       saidByMemberId: formContributor || undefined,
     });
     setShowForm(false);
@@ -339,6 +345,10 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
                 <AudioRecorder
                   value={formAudioUrl}
                   onChange={setFormAudioUrl}
+                  recordedByMemberId={formRecordedByMemberId}
+                  onRecordedByMemberChange={setFormRecordedByMemberId}
+                  recordedByName={formRecordedByName}
+                  onRecordedByNameChange={setFormRecordedByName}
                   label="Record how it's spoken"
                   onBusyChange={setFormAudioBusy}
                 />
@@ -384,9 +394,18 @@ export const Dictionary: React.FC<Props> = ({ onSelectMember }) => {
           onDelete={() => handleDelete(selectedEntry.id)}
           onLike={() => toggleLike(selectedEntry.id)}
           onSelectMember={onSelectMember}
-          onAudioSaved={(url) => {
-            updateLanguageEntry(selectedEntry.id, { audioUrl: url });
-            setSelectedEntry(prev => prev ? { ...prev, audioUrl: url } : null);
+          onAudioSaved={(url, recordedByMemberId, recordedByName) => {
+            updateLanguageEntry(selectedEntry.id, {
+              audioUrl: url,
+              recordedByMemberId: recordedByMemberId || undefined,
+              recordedByName: recordedByName || undefined,
+            });
+            setSelectedEntry(prev => prev ? {
+              ...prev,
+              audioUrl: url,
+              recordedByMemberId: recordedByMemberId || undefined,
+              recordedByName: recordedByName || undefined,
+            } : null);
             pushToast('Voice recording saved');
           }}
         />
@@ -549,6 +568,10 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onEdit, onL
   const { currentProfile, updateLanguageEntry, pushToast } = useApp();
   const canAddVoice = canAddContent(currentProfile?.role);
   const [recording, setRecording] = useState(false);
+  const [inlineRecordingMemberId, setInlineRecordingMemberId] = useState(currentProfile?.memberId || '');
+  const [inlineRecordingName, setInlineRecordingName] = useState(currentProfile?.displayName || '');
+  const speaker = entry.recordedByMemberId ? members.find(m => m.id === entry.recordedByMemberId) : undefined;
+  const speakerName = speaker ? fullName(speaker) : entry.recordedByName;
 
   return (
     <div
@@ -619,15 +642,31 @@ function WisdomCard({ entry, members, likes, cat, canRemove, onView, onEdit, onL
           {entry.meaning}
         </p>
 
+        {/* Speaker Tag when audio attached */}
+        {entry.audioUrl && (
+          <div className="flex items-center gap-1.5 text-[11px] text-heritage-bark-700 dark:text-heritage-gold-400 bg-heritage-cream-100/70 dark:bg-heritage-dark-card/60 px-2 py-0.5 rounded-md w-fit border border-heritage-cream-200 dark:border-heritage-dark-border/40">
+            <Mic size={11} className="shrink-0" />
+            <span>Voice: <strong className="font-semibold text-heritage-green-900 dark:text-heritage-dark-text">{speakerName || 'Family Member'}</strong></span>
+          </div>
+        )}
+
         {/* Tapping the mic next to the word opens the recorder here, under the meaning */}
         {!entry.audioUrl && canAddVoice && recording && (
           <div onClick={(e) => e.stopPropagation()} className="space-y-2">
             <AudioRecorder
               label="Record the pronunciation"
               maxSeconds={60}
+              recordedByMemberId={inlineRecordingMemberId}
+              onRecordedByMemberChange={setInlineRecordingMemberId}
+              recordedByName={inlineRecordingName}
+              onRecordedByNameChange={setInlineRecordingName}
               onChange={(url) => {
                 if (!url) return;
-                updateLanguageEntry(entry.id, { audioUrl: url });
+                updateLanguageEntry(entry.id, {
+                  audioUrl: url,
+                  recordedByMemberId: inlineRecordingMemberId || currentProfile?.memberId,
+                  recordedByName: inlineRecordingName || currentProfile?.displayName,
+                });
                 pushToast('Voice recording saved');
                 setRecording(false);
               }}
@@ -677,7 +716,7 @@ interface WisdomDetailModalProps {
   onDelete: () => void;
   onLike: () => void;
   onSelectMember: (id: string) => void;
-  onAudioSaved: (url: string) => void;
+  onAudioSaved: (url: string, recordedByMemberId?: string, recordedByName?: string) => void;
   startInEdit?: boolean;
   onSave: (patch: { term: string; meaning: string }) => void;
 }
@@ -688,8 +727,13 @@ function WisdomDetailModal({
 }: WisdomDetailModalProps) {
   const cat = categoryDef(entry);
   const contributor = entry.saidByMemberId ? members.find(m => m.id === entry.saidByMemberId) : undefined;
+  const { currentProfile } = useApp();
+  const speaker = entry.recordedByMemberId ? members.find(m => m.id === entry.recordedByMemberId) : undefined;
+  const speakerName = speaker ? fullName(speaker) : entry.recordedByName;
   const [showAudioEdit, setShowAudioEdit] = useState(false);
   const [pendingAudio, setPendingAudio] = useState(entry.audioUrl ?? '');
+  const [pendingRecordedBy, setPendingRecordedBy] = useState(entry.recordedByMemberId || currentProfile?.memberId || '');
+  const [pendingRecordedName, setPendingRecordedName] = useState(entry.recordedByName || currentProfile?.displayName || '');
   const [audioBusy, setAudioBusy] = useState(false);
 
   // Correcting the word or its meaning
@@ -826,16 +870,31 @@ function WisdomDetailModal({
             </h4>
 
             {entry.audioUrl && !showAudioEdit && (
-              <div className="space-y-2">
-                <audio controls src={entry.audioUrl} className="w-full h-9 rounded-lg" />
-                {canAdd && (
-                  <button
-                    onClick={() => { setPendingAudio(entry.audioUrl ?? ''); setShowAudioEdit(true); }}
-                    className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 dark:hover:text-heritage-dark-text underline"
-                  >
-                    Replace recording
-                  </button>
-                )}
+              <div className="space-y-2 p-3.5 bg-heritage-cream-50/80 dark:bg-heritage-dark-card rounded-xl border border-heritage-cream-200 dark:border-heritage-dark-border">
+                <audio controls src={entry.audioUrl} className="w-full h-9 rounded-lg shadow-xs" />
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1 text-xs text-heritage-green-700 dark:text-heritage-dark-muted">
+                  <div className="flex items-center gap-2">
+                    {speaker?.avatarUrl && (
+                      <img src={speaker.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-heritage-gold-400" />
+                    )}
+                    <span className="font-medium">
+                      🎙️ Spoken / Recorded by: <strong className="text-heritage-green-900 dark:text-heritage-dark-text">{speakerName || 'Family Member'}</strong>
+                    </span>
+                  </div>
+                  {canAdd && (
+                    <button
+                      onClick={() => {
+                        setPendingAudio(entry.audioUrl ?? '');
+                        setPendingRecordedBy(entry.recordedByMemberId || currentProfile?.memberId || '');
+                        setPendingRecordedName(entry.recordedByName || currentProfile?.displayName || '');
+                        setShowAudioEdit(true);
+                      }}
+                      className="text-xs text-heritage-green-600 dark:text-heritage-dark-muted hover:text-heritage-green-900 dark:hover:text-heritage-dark-text underline"
+                    >
+                      Replace or re-tag recording
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -857,13 +916,20 @@ function WisdomDetailModal({
                 <AudioRecorder
                   value={pendingAudio}
                   onChange={setPendingAudio}
+                  recordedByMemberId={pendingRecordedBy}
+                  onRecordedByMemberChange={setPendingRecordedBy}
+                  recordedByName={pendingRecordedName}
+                  onRecordedByNameChange={setPendingRecordedName}
                   label="Record how it's spoken"
                   onBusyChange={setAudioBusy}
                 />
                 <div className="flex gap-2">
                   <button
                     disabled={audioBusy}
-                    onClick={() => { onAudioSaved(pendingAudio); setShowAudioEdit(false); }}
+                    onClick={() => {
+                      onAudioSaved(pendingAudio, pendingRecordedBy, pendingRecordedName);
+                      setShowAudioEdit(false);
+                    }}
                     className="px-4 py-2 rounded-xl text-xs font-semibold bg-heritage-green-800 hover:bg-heritage-green-700 text-white transition-all disabled:opacity-50"
                   >
                     Save Recording
