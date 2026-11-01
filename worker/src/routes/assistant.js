@@ -474,3 +474,5 @@ INSTRUCTIONS:
   });
 });
 
+
+export default assistant;
