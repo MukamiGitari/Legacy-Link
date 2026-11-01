@@ -326,8 +326,8 @@ export const AddEditMemberModal: React.FC<AddEditMemberModalProps> = ({ memberId
               </select>
             </div>
             <div>
-              <label className={labelCls}>Generation</label>
-              <input type="number" min={1} max={8} className={inputCls} value={generation} onChange={e => setGeneration(Number(e.target.value))} />
+              <label className={labelCls}>Generation {generation === -2 ? '(Foundation)' : ''}</label>
+              <input type="number" min={-5} max={8} className={inputCls} value={generation} onChange={e => setGeneration(Number(e.target.value))} />
             </div>
             <div>
               <label className={labelCls}>Status</label>

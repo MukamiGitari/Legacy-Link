@@ -31,10 +31,14 @@ export const TimelineTree: React.FC<Props> = ({ onSelect, filter = 'bloodline' }
       {rows.map(({ gen, members }) => (
         <div key={gen} className="relative">
           <div className="flex items-center gap-3 mb-4">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-heritage-green-800 text-white text-xs font-semibold shrink-0">
-              G{gen}
+            <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold shrink-0 ${
+              gen === -2 ? 'bg-heritage-gold-600 text-white shadow-xs font-bold' : 'bg-heritage-green-800 text-white'
+            }`}>
+              {gen === -2 ? '🏛️' : `G${gen}`}
             </span>
-            <h3 className="font-serif text-heritage-green-900 dark:text-heritage-dark-text">Generation {gen}</h3>
+            <h3 className="font-serif text-heritage-green-900 dark:text-heritage-dark-text font-bold">
+              {gen === -2 ? 'Generation -2 • Foundation' : gen === -1 ? 'Generation -1 • Ancestors' : gen === 0 ? 'Generation 0 • Patriarchs & Matriarchs' : `Generation ${gen}`}
+            </h3>
             <div className="h-px flex-1 bg-heritage-cream-400 dark:bg-heritage-dark-border" />
           </div>
 

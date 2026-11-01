@@ -60,6 +60,11 @@ export const HeritageTree: React.FC<Props> = ({ onSelect, filter = 'bloodline' }
             Married In
           </span>
         )}
+        {m.generation === -2 && (
+          <span className="mt-0.5 text-[8px] font-bold px-1.5 py-0.2 rounded-full border bg-heritage-gold-100 text-heritage-gold-800 border-heritage-gold-400 dark:bg-heritage-gold-950 dark:text-heritage-gold-200 shadow-xs">
+            🏛️ Foundation
+          </span>
+        )}
       </div>
     );
   };

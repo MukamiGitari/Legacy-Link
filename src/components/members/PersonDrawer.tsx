@@ -116,7 +116,16 @@ export const PersonDrawer: React.FC<PersonDrawerProps> = ({
               </span>
             </div>
           </div>
-          <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted mt-0.5">Generation {member.generation}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-sm text-heritage-green-600 dark:text-heritage-dark-muted">
+              {member.generation === -2 ? 'Generation -2 • Foundation Ancestor' : member.generation === -1 ? 'Generation -1 • Ancestor' : `Generation ${member.generation}`}
+            </p>
+            {member.generation === -2 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-heritage-gold-100 text-heritage-gold-800 border border-heritage-gold-400 dark:bg-heritage-gold-950 dark:text-heritage-gold-200">
+                🏛️ Foundation
+              </span>
+            )}
+          </div>
           {member.professionalTitle && (
             <p className="text-sm text-heritage-green-700 dark:text-heritage-dark-muted mt-0.5">
               {member.professionalTitle}{member.currentOrganization ? ` at ${member.currentOrganization}` : ''}

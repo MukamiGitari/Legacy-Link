@@ -17,11 +17,23 @@ const m = (partial: Omit<Member, 'familyId' | 'isLiving'> & { isLiving?: boolean
 });
 
 export const members: Member[] = [
+  // Generation -2 — Foundation Ancestor of the M'Ikunyua Lineage
+  m({ id: 'b0000000-0000-0000-0000-000000000005', firstName: 'Kurirua', lastName: 'Ancestor', gender: 'male', generation: -2,
+    occupation: 'Founding Ancestor',
+    bio: 'Founding apex ancestor and foundation of the M\'Ikunyua lineage. Great-grandfather of Senior Chief Gerald Kithinji M\'Ikunyua and father of M\'Mbwiria.',
+    isFounder: true, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
+
+  // Generation -1 — Lineage Patriarch
+  m({ id: 'b0000000-0000-0000-0000-000000000004', firstName: "M'Mbwiria", lastName: 'son of Kurirua', gender: 'male', generation: -1,
+    occupation: 'Lineage Patriarch',
+    bio: 'Father of Nkuruu M\'Mbwiria and grandfather of Senior Chief Gerald Kithinji M\'Ikunyua. Son of Kurirua.',
+    isFounder: false, birthPlace: 'Meru, Kenya', location: 'Meru, Kenya' }),
+
   // Generation 0 — Founding Patriarch & Wives
   m({ id: 'b0000000-0000-0000-0000-000000000001', firstName: 'Nkuruu', lastName: "M'Mbwiria", gender: 'male', generation: 0,
     occupation: 'Farmer & WWI Veteran',
     bio: 'Father of Senior Chief Gerald M\'Ikunyua and founding patriarch of the Mbwiria lineage (son of M\'Mbwiria, son of Kurirua). A World War I veteran deployed to Dodoma, Tanzania, who farmed bananas, yams, and coffee in Kinoru and kept cattle and sheep.',
-    isFounder: true, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
+    isFounder: false, birthPlace: 'Kinoru, Meru, Kenya', location: 'Kinoru, Meru, Kenya' }),
   m({ id: 'b0000000-0000-0000-0000-000000000002', firstName: 'Salome Gateti', lastName: 'CioMuga', gender: 'female', generation: 0,
     occupation: 'Homesteader & Farmer',
     bio: 'Mother of Senior Chief Gerald M\'Ikunyua and first wife of Nkuruu M\'Mbwiria. Raised three sons in Kinoru, planted millet and ncabi (black beans) in Kithoka, and saved young Gerald from a childhood fire.',
@@ -157,6 +169,10 @@ const parentOf = (parentId: string, childId: string): Relationship => ({
 });
 
 export const relationships: Relationship[] = [
+
+  // Foundation Lineage: Kurirua (-2) -> M'Mbwiria (-1) -> Nkuruu (0)
+  parentOf('b0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000004'),
+  parentOf('b0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   // Nkuruu M'Mbwiria marriages (Two Wives)
   ...spouse('b0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000002', '1920-01-01'), // First Wife: Salome Gateti

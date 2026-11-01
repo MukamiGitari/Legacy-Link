@@ -400,3 +400,10 @@ export function getDerivedInLawRelationships(memberId: string, members: Member[]
   return results;
 }
 
+
+export function generationLabel(gen: number): string {
+  if (gen === -2) return 'Generation -2 • Foundation';
+  if (gen === -1) return 'Generation -1 • Ancestors';
+  if (gen === 0) return 'Generation 0 • Patriarchs & Matriarchs';
+  return `Generation ${gen}`;
+}
