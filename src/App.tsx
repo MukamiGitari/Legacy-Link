@@ -24,7 +24,6 @@ import { useApp } from './context/AppContext';
 import { isAdminRole, canAddContent } from './lib/permissions';
 import { ShieldAlert } from 'lucide-react';
 import { ChatPanel } from './components/assistant/ChatPanel';
-import { AssistantEntryPanel } from './components/assistant/AssistantEntryPanel';
 
 export type Page =
   | 'dashboard' | 'myFamily' | 'tree' | 'directory' | 'profile' | 'gallery' | 'cookbook'
@@ -167,13 +166,16 @@ const App: React.FC = () => {
         />
       )}
 
-      <ChatPanel isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} onToggle={() => setAssistantOpen(v => !v)} onSelectMember={openMemberDrawer} onNavigate={navigate} />
-      <AssistantEntryPanel />
+      <ChatPanel
+        isOpen={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onToggle={() => setAssistantOpen(v => !v)}
+        onSelectMember={openMemberDrawer}
+        onNavigate={navigate}
+      />
       <ToastStack />
     </div>
   );
 };
 
 export default App;
-
-

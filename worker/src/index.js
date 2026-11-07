@@ -9,7 +9,6 @@ import albumRoutes from './routes/albums.js';
 import featureRoutes from './routes/features.js';
 import songRoutes from './routes/songs.js';
 import assistantRoutes from './routes/assistant.js';
-import assistantEntryRoutes from './routes/assistantEntry.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
 const app = new Hono();
@@ -62,7 +61,8 @@ app.route('/api/albums', albumRoutes);
 app.route('/api/features', featureRoutes);
 app.route('/api/songs', songRoutes);
 app.route('/api/assistant', assistantRoutes);
-app.route('/api/assistant-entry', assistantEntryRoutes);
+// Aliased so any legacy or cached client calls to /api/assistant-entry route seamlessly
+app.route('/api/assistant-entry', assistantRoutes);
 
 // Centralized error handler.
 app.onError((err, c) => {
@@ -71,4 +71,3 @@ app.onError((err, c) => {
 });
 
 export default app;
-

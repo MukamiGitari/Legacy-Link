@@ -139,21 +139,57 @@ export async function uploadFileToR2({
   return { key, url: publicUrl };
 }
 
+export type AssistantProposalOpType =
+  | 'add_member'
+  | 'update_member'
+  | 'add_relationship'
+  | 'add_recipe'
+  | 'update_recipe'
+  | 'add_memory'
+  | 'add_language_entry'
+  | 'add_event';
+
+export interface AssistantProposalOp {
+  op: AssistantProposalOpType;
+  ref?: string;
+  id?: string;
+  data?: Record<string, any>;
+  from?: string;
+  to?: string;
+  type?: 'parent' | 'spouse';
+  started_at?: string | null;
+}
+
+export interface AssistantProposal {
+  summary: string;
+  operations: AssistantProposalOp[];
+}
+
 export interface AssistantChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  proposal?: AssistantProposal | null;
+  saved?: boolean;
+  createdIds?: Record<string, string>;
 }
 
 export interface AssistantChatResponse {
   reply: string;
+  proposal?: AssistantProposal | null;
   source?: 'workers-ai' | 'anthropic' | 'synthesizer';
 }
 
 export async function askAssistant(
   message: string,
-  history: AssistantChatMessage[] = []
+  history: { role: string; content: string }[] = []
 ): Promise<AssistantChatResponse> {
   return await api.post<AssistantChatResponse>('/assistant/chat', { message, history });
+}
+
+export async function commitAssistantProposal(
+  proposal: AssistantProposal
+): Promise<{ ok: boolean; created?: Record<string, string>; error?: string }> {
+  return await api.post('/assistant/commit', proposal);
 }
 
 export async function getAssistantSuggestions(): Promise<string[]> {
@@ -165,7 +201,7 @@ export async function getAssistantSuggestions(): Promise<string[]> {
       "Tell me about Senior Chief Gerald M'Ikunyua's early life and legacy",
       "Who was our family founder and how did our roots begin?",
       "Share a wise proverb from the Heritage Vault and explain it",
-      "What traditional Meru recipes are in our cookbook?",
+      "What traditional recipes are in our cookbook?",
       "What eras are documented in our Family Chronicle?",
     ];
   }
