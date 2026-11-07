@@ -275,10 +275,322 @@ async function getFamilyContext(client, familyId) {
 }
 
 /**
- * Intelligent in-process Natural Language Parser for adding in-laws, parents, and members.
- * Handles single-turn and multi-turn conversations seamlessly.
+ * Transactional Proposal Execution Engine
+ * Commits members, relationships, recipes, memories, language entries, and events.
  */
-async function parseNaturalLanguageEntry(message, history, context, client, familyId) {
+async function executeProposalCommit(client, proposal, profile, user, fam) {
+  await client.query('BEGIN');
+  try {
+    const refToId = new Map();
+    const newGen = new Map();
+
+    for (const op of proposal.operations) {
+      if (op.op === 'add_member' && op.ref) {
+        refToId.set(op.ref, crypto.randomUUID());
+      } else if (op.op === 'add_recipe' && op.ref) {
+        refToId.set(op.ref, crypto.randomUUID());
+      } else if (op.op === 'add_memory' && op.ref) {
+        refToId.set(op.ref, crypto.randomUUID());
+      } else if (op.op === 'add_language_entry' && op.ref) {
+        refToId.set(op.ref, crypto.randomUUID());
+      } else if (op.op === 'add_event' && op.ref) {
+        refToId.set(op.ref, crypto.randomUUID());
+      }
+    }
+
+    const resolve = (x) => refToId.get(x) ?? x;
+
+    // Validate existing member IDs
+    const existingMemberIds = new Set();
+    for (const op of proposal.operations) {
+      if (op.op === 'update_member') existingMemberIds.add(op.id);
+      if (op.op === 'add_relationship') {
+        for (const x of [op.from, op.to]) {
+          if (!refToId.has(x)) existingMemberIds.add(x);
+        }
+      }
+    }
+
+    for (const id of existingMemberIds) {
+      if (!UUID_RE.test(id)) throw new UserError('The proposal refers to an invalid member identifier');
+    }
+
+    const gens = new Map();
+    if (existingMemberIds.size) {
+      const r = await client.query(
+        `SELECT id, generation FROM members WHERE family_id = $1 AND id = ANY($2::uuid[])`,
+        [fam, [...existingMemberIds]]
+      );
+      if (r.rowCount !== existingMemberIds.size) {
+        throw new UserError('A referenced person does not exist in your family');
+      }
+      r.rows.forEach((m) => gens.set(m.id, m.generation));
+    }
+
+    // Validate relationships
+    const rels = proposal.operations.filter((o) => o.op === 'add_relationship');
+    for (const r of rels) {
+      const f = resolve(r.from);
+      const t = resolve(r.to);
+      if (f === t) throw new UserError('A person cannot be related to themselves');
+
+      if (r.type === 'parent' && !refToId.has(r.from) && !refToId.has(r.to)) {
+        const loop = await client.query(
+          `WITH RECURSIVE d AS (
+             SELECT to_member_id AS id FROM relationships WHERE relationship_type='parent' AND from_member_id = $1
+             UNION
+             SELECT r.to_member_id FROM relationships r JOIN d ON r.from_member_id = d.id WHERE r.relationship_type='parent'
+           )
+           SELECT 1 FROM d WHERE id = $2 LIMIT 1`,
+          [t, f]
+        );
+        if (loop.rowCount) throw new UserError('That parent relationship would create an ancestral loop');
+      }
+    }
+
+    // Derive generation
+    for (const op of proposal.operations) {
+      if (op.op !== 'add_member') continue;
+      const id = refToId.get(op.ref);
+      let g = op.data.generation ?? null;
+
+      for (const r of rels) {
+        const f = resolve(r.from);
+        const t = resolve(r.to);
+        if (r.type === 'parent' && t === id && gens.has(f)) g = gens.get(f) + 1;
+        if (r.type === 'parent' && f === id && gens.has(t)) g = gens.get(t) - 1;
+        if (r.type === 'spouse' && (f === id || t === id)) {
+          const partnerId = f === id ? t : f;
+          if (gens.has(partnerId)) g = gens.get(partnerId);
+        }
+      }
+
+      if (g == null) g = 1;
+      newGen.set(id, g);
+      gens.set(id, g);
+    }
+
+    // Apply operations
+    for (const op of proposal.operations) {
+      if (op.op === 'add_member') {
+        const d = op.data;
+        const id = refToId.get(op.ref);
+
+        if (d.date_of_birth && d.date_of_passing && d.date_of_passing < d.date_of_birth) {
+          throw new UserError(`${d.first_name}: passing date cannot be before birth date`);
+        }
+
+        // Soft duplicate check: if person already exists by first & last name, reuse their ID
+        const dup = await client.query(
+          `SELECT id FROM members WHERE family_id = $1 AND lower(first_name) = lower($2)
+             AND lower(last_name) = lower($3) LIMIT 1`,
+          [fam, d.first_name, d.last_name]
+        );
+        if (dup.rowCount > 0) {
+          refToId.set(op.ref, dup.rows[0].id);
+          continue;
+        }
+
+        await client.query(
+          `INSERT INTO members (
+             id, family_id, first_name, last_name, maiden_name, gender, generation, is_living,
+             date_of_birth, date_of_passing, birth_place, resting_place, occupation, professional_title,
+             bio, location
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+          [
+            id,
+            fam,
+            d.first_name,
+            d.last_name,
+            d.maiden_name ?? null,
+            d.gender ?? null,
+            newGen.get(id),
+            d.is_living && !d.date_of_passing,
+            d.date_of_birth ?? null,
+            d.date_of_passing ?? null,
+            d.birth_place ?? null,
+            d.resting_place ?? null,
+            d.occupation ?? null,
+            d.professional_title ?? null,
+            d.bio ?? null,
+            d.location ?? null,
+          ]
+        );
+
+        if (d.named_after) {
+          await client.query(
+            `UPDATE members SET named_after = $1 WHERE id = $2 AND family_id = $3`,
+            [d.named_after, id, fam]
+          ).catch(() => {});
+        }
+
+        await audit(client, fam, user.id, 'assistant_add_member', 'member', id, {
+          name: `${d.first_name} ${d.last_name}`,
+          generation: newGen.get(id),
+        });
+      } else if (op.op === 'update_member') {
+        const entries = Object.entries(op.data).filter(([, v]) => v !== undefined);
+        if (entries.length) {
+          const sets = entries.map(([k], i) => `${k} = $${i + 3}`).join(', ');
+          await client.query(
+            `UPDATE members SET ${sets}, updated_at = now() WHERE id = $1 AND family_id = $2`,
+            [op.id, fam, ...entries.map(([, v]) => v)]
+          );
+          await audit(client, fam, user.id, 'assistant_update_member', 'member', op.id, op.data);
+        }
+      } else if (op.op === 'add_relationship') {
+        const f = resolve(op.from);
+        const t = resolve(op.to);
+        const pairs = op.type === 'spouse' ? [[f, t], [t, f]] : [[f, t]];
+
+        for (const [a, b] of pairs) {
+          await client.query(
+            `INSERT INTO relationships (id, family_id, from_member_id, to_member_id, relationship_type, started_at)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+             ON CONFLICT (from_member_id, to_member_id, relationship_type)
+             DO UPDATE SET started_at = COALESCE(EXCLUDED.started_at, relationships.started_at)`,
+            [fam, a, b, op.type, op.started_at ?? null]
+          );
+        }
+        await audit(client, fam, user.id, 'assistant_add_relationship', 'relationship', null, {
+          from: f,
+          to: t,
+          type: op.type,
+        });
+      } else if (op.op === 'add_recipe') {
+        const d = op.data;
+        const recipeId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
+
+        const albumRes = await client.query(
+          `SELECT id FROM cookbook_albums WHERE family_id = $1 ORDER BY created_at ASC LIMIT 1`,
+          [fam]
+        );
+        let albumId = albumRes.rows[0]?.id;
+        if (!albumId) {
+          const newAlbum = await client.query(
+            `INSERT INTO cookbook_albums (id, family_id, title, style)
+             VALUES (gen_random_uuid(), $1, 'Traditional Family Cookbook', 'traditional') RETURNING id`,
+            [fam]
+          );
+          albumId = newAlbum.rows[0].id;
+        }
+
+        await client.query(
+          `INSERT INTO recipes (
+             id, album_id, family_id, title, category, is_vegetarian,
+             ingredients, instructions, cook_time, family_story
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            recipeId,
+            albumId,
+            fam,
+            d.title,
+            d.category || 'main',
+            Boolean(d.is_vegetarian),
+            d.ingredients || [],
+            d.instructions || [],
+            d.cook_time ?? null,
+            d.family_story ?? null,
+          ]
+        );
+
+        if (op.ref) refToId.set(op.ref, recipeId);
+        await audit(client, fam, user.id, 'assistant_add_recipe', 'recipe', recipeId, { title: d.title });
+      } else if (op.op === 'update_recipe') {
+        const entries = Object.entries(op.data).filter(([, v]) => v !== undefined);
+        if (entries.length) {
+          const sets = entries.map(([k], i) => `${k} = $${i + 3}`).join(', ');
+          await client.query(
+            `UPDATE recipes SET ${sets}, updated_at = now() WHERE id = $1 AND family_id = $2`,
+            [op.id, fam, ...entries.map(([, v]) => v)]
+          );
+          await audit(client, fam, user.id, 'assistant_update_recipe', 'recipe', op.id, op.data);
+        }
+      } else if (op.op === 'add_memory') {
+        const d = op.data;
+        const memoryId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
+
+        await client.query(
+          `INSERT INTO memories (
+             id, family_id, title, body, author_id, author_name, era, year
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            memoryId,
+            fam,
+            d.title,
+            d.body,
+            user.id,
+            profile.display_name || 'Family Member',
+            d.era ?? null,
+            d.year ?? null,
+          ]
+        );
+
+        if (op.ref) refToId.set(op.ref, memoryId);
+        await audit(client, fam, user.id, 'assistant_add_memory', 'memory', memoryId, { title: d.title });
+      } else if (op.op === 'add_language_entry') {
+        const d = op.data;
+        const langId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
+
+        await client.query(
+          `INSERT INTO dictionary_entries (
+             id, family_id, term, entry_type, meaning, answer, created_by, contributor_name
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            langId,
+            fam,
+            d.term,
+            d.entry_type || 'phrase',
+            d.meaning,
+            d.answer ?? null,
+            user.id,
+            profile.display_name || 'Family Griot',
+          ]
+        );
+
+        if (op.ref) refToId.set(op.ref, langId);
+        await audit(client, fam, user.id, 'assistant_add_language_entry', 'language_entry', langId, {
+          term: d.term,
+        });
+      } else if (op.op === 'add_event') {
+        const d = op.data;
+        const eventId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
+
+        await client.query(
+          `INSERT INTO events (
+             id, family_id, title, event_type, description, location, starts_at, ends_at, created_by
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            eventId,
+            fam,
+            d.title,
+            d.event_type || 'reunion',
+            d.description ?? null,
+            d.location ?? null,
+            d.starts_at,
+            d.ends_at ?? null,
+            user.id,
+          ]
+        );
+
+        if (op.ref) refToId.set(op.ref, eventId);
+        await audit(client, fam, user.id, 'assistant_add_event', 'event', eventId, { title: d.title });
+      }
+    }
+
+    await client.query('COMMIT');
+    return { ok: true, created: Object.fromEntries(refToId) };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+/**
+ * Intelligent in-process Natural Language Parser for adding in-laws, parents, and members.
+ * Handles single-turn and multi-turn conversations seamlessly, including direct conversational commits.
+ */
+async function parseNaturalLanguageEntry(message, history, context, client, familyId, user, profile) {
   const text = message.trim();
   const lower = text.toLowerCase();
 
@@ -307,8 +619,41 @@ async function parseNaturalLanguageEntry(message, history, context, client, fami
 
   // Case -1: Affirmative confirmation phrases ("add to archive", "yes", "save", "confirm", "proceed")
   if (/^\s*(add to archive|save|save it|save to archive|confirm|yes|proceed|go ahead|do it|add them|approve)\b/i.test(text.trim())) {
+    // Reconstruct previous proposal from recent conversational history
+    const candidateTurn = [...turns].reverse().find(
+      (h) => h.role === 'user' && !/^\s*(add to archive|save|confirm|yes|proceed|do it|go ahead)\b/i.test(h.content)
+    );
+    if (candidateTurn && user && profile && profile.role !== 'guest') {
+      const priorProposal = await parseNaturalLanguageEntry(
+        candidateTurn.content,
+        turns.filter((t) => t !== candidateTurn),
+        context,
+        client,
+        familyId,
+        user,
+        profile
+      );
+      if (priorProposal?.proposal) {
+        try {
+          const commitRes = await executeProposalCommit(client, priorProposal.proposal, profile, user, familyId);
+          return {
+            reply: `🎉 **Successfully saved to the family archive!**\n\nI have added **${priorProposal.proposal.summary.replace(/^Add\s+/i, '')}** into your family tree! You can now explore their records and connections in the **Member Tree**.`,
+            proposal: null,
+            saved: true,
+            created: commitRes.created,
+          };
+        } catch (commitErr) {
+          console.error('[assistant auto-commit error]:', commitErr);
+          return {
+            reply: `Could not save automatically: ${commitErr.message}. Please click the **Add to archive** button on the review card above.`,
+            proposal: null,
+          };
+        }
+      }
+    }
+
     return {
-      reply: `Please click the **Add to archive** button on the review card above to save the proposed family records! You can also uncheck any item you'd like to skip before clicking.`,
+      reply: `Please review the proposed records in the card above and click the **Add to archive** button to save!`,
       proposal: null,
     };
   }
@@ -965,11 +1310,13 @@ assistant.post('/chat', async (c) => {
     // 2. Intelligent in-process Parser (runs first for high accuracy on family additions & multi-turn dialog)
     if (canPropose) {
       try {
-        const parsedProposal = await parseNaturalLanguageEntry(message, history, context, client, famId);
+        const parsedProposal = await parseNaturalLanguageEntry(message, history, context, client, famId, user, profile);
         if (parsedProposal) {
           return c.json({
             reply: parsedProposal.reply,
             proposal: parsedProposal.proposal,
+            saved: parsedProposal.saved ?? false,
+            created: parsedProposal.created ?? null,
             source: 'synthesizer',
           });
         }
@@ -1216,351 +1563,10 @@ assistant.post('/commit', async (c) => {
       return c.json({ error: 'Assistant data entry is not enabled for this family' }, 403);
     }
 
-    const fam = profile.family_id;
-
     try {
-      await client.query('BEGIN');
-
-      // 1. Resolve temp refs -> UUIDs
-      const refToId = new Map();
-      const newGen = new Map();
-
-      for (const op of proposal.operations) {
-        if (op.op === 'add_member' && op.ref) {
-          refToId.set(op.ref, crypto.randomUUID());
-        } else if (op.op === 'add_recipe' && op.ref) {
-          refToId.set(op.ref, crypto.randomUUID());
-        } else if (op.op === 'add_memory' && op.ref) {
-          refToId.set(op.ref, crypto.randomUUID());
-        } else if (op.op === 'add_language_entry' && op.ref) {
-          refToId.set(op.ref, crypto.randomUUID());
-        } else if (op.op === 'add_event' && op.ref) {
-          refToId.set(op.ref, crypto.randomUUID());
-        }
-      }
-
-      const resolve = (x) => refToId.get(x) ?? x;
-
-      // 2. Validate all existing IDs belong to this family
-      const existingMemberIds = new Set();
-      for (const op of proposal.operations) {
-        if (op.op === 'update_member') existingMemberIds.add(op.id);
-        if (op.op === 'add_relationship') {
-          for (const x of [op.from, op.to]) {
-            if (!refToId.has(x)) existingMemberIds.add(x);
-          }
-        }
-      }
-
-      for (const id of existingMemberIds) {
-        if (!UUID_RE.test(id)) throw new UserError('The proposal refers to an invalid member identifier');
-      }
-
-      const gens = new Map();
-      if (existingMemberIds.size) {
-        const r = await client.query(
-          `SELECT id, generation FROM members WHERE family_id = $1 AND id = ANY($2::uuid[])`,
-          [fam, [...existingMemberIds]]
-        );
-        if (r.rowCount !== existingMemberIds.size) {
-          throw new UserError('A referenced person does not exist in your family');
-        }
-        r.rows.forEach((m) => gens.set(m.id, m.generation));
-      }
-
-      // 3. Validate relationships: no self-links, no parent cycles
-      const rels = proposal.operations.filter((o) => o.op === 'add_relationship');
-      for (const r of rels) {
-        const f = resolve(r.from);
-        const t = resolve(r.to);
-        if (f === t) throw new UserError('A person cannot be related to themselves');
-
-        if (r.type === 'parent' && !refToId.has(r.from) && !refToId.has(r.to)) {
-          const loop = await client.query(
-            `WITH RECURSIVE d AS (
-               SELECT to_member_id AS id FROM relationships WHERE relationship_type='parent' AND from_member_id = $1
-               UNION
-               SELECT r.to_member_id FROM relationships r JOIN d ON r.from_member_id = d.id WHERE r.relationship_type='parent'
-             )
-             SELECT 1 FROM d WHERE id = $2 LIMIT 1`,
-            [t, f]
-          );
-          if (loop.rowCount) throw new UserError('That parent relationship would create an ancestral loop');
-        }
-      }
-
-      // 4. Derive generation for new members (supports negative generations!)
-      for (const op of proposal.operations) {
-        if (op.op !== 'add_member') continue;
-        const id = refToId.get(op.ref);
-        let g = op.data.generation ?? null;
-
-        for (const r of rels) {
-          const f = resolve(r.from);
-          const t = resolve(r.to);
-          if (r.type === 'parent' && t === id && gens.has(f)) g = gens.get(f) + 1;
-          if (r.type === 'parent' && f === id && gens.has(t)) g = gens.get(t) - 1;
-          if (r.type === 'spouse' && (f === id || t === id)) {
-            const partnerId = f === id ? t : f;
-            if (gens.has(partnerId)) g = gens.get(partnerId);
-          }
-        }
-
-        if (g == null) g = 1;
-        newGen.set(id, g);
-        gens.set(id, g);
-      }
-
-      // 5. Apply each operation
-      for (const op of proposal.operations) {
-        // --- ADD MEMBER ---
-        if (op.op === 'add_member') {
-          const d = op.data;
-          const id = refToId.get(op.ref);
-
-          if (d.date_of_birth && d.date_of_passing && d.date_of_passing < d.date_of_birth) {
-            throw new UserError(`${d.first_name}: passing date cannot be before birth date`);
-          }
-
-          if (d.date_of_birth) {
-            const dup = await client.query(
-              `SELECT 1 FROM members WHERE family_id = $1 AND lower(first_name) = lower($2)
-                 AND lower(last_name) = lower($3) AND date_of_birth = $4 LIMIT 1`,
-              [fam, d.first_name, d.last_name, d.date_of_birth]
-            );
-            if (dup.rowCount) {
-              throw new UserError(`${d.first_name} ${d.last_name} (born ${d.date_of_birth}) is already in the tree`);
-            }
-          }
-
-          await client.query(
-            `INSERT INTO members (
-               id, family_id, first_name, last_name, maiden_name, gender, generation, is_living,
-               date_of_birth, date_of_passing, birth_place, resting_place, occupation, professional_title,
-               bio, location
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-            [
-              id,
-              fam,
-              d.first_name,
-              d.last_name,
-              d.maiden_name ?? null,
-              d.gender ?? null,
-              newGen.get(id),
-              d.is_living && !d.date_of_passing,
-              d.date_of_birth ?? null,
-              d.date_of_passing ?? null,
-              d.birth_place ?? null,
-              d.resting_place ?? null,
-              d.occupation ?? null,
-              d.professional_title ?? null,
-              d.bio ?? null,
-              d.location ?? null,
-            ]
-          );
-
-          if (d.named_after) {
-            await client.query(
-              `UPDATE members SET named_after = $1 WHERE id = $2 AND family_id = $3`,
-              [d.named_after, id, fam]
-            ).catch(() => {});
-          }
-
-          await audit(client, fam, user.id, 'assistant_add_member', 'member', id, {
-            name: `${d.first_name} ${d.last_name}`,
-            generation: newGen.get(id),
-          });
-        }
-
-        // --- UPDATE MEMBER ---
-        else if (op.op === 'update_member') {
-          const entries = Object.entries(op.data).filter(([, v]) => v !== undefined);
-          if (entries.length) {
-            const sets = entries.map(([k], i) => `${k} = $${i + 3}`).join(', ');
-            await client.query(
-              `UPDATE members SET ${sets}, updated_at = now() WHERE id = $1 AND family_id = $2`,
-              [op.id, fam, ...entries.map(([, v]) => v)]
-            );
-            await audit(client, fam, user.id, 'assistant_update_member', 'member', op.id, op.data);
-          }
-        }
-
-        // --- ADD RELATIONSHIP ---
-        else if (op.op === 'add_relationship') {
-          const f = resolve(op.from);
-          const t = resolve(op.to);
-          const pairs = op.type === 'spouse' ? [[f, t], [t, f]] : [[f, t]];
-
-          for (const [a, b] of pairs) {
-            await client.query(
-              `INSERT INTO relationships (id, family_id, from_member_id, to_member_id, relationship_type, started_at)
-               VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
-               ON CONFLICT (from_member_id, to_member_id, relationship_type)
-               DO UPDATE SET started_at = COALESCE(EXCLUDED.started_at, relationships.started_at)`,
-              [fam, a, b, op.type, op.started_at ?? null]
-            );
-          }
-          await audit(client, fam, user.id, 'assistant_add_relationship', 'relationship', null, {
-            from: f,
-            to: t,
-            type: op.type,
-          });
-        }
-
-        // --- ADD RECIPE ---
-        else if (op.op === 'add_recipe') {
-          const d = op.data;
-          const recipeId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
-
-          const dup = await client.query(
-            `SELECT 1 FROM recipes WHERE family_id = $1 AND lower(title) = lower($2) LIMIT 1`,
-            [fam, d.title]
-          );
-          if (dup.rowCount) {
-            throw new UserError(`Recipe "${d.title}" already exists in the cookbook`);
-          }
-
-          const albumRes = await client.query(
-            `SELECT id FROM cookbook_albums WHERE family_id = $1 ORDER BY created_at ASC LIMIT 1`,
-            [fam]
-          );
-          let albumId = albumRes.rows[0]?.id;
-          if (!albumId) {
-            const newAlbum = await client.query(
-              `INSERT INTO cookbook_albums (id, family_id, title, style)
-               VALUES (gen_random_uuid(), $1, 'Traditional Family Cookbook', 'traditional') RETURNING id`,
-              [fam]
-            );
-            albumId = newAlbum.rows[0].id;
-          }
-
-          await client.query(
-            `INSERT INTO recipes (
-               id, album_id, family_id, title, category, is_vegetarian,
-               ingredients, instructions, cook_time, family_story
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-            [
-              recipeId,
-              albumId,
-              fam,
-              d.title,
-              d.category || 'main',
-              Boolean(d.is_vegetarian),
-              d.ingredients || [],
-              d.instructions || [],
-              d.cook_time ?? null,
-              d.family_story ?? null,
-            ]
-          );
-
-          if (op.ref) refToId.set(op.ref, recipeId);
-          await audit(client, fam, user.id, 'assistant_add_recipe', 'recipe', recipeId, { title: d.title });
-        }
-
-        // --- UPDATE RECIPE ---
-        else if (op.op === 'update_recipe') {
-          const entries = Object.entries(op.data).filter(([, v]) => v !== undefined);
-          if (entries.length) {
-            const sets = entries.map(([k], i) => `${k} = $${i + 3}`).join(', ');
-            await client.query(
-              `UPDATE recipes SET ${sets} WHERE id = $1 AND family_id = $2`,
-              [op.id, fam, ...entries.map(([, v]) => v)]
-            );
-            await audit(client, fam, user.id, 'assistant_update_recipe', 'recipe', op.id, op.data);
-          }
-        }
-
-        // --- ADD MEMORY ---
-        else if (op.op === 'add_memory') {
-          const d = op.data;
-          const memoryId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
-
-          await client.query(
-            `INSERT INTO memories (
-               id, family_id, title, body, era, author_member_id, recorded_by_name, related_member_ids
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [
-              memoryId,
-              fam,
-              d.title,
-              d.body,
-              d.era ?? null,
-              d.author_member_id ?? null,
-              d.author_name || profile.display_name || 'Family Member',
-              d.related_member_ids || [],
-            ]
-          );
-
-          if (op.ref) refToId.set(op.ref, memoryId);
-          await audit(client, fam, user.id, 'assistant_add_memory', 'memory', memoryId, { title: d.title });
-        }
-
-        // --- ADD LANGUAGE ENTRY (PROVERB / SAYING / TERM) ---
-        else if (op.op === 'add_language_entry') {
-          const d = op.data;
-          const langId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
-
-          const dup = await client.query(
-            `SELECT 1 FROM language_entries WHERE family_id = $1 AND lower(term) = lower($2) LIMIT 1`,
-            [fam, d.term]
-          );
-          if (dup.rowCount) {
-            throw new UserError(`"${d.term}" already exists in the Heritage Vault`);
-          }
-
-          await client.query(
-            `INSERT INTO language_entries (
-               id, family_id, entry_type, term, meaning, answer, contributed_by_profile_id, contributed_by_name
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [
-              langId,
-              fam,
-              d.entry_type || 'proverb',
-              d.term,
-              d.meaning,
-              d.answer ?? null,
-              user.id,
-              profile.display_name || 'Family Griot',
-            ]
-          );
-
-          if (op.ref) refToId.set(op.ref, langId);
-          await audit(client, fam, user.id, 'assistant_add_language_entry', 'language_entry', langId, {
-            term: d.term,
-          });
-        }
-
-        // --- ADD EVENT ---
-        else if (op.op === 'add_event') {
-          const d = op.data;
-          const eventId = (op.ref && refToId.get(op.ref)) || crypto.randomUUID();
-
-          await client.query(
-            `INSERT INTO events (
-               id, family_id, title, event_type, description, location, starts_at, ends_at, created_by
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [
-              eventId,
-              fam,
-              d.title,
-              d.event_type || 'reunion',
-              d.description ?? null,
-              d.location ?? null,
-              d.starts_at,
-              d.ends_at ?? null,
-              user.id,
-            ]
-          );
-
-          if (op.ref) refToId.set(op.ref, eventId);
-          await audit(client, fam, user.id, 'assistant_add_event', 'event', eventId, { title: d.title });
-        }
-      }
-
-      await client.query('COMMIT');
-      return c.json({ ok: true, created: Object.fromEntries(refToId) });
+      const res = await executeProposalCommit(client, proposal, profile, user, profile.family_id);
+      return c.json(res);
     } catch (e) {
-      await client.query('ROLLBACK').catch(() => {});
       if (e instanceof UserError) return c.json({ error: e.message }, 400);
       console.error('[assistant] commit failed:', e);
       return c.json({ error: e.message || 'Could not save. Nothing was changed.' }, 500);

@@ -176,6 +176,8 @@ export interface AssistantChatMessage {
 export interface AssistantChatResponse {
   reply: string;
   proposal?: AssistantProposal | null;
+  saved?: boolean;
+  created?: Record<string, string>;
   source?: 'workers-ai' | 'anthropic' | 'synthesizer';
 }
 

@@ -204,13 +204,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         .map((m) => ({ role: m.role, content: m.content.slice(0, 3000) }));
 
       const res = await askAssistant(text, history);
+      if (res.saved) {
+        reloadDataset();
+        pushToast('Successfully saved items to the family archive!', 'success');
+      }
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: res.reply || 'I processed your request.',
           proposal: res.proposal || null,
-          saved: false,
+          saved: Boolean(res.saved),
+          createdIds: res.created || undefined,
         },
       ]);
     } catch (err: any) {
