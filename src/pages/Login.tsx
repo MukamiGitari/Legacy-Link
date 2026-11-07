@@ -360,14 +360,14 @@ export const Login: React.FC = () => {
 
                 <div>
                   <div className="relative">
-                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
+                    <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-heritage-gold-500" />
                     <input
-                      type="text"
+                      type={mode === 'join' || mode === 'register' ? 'email' : 'text'}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Username / Email Address"
-                      autoComplete="username"
+                      placeholder={mode === 'join' ? 'Email Address' : mode === 'register' ? 'Email Address' : 'Email Address'}
+                      autoComplete="email"
                       className="w-full pl-9 pr-3 py-2 bg-[#17130c] border border-[#5e4926] focus:border-heritage-gold-400 focus:bg-[#211b11] rounded-lg text-xs sm:text-sm text-[#f7e5b5] placeholder:text-[#8c7447] outline-hidden transition-all"
                     />
                   </div>
